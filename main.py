@@ -1,10 +1,9 @@
-import logging
 from pyrogram import Client
-from config import API_ID, API_HASH, BOT_TOKEN, LOG_LEVEL
+from config import API_ID, API_HASH, BOT_TOKEN
 from handlers import register_handlers
+from utils.logger import get_logger
 
-logging.basicConfig(level=getattr(logging, LOG_LEVEL))
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def main():

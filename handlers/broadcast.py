@@ -1,5 +1,6 @@
 from pyrogram import Client, filters
 from utils.filters import admin_filter
+from utils.logger import log_to_channel
 
 
 async def broadcast(client: Client, message):
@@ -14,6 +15,7 @@ async def broadcast(client: Client, message):
         except Exception:
             continue
     await message.reply(f"Broadcast sent to {sent} chats")
+    await log_to_channel(client, f"Broadcast by {message.from_user.id} to {sent} chats")
 
 
 def register(app: Client):

@@ -1,20 +1,8 @@
 from pyrogram import filters
-from config import OWNER_ID, SUDO_USERS
-from database import approvals, biomode
+from utils.perms import is_admin
 
-# Owner / sudo filters
-owner_filter = filters.user(OWNER_ID)
-sudo_filter = filters.user(SUDO_USERS)
-admin_filter = owner_filter | sudo_filter
 
-async def approved(user_id: int, chat_id: int) -> bool:
-    data = approvals.find_one({"chat_id": chat_id})
-    if not data:
-        return False
-    return user_id in data.get("user_ids", [])
+async def admin_filter_func(_, client, message):
+    return await is_admin(client, message.chat.id, message.from_user.id)
 
-async def is_biomode(chat_id: int) -> bool:
-    data = biomode.find_one({"chat_id": chat_id})
-    if not data:
-        return False
-    return data.get("enabled", False)
+admin_filter = filters.create(admin_filter_func)
