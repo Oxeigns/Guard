@@ -10,7 +10,7 @@ async def blacklist_cmd(client: Client, message: Message):
     if len(message.command) < 2:
         words = await list_words(message.chat.id)
         text = "\n".join(words) or "No words set"
-        return await message.reply(f"<b>Blacklisted Words</b>\n{text}", parse_mode="html")
+        return await message.reply(f"<b>Blacklisted Words</b>\n{text}", parse_mode="HTML")
     action = message.command[1].lower()
     if action == "add" and len(message.command) > 2:
         word = message.command[2].lower()
@@ -25,7 +25,7 @@ async def blacklist_cmd(client: Client, message: Message):
     elif action == "list":
         words = await list_words(message.chat.id)
         text = "\n".join(words) or "No words set"
-        await message.reply(f"<b>Blacklisted Words</b>\n{text}", parse_mode="html")
+        await message.reply(f"<b>Blacklisted Words</b>\n{text}", parse_mode="HTML")
     else:
         await message.reply("Usage: /blacklist [add|remove|list] <word>")
 
