@@ -12,6 +12,9 @@ Oxeign Telegram Guard is a modular security bot built with **Pyrogram**. It keep
 - Moderation tools: `/mute`, `/unmute`, `/ban`, `/unban`, `/kick`, `/warn`
 - Sudo management: `/addsudo`, `/rmsudo`
 - Broadcast messages: `/broadcast <text>`
+- Auto delete timer: `/setautodelete <seconds>`
+- Blacklist management: `/blacklist add|remove|list`
+- Custom welcome messages: `/setwelcome <text>`
 - View chat configuration: `/getconfig`
 
 ## Setup
@@ -38,4 +41,4 @@ pip install detoxify torch
 
 ## Credits
 
-Developed by [@Oxeign](https://t.me/Oxeign) with help from [@MajorGameApp](https://t.me/MajorGameApp).
+Developed by [@Oxeign](https://t.me/Oxeign). Need help? Visit [@Botsyard](https://t.me/Botsyard).
