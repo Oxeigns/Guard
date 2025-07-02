@@ -17,7 +17,7 @@ async def mute(client: Client, message):
     if await is_admin(client, message.chat.id, user_id):
         return await message.reply("❌ Cannot mute an admin")
     await client.restrict_chat_member(message.chat.id, user_id, ChatPermissions())
-    reply = await message.reply("✅ User muted")
+    reply = await message.reply("✅ <b>User muted</b>", parse_mode=ParseMode.HTML)
     await log_to_channel(client, f"Muted {user_id} in {message.chat.id}")
     client.loop.create_task(auto_delete(client, message, reply))
 
@@ -26,7 +26,7 @@ async def unmute(client: Client, message):
         return await message.reply("❌ Reply to a user to unmute")
     user_id = message.reply_to_message.from_user.id
     await client.unban_chat_member(message.chat.id, user_id, only_if_banned=False)
-    reply = await message.reply("✅ User unmuted")
+    reply = await message.reply("✅ <b>User unmuted</b>", parse_mode=ParseMode.HTML)
     await log_to_channel(client, f"Unmuted {user_id} in {message.chat.id}")
     client.loop.create_task(auto_delete(client, message, reply))
 
@@ -37,7 +37,7 @@ async def ban(client: Client, message):
     if await is_admin(client, message.chat.id, user_id):
         return await message.reply("❌ Cannot ban an admin")
     await client.ban_chat_member(message.chat.id, user_id)
-    reply = await message.reply("✅ User banned")
+    reply = await message.reply("✅ <b>User banned</b>", parse_mode=ParseMode.HTML)
     await log_to_channel(client, f"Banned {user_id} in {message.chat.id}")
     client.loop.create_task(auto_delete(client, message, reply))
 
@@ -46,7 +46,7 @@ async def unban(client: Client, message):
         return await message.reply("❌ Usage: reply or /unban user_id")
     user_id = int(message.command[1]) if len(message.command) > 1 else message.reply_to_message.from_user.id
     await client.unban_chat_member(message.chat.id, user_id)
-    reply = await message.reply("✅ User unbanned")
+    reply = await message.reply("✅ <b>User unbanned</b>", parse_mode=ParseMode.HTML)
     await log_to_channel(client, f"Unbanned {user_id} in {message.chat.id}")
     client.loop.create_task(auto_delete(client, message, reply))
 
@@ -63,7 +63,7 @@ async def gban(client: Client, message):
             count += 1
         except Exception:
             continue
-    reply = await message.reply(f"✅ Globally banned in {count} chats")
+    reply = await message.reply(f"✅ <b>Globally banned</b> in {count} chats", parse_mode=ParseMode.HTML)
     await log_to_channel(client, f"Gban {user_id} by {message.from_user.id} ({count})")
     client.loop.create_task(auto_delete(client, message, reply))
 
@@ -80,7 +80,7 @@ async def gunban(client: Client, message):
             count += 1
         except Exception:
             continue
-    reply = await message.reply(f"✅ Globally unbanned in {count} chats")
+    reply = await message.reply(f"✅ <b>Globally unbanned</b> in {count} chats", parse_mode=ParseMode.HTML)
     await log_to_channel(client, f"Gunban {user_id} by {message.from_user.id} ({count})")
     client.loop.create_task(auto_delete(client, message, reply))
 
@@ -97,7 +97,7 @@ async def gmute(client: Client, message):
             count += 1
         except Exception:
             continue
-    reply = await message.reply(f"✅ Globally muted in {count} chats")
+    reply = await message.reply(f"✅ <b>Globally muted</b> in {count} chats", parse_mode=ParseMode.HTML)
     await log_to_channel(client, f"Gmute {user_id} by {message.from_user.id} ({count})")
     client.loop.create_task(auto_delete(client, message, reply))
 
@@ -114,7 +114,7 @@ async def gunmute(client: Client, message):
             count += 1
         except Exception:
             continue
-    reply = await message.reply(f"✅ Globally unmuted in {count} chats")
+    reply = await message.reply(f"✅ <b>Globally unmuted</b> in {count} chats", parse_mode=ParseMode.HTML)
     await log_to_channel(client, f"Gunmute {user_id} by {message.from_user.id} ({count})")
     client.loop.create_task(auto_delete(client, message, reply))
 
@@ -126,7 +126,7 @@ async def kick(client: Client, message):
         return await message.reply("❌ Cannot kick an admin")
     await client.ban_chat_member(message.chat.id, user_id)
     await client.unban_chat_member(message.chat.id, user_id)
-    reply = await message.reply("✅ User kicked")
+    reply = await message.reply("✅ <b>User kicked</b>", parse_mode=ParseMode.HTML)
     await log_to_channel(client, f"Kicked {user_id} in {message.chat.id}")
     client.loop.create_task(auto_delete(client, message, reply))
 
@@ -141,7 +141,7 @@ async def warn(client: Client, message):
     buttons = InlineKeyboardMarkup(
         [[InlineKeyboardButton("Clear Warns", callback_data=f"clearwarn:{user_id}")]]
     )
-    reply = await message.reply(f"⚠️ User warned. Total warns: {count}", reply_markup=buttons)
+    reply = await message.reply(f"⚠️ <b>User warned</b>. Total warns: {count}", reply_markup=buttons, parse_mode=ParseMode.HTML)
     await log_to_channel(client, f"Warned {user_id} ({count}) in {message.chat.id}")
     client.loop.create_task(auto_delete(client, message, reply))
 

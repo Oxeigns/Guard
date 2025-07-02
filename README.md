@@ -17,7 +17,7 @@ Oxeign Telegram Guard is a modular security bot built with **Pyrogram**. It keep
 - Custom welcome messages: `/setwelcome <text>`
 - View chat configuration: `/getconfig`
 - Bulk purge messages: `/purge` (reply to a message)
-- Mention all members: `/tagall`
+- View and manage settings: `/settings`
 
 ## Setup
 

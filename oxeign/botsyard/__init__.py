@@ -14,8 +14,8 @@ from . import (
     blacklist,
     autodelete,
     purge,
-    tagall,
     status,
+    settings_cmd,
 )
 
 
@@ -34,8 +34,8 @@ def register_handlers(app: Client):
         blacklist,
         autodelete,
         purge,
-        tagall,
         status,
+        settings_cmd,
     ):
         if hasattr(module, "register"):
             module.register(app)

@@ -16,19 +16,19 @@ async def blacklist_cmd(client: Client, message: Message):
     if action == "add" and len(message.command) > 2:
         word = message.command[2].lower()
         await add_word(message.chat.id, word)
-        await message.reply("✅ Word added")
+        await message.reply("✅ <b>Word added</b>", parse_mode=ParseMode.HTML)
         await log_to_channel(client, f"Added blacklist word '{word}' in {message.chat.id}")
     elif action in {"remove", "del"} and len(message.command) > 2:
         word = message.command[2].lower()
         await remove_word(message.chat.id, word)
-        await message.reply("✅ Word removed")
+        await message.reply("✅ <b>Word removed</b>", parse_mode=ParseMode.HTML)
         await log_to_channel(client, f"Removed blacklist word '{word}' in {message.chat.id}")
     elif action == "list":
         words = await list_words(message.chat.id)
         text = "\n".join(words) or "No words set"
         await message.reply(f"<b>Blacklisted Words</b>\n{text}", parse_mode=ParseMode.HTML)
     else:
-        await message.reply("❌ Usage: /blacklist [add|remove|list] <word>")
+        await message.reply("❌ <b>Usage:</b> /blacklist [add|remove|list] <word>", parse_mode=ParseMode.HTML)
 
 
 async def enforce_blacklist(client: Client, message: Message):
