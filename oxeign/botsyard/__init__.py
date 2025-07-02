@@ -13,6 +13,7 @@ from . import (
     welcome,
     blacklist,
     autodelete,
+    status,
 )
 
 
@@ -30,6 +31,7 @@ def register_handlers(app: Client):
         welcome,
         blacklist,
         autodelete,
+        status,
     ):
         if hasattr(module, "register"):
             module.register(app)
