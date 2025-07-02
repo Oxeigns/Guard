@@ -1,5 +1,6 @@
 from pyrogram import Client, filters
 from pyrogram.types import ChatPermissions, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from utils.filters import admin_filter
 from utils.perms import is_admin
 from database.warns import add_warn, clear_warns
@@ -78,10 +79,10 @@ async def clear_warn_callback(client: Client, callback_query):
 
 
 def register(app: Client):
-    app.add_handler(filters.command("mute") & admin_filter, mute)
-    app.add_handler(filters.command("unmute") & admin_filter, unmute)
-    app.add_handler(filters.command("ban") & admin_filter, ban)
-    app.add_handler(filters.command("unban") & admin_filter, unban)
-    app.add_handler(filters.command("kick") & admin_filter, kick)
-    app.add_handler(filters.command("warn") & admin_filter, warn)
-    app.on_callback_query(filters.regex("^clearwarn:"))(clear_warn_callback)
+    app.add_handler(MessageHandler(mute, filters.command("mute") & admin_filter))
+    app.add_handler(MessageHandler(unmute, filters.command("unmute") & admin_filter))
+    app.add_handler(MessageHandler(ban, filters.command("ban") & admin_filter))
+    app.add_handler(MessageHandler(unban, filters.command("unban") & admin_filter))
+    app.add_handler(MessageHandler(kick, filters.command("kick") & admin_filter))
+    app.add_handler(MessageHandler(warn, filters.command("warn") & admin_filter))
+    app.add_handler(CallbackQueryHandler(clear_warn_callback, filters.regex("^clearwarn:")))
