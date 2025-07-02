@@ -62,7 +62,9 @@ async def check_message(client: Client, message):
             await log_to_channel(client, f"{BOT_NAME}: Deleted message due to bio link from {message.from_user.mention}")
             return
 
-    if message.media and message.media != "message":
+    # Delete any message containing media (photo, video, sticker, etc.)
+    # since this bot is focused on text based interactions only
+    if message.media:
         await message.delete()
         await log_to_channel(client, f"{BOT_NAME}: Deleted media from {message.from_user.mention}")
 
