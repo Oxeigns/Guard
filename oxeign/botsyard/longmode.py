@@ -8,22 +8,22 @@ VALID_MODES = {"off", "split", "telegraph"}
 
 async def set_longmode(client: Client, message):
     if len(message.command) < 2:
-        return await message.reply("Usage: /setlongmode <off|split|telegraph>")
+        return await message.reply("❌ Usage: /setlongmode <off|split|telegraph>")
     mode = message.command[1].lower()
     if mode not in VALID_MODES:
-        return await message.reply("Invalid mode")
+        return await message.reply("❌ Invalid mode")
     await set_mode(message.chat.id, mode)
-    await message.reply(f"Long mode set to {mode}")
+    await message.reply(f"✅ Long mode set to {mode}")
 
 async def set_longlimit(client: Client, message):
     if len(message.command) < 2:
-        return await message.reply("Usage: /setlonglimit <number>")
+        return await message.reply("❌ Usage: /setlonglimit <number>")
     try:
         limit = int(message.command[1])
     except ValueError:
-        return await message.reply("Limit must be a number")
+        return await message.reply("❌ Limit must be a number")
     await set_limit(message.chat.id, limit)
-    await message.reply(f"Long limit set to {limit}")
+    await message.reply(f"✅ Long limit set to {limit}")
 
 async def get_config(client: Client, message):
     settings = await get_settings(message.chat.id)

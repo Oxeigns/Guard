@@ -1,6 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.handlers import MessageHandler
+from pyrogram.enums import ParseMode
 from oxeign.utils.filters import admin_filter
 from oxeign.swagger.blacklist import add_word, remove_word, list_words
 from oxeign.utils.logger import log_to_channel
@@ -10,7 +11,7 @@ async def blacklist_cmd(client: Client, message: Message):
     if len(message.command) < 2:
         words = await list_words(message.chat.id)
         text = "\n".join(words) or "No words set"
-        return await message.reply(f"<b>Blacklisted Words</b>\n{text}", parse_mode="HTML")
+        return await message.reply(f"<b>Blacklisted Words</b>\n{text}", parse_mode=ParseMode.HTML)
     action = message.command[1].lower()
     if action == "add" and len(message.command) > 2:
         word = message.command[2].lower()
@@ -25,9 +26,9 @@ async def blacklist_cmd(client: Client, message: Message):
     elif action == "list":
         words = await list_words(message.chat.id)
         text = "\n".join(words) or "No words set"
-        await message.reply(f"<b>Blacklisted Words</b>\n{text}", parse_mode="HTML")
+        await message.reply(f"<b>Blacklisted Words</b>\n{text}", parse_mode=ParseMode.HTML)
     else:
-        await message.reply("Usage: /blacklist [add|remove|list] <word>")
+        await message.reply("❌ Usage: /blacklist [add|remove|list] <word>")
 
 
 async def enforce_blacklist(client: Client, message: Message):

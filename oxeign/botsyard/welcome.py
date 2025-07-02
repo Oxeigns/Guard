@@ -8,7 +8,7 @@ from oxeign.utils.logger import log_to_channel
 
 async def set_welcome_cmd(client: Client, message: Message):
     if len(message.command) < 2:
-        return await message.reply("Usage: /setwelcome <text>")
+        return await message.reply("❌ Usage: /setwelcome <text>")
     text = message.text.split(None, 1)[1]
     await set_welcome(message.chat.id, text)
     await message.reply("✅ Welcome message saved")

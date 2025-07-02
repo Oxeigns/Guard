@@ -8,11 +8,11 @@ from oxeign.utils.logger import log_to_channel
 import asyncio
 async def set_autodelete_cmd(client: Client, message: Message):
     if len(message.command) < 2:
-        return await message.reply("Usage: /setautodelete <seconds>")
+        return await message.reply("❌ Usage: /setautodelete <seconds>")
     try:
         seconds = int(message.command[1])
     except ValueError:
-        return await message.reply("Seconds must be a number")
+        return await message.reply("❌ Seconds must be a number")
     await set_autodelete(message.chat.id, seconds)
     await message.reply("✅ Auto delete updated")
     await log_to_channel(client, f"Auto delete set to {seconds}s in {message.chat.id}")

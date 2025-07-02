@@ -8,25 +8,25 @@ from oxeign.utils.perms import is_sudo
 
 async def add_sudo_cmd(client: Client, message):
     if not message.reply_to_message and len(message.command) < 2:
-        return await message.reply("Reply or provide a user id")
+        return await message.reply("❌ Reply or provide a user id")
     user_id = (
         int(message.command[1]) if len(message.command) > 1 else message.reply_to_message.from_user.id
     )
     await add_sudo(user_id)
-    await message.reply("User added as sudo")
+    await message.reply("✅ User added as sudo")
     await log_to_channel(client, f"Added sudo {user_id}")
 
 
 async def remove_sudo_cmd(client: Client, message):
     if not message.reply_to_message and len(message.command) < 2:
-        return await message.reply("Reply or provide a user id")
+        return await message.reply("❌ Reply or provide a user id")
     user_id = (
         int(message.command[1]) if len(message.command) > 1 else message.reply_to_message.from_user.id
     )
     if not await is_sudo(user_id):
-        return await message.reply("User is not sudo")
+        return await message.reply("❌ User is not sudo")
     await remove_sudo(user_id)
-    await message.reply("User removed from sudo")
+    await message.reply("✅ User removed from sudo")
     await log_to_channel(client, f"Removed sudo {user_id}")
 
 
