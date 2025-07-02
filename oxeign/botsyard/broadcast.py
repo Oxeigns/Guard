@@ -1,10 +1,12 @@
 from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler
-from oxeign.utils.filters import admin_filter
+from oxeign.utils.perms import is_sudo
 from oxeign.utils.logger import log_to_channel
 
 
 async def broadcast(client: Client, message):
+    if not await is_sudo(message.from_user.id):
+        return
     if len(message.command) < 2 and not message.reply_to_message:
         return await message.reply("Usage: /broadcast <text> or reply to a message")
     text = message.text.split(None, 1)[1] if len(message.command) > 1 else message.reply_to_message.text
@@ -20,4 +22,4 @@ async def broadcast(client: Client, message):
 
 
 def register(app: Client):
-    app.add_handler(MessageHandler(broadcast, filters.command("broadcast") & admin_filter))
+    app.add_handler(MessageHandler(broadcast, filters.command("broadcast")))

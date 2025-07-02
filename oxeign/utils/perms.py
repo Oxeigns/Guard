@@ -15,3 +15,19 @@ async def is_admin(client: Client, chat_id: int, user_id: int) -> bool:
     except Exception:
         return False
     return member.status in (ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR)
+
+
+async def get_role(client: Client, chat_id: int | None, user_id: int) -> str:
+    if user_id == OWNER_ID:
+        return "owner"
+    sudos = await get_sudos()
+    if user_id in sudos:
+        return "sudo"
+    if chat_id:
+        try:
+            member = await client.get_chat_member(chat_id, user_id)
+            if member.status in (ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR):
+                return "admin"
+        except Exception:
+            pass
+    return "user"

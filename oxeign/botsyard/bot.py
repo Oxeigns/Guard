@@ -3,14 +3,27 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from oxeign.config import START_IMAGE, BOT_NAME
 from oxeign.utils.cleaner import auto_delete
+from oxeign.utils.perms import get_role
+from oxeign.utils.logger import log_to_channel
 
 async def start(client: Client, message):
-    text = f"✨ Welcome to <b>{BOT_NAME}</b>!" \
-        "\nYour personal guardian at your service."
+    user = message.from_user
+    role = await get_role(client, None, user.id)
+    full_name = " ".join(filter(None, [user.first_name, user.last_name]))
+    username = f"@{user.username}" if user.username else "N/A"
+    group_count = sum(1 async for d in client.get_dialogs() if d.chat.type in ("supergroup", "group"))
+    text = (
+        f"<b>{full_name}</b>\n"
+        f"ID: <code>{user.id}</code>\n"
+        f"Username: {username}\n"
+        f"Role: <b>{role}</b>\n"
+        f"Groups: {group_count}\n\n"
+        f"Welcome to <b>{BOT_NAME}</b>, your premium moderation assistant."
+    )
     buttons = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("📖 Help", callback_data="help")],
-            [InlineKeyboardButton("💬 Support", url="https://t.me/botsyard")],
+            [InlineKeyboardButton("🛠 Commands", callback_data="menu"), InlineKeyboardButton("❓ Help", callback_data="help")],
+            [InlineKeyboardButton("📚 How It Works", url="https://t.me/Botsyard"), InlineKeyboardButton("📣 Support", url="https://t.me/Botsyard")],
         ]
     )
     reply = (
@@ -19,21 +32,18 @@ async def start(client: Client, message):
         else await message.reply(text, reply_markup=buttons, parse_mode="html")
     )
     client.loop.create_task(auto_delete(client, message, reply))
+    await log_to_channel(client, f"/start by {user.id}")
 
 async def help_cmd(client: Client, message):
     help_text = (
-        "<b>Master Guardian Commands</b>\n"
-        "• /approve - Allow a user\n"
-        "• /disapprove - Revoke approval\n"
-        "• /setlongmode &lt;mode&gt;\n"
-        "• /setlonglimit &lt;num&gt;\n"
-        "• /biolink on|off\n"
-        "• /broadcast &lt;text&gt;\n"
-        "• /mute /unmute\n"
-        "• /ban /unban /kick\n"
-        "• /warn - Issue warn\n"
+        "<b>Oxeign Guard Commands</b>\n"
+        "• /menu - Command list\n"
+        "• /ban /unban /mute /unmute\n"
         "• /addsudo /rmsudo\n"
-        "• /gban /gunban /gmute /gunmute (sudo)"
+        "• /blacklist add|remove|list\n"
+        "• /setautodelete &lt;sec&gt;\n"
+        "• /setwelcome &lt;text&gt;\n"
+        "• /broadcast &lt;text&gt;\n"
     )
     buttons = InlineKeyboardMarkup(
         [
@@ -44,14 +54,35 @@ async def help_cmd(client: Client, message):
     reply = await message.reply(help_text, reply_markup=buttons, parse_mode="html")
     client.loop.create_task(auto_delete(client, message, reply))
 
+async def menu_cmd(client: Client, message):
+    text = (
+        "<b>Command Menu</b>\n"
+        "/ban /unban /mute /unmute\n"
+        "/addsudo /rmsudo\n"
+        "/blacklist add|remove|list\n"
+        "/setautodelete <sec>\n"
+        "/setwelcome <text>\n"
+        "/broadcast <text>"
+    )
+    reply = await message.reply(text, parse_mode="html")
+    client.loop.create_task(auto_delete(client, message, reply))
+
 async def help_callback(client: Client, callback_query):
     await callback_query.answer()
     await callback_query.message.delete()
     m = await callback_query.message.reply("/help")
     await help_cmd(client, m)
 
+async def menu_callback(client: Client, callback_query):
+    await callback_query.answer()
+    await callback_query.message.delete()
+    m = await callback_query.message.reply("/menu")
+    await menu_cmd(client, m)
+
 
 def register(app: Client):
     app.add_handler(MessageHandler(start, filters.command("start")))
     app.add_handler(MessageHandler(help_cmd, filters.command("help")))
+    app.add_handler(MessageHandler(menu_cmd, filters.command("menu")))
     app.add_handler(CallbackQueryHandler(help_callback, filters.regex("^help$")))
+    app.add_handler(CallbackQueryHandler(menu_callback, filters.regex("^menu$")))
