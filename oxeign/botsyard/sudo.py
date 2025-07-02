@@ -32,4 +32,9 @@ async def remove_sudo_cmd(client: Client, message):
 
 def register(app: Client):
     app.add_handler(MessageHandler(add_sudo_cmd, filters.command("addsudo") & admin_filter))
-    app.add_handler(MessageHandler(remove_sudo_cmd, filters.command("removesudo") & admin_filter))
+    app.add_handler(
+        MessageHandler(
+            remove_sudo_cmd,
+            filters.command(["removesudo", "rmsudo"]) & admin_filter,
+        )
+    )

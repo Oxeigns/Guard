@@ -7,7 +7,10 @@ async def start(client: Client, message):
     await message.reply_photo(START_IMAGE, caption=text) if START_IMAGE else await message.reply(text)
 
 async def help_cmd(client: Client, message):
-    help_text = "Available commands: /approve, /disapprove, /setlongmode, /setlonglimit, /biolink, /broadcast, /mute, /unmute, /ban, /unban, /kick, /warn, /addsudo, /removesudo"
+    help_text = (
+        "Available commands: /approve, /disapprove, /setlongmode, /setlonglimit, "
+        "/biolink, /broadcast, /mute, /unmute, /ban, /unban, /kick, /warn, /addsudo, /rmsudo"
+    )
     await message.reply(help_text)
 
 
