@@ -7,11 +7,11 @@ from oxeign.utils.logger import log_to_channel
 
 async def toggle_biolink(client: Client, message):
     if len(message.command) < 2:
-        return await message.reply("Usage: /biolink on|off")
+        return await message.reply("❌ Usage: /biolink on|off")
     mode = message.command[1].lower()
     enabled = mode == "on"
     await set_biomode(message.chat.id, enabled)
-    await message.reply(f"Bio link mode {'enabled' if enabled else 'disabled'}")
+    await message.reply(f"✅ Bio link mode {'enabled' if enabled else 'disabled'}")
     await log_to_channel(client, f"Bio mode set to {enabled} in {message.chat.id}")
 
 

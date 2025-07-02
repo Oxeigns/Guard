@@ -1,20 +1,22 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
+from pyrogram.enums import ParseMode
 from oxeign.config import START_IMAGE, BOT_NAME
 from oxeign.utils.cleaner import auto_delete
 from oxeign.utils.perms import get_role
 from oxeign.utils.logger import log_to_channel
+from oxeign.swagger.groups import add_group, get_groups
 
 async def start(client: Client, message):
     user = message.from_user
     role = await get_role(client, None, user.id)
     full_name = " ".join(filter(None, [user.first_name, user.last_name]))
     username = f"@{user.username}" if user.username else "N/A"
-    group_count = 0
-    async for d in client.get_dialogs():
-        if d.chat.type in ("supergroup", "group"):
-            group_count += 1
+    groups = await get_groups()
+    group_count = len(groups)
+    if message.chat.type in ("supergroup", "group"):
+        await add_group(message.chat.id)
     text = (
         f"<b>{full_name}</b>\n"
         f"ID: <code>{user.id}</code>\n"
@@ -30,9 +32,9 @@ async def start(client: Client, message):
         ]
     )
     reply = (
-        await message.reply_photo(START_IMAGE, caption=text, reply_markup=buttons, parse_mode="HTML")
+        await message.reply_photo(START_IMAGE, caption=text, reply_markup=buttons, parse_mode=ParseMode.HTML)
         if START_IMAGE
-        else await message.reply(text, reply_markup=buttons, parse_mode="HTML")
+        else await message.reply(text, reply_markup=buttons, parse_mode=ParseMode.HTML)
     )
     client.loop.create_task(auto_delete(client, message, reply))
     await log_to_channel(client, f"/start by {user.id}")
@@ -54,7 +56,7 @@ async def help_cmd(client: Client, message):
             [InlineKeyboardButton("💬 Support", url="https://t.me/botsyard")],
         ]
     )
-    reply = await message.reply(help_text, reply_markup=buttons, parse_mode="HTML")
+    reply = await message.reply(help_text, reply_markup=buttons, parse_mode=ParseMode.HTML)
     client.loop.create_task(auto_delete(client, message, reply))
 
 async def menu_cmd(client: Client, message):
@@ -67,7 +69,7 @@ async def menu_cmd(client: Client, message):
         "/setwelcome <text>\n"
         "/broadcast <text>"
     )
-    reply = await message.reply(text, parse_mode="HTML")
+    reply = await message.reply(text, parse_mode=ParseMode.HTML)
     client.loop.create_task(auto_delete(client, message, reply))
 
 async def help_callback(client: Client, callback_query):

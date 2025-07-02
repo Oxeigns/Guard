@@ -2,6 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler
 from oxeign.utils.perms import is_sudo
 from oxeign.utils.logger import log_to_channel
+from oxeign.swagger.groups import get_groups
 
 
 async def broadcast(client: Client, message):
@@ -11,13 +12,13 @@ async def broadcast(client: Client, message):
         return await message.reply("Usage: /broadcast <text> or reply to a message")
     text = message.text.split(None, 1)[1] if len(message.command) > 1 else message.reply_to_message.text
     sent = 0
-    async for dialog in client.get_dialogs():
+    for chat_id in await get_groups():
         try:
-            await client.send_message(dialog.chat.id, text)
+            await client.send_message(chat_id, text)
             sent += 1
         except Exception:
             continue
-    await message.reply(f"Broadcast sent to {sent} chats")
+    await message.reply(f"✅ Broadcast sent to {sent} chats")
     await log_to_channel(client, f"Broadcast by {message.from_user.id} to {sent} chats")
 
 
