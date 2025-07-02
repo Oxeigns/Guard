@@ -1,6 +1,6 @@
 # Oxeign Telegram Guard
 
-Oxeign Telegram Guard is a modular security bot built with **Pyrogram**. It keeps groups clean using a mix of admin tools, approval flows and message filters powered by the Detoxify model. All persistent data is stored in MongoDB.
+Oxeign Telegram Guard is a modular security bot built with **Pyrogram**. It keeps groups clean using a mix of admin tools, approval flows and optional toxicity filters powered by the Detoxify model (if installed). All persistent data is stored in MongoDB.
 
 ## Features
 
@@ -28,6 +28,13 @@ Oxeign Telegram Guard is a modular security bot built with **Pyrogram**. It keep
    ```bash
    python -m oxeign.main
    ```
+
+### Optional toxicity filtering
+
+To enable Detoxify based toxicity filtering, install the extra packages:
+```bash
+pip install detoxify torch
+```
 
 ## Credits
 
