@@ -21,7 +21,9 @@ Oxeign Telegram Guard is a modular security bot built with **Pyrogram**. It keep
    ```bash
    pip install -r requirements.txt
    ```
-3. Copy `.env.example` to `.env` and fill in your API keys and database URI.
+3. Copy `.env.example` to `.env` and fill in your API keys and database URI. If
+   your MongoDB URI does not contain a database name, set `MONGO_DB_NAME` as
+   well.
 4. Run the bot:
    ```bash
    python -m oxeign.main
