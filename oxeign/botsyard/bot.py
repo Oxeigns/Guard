@@ -1,6 +1,6 @@
 from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler
-from config import START_IMAGE
+from oxeign.config import START_IMAGE
 
 async def start(client: Client, message):
     text = "I am alive!"

@@ -1,45 +1,32 @@
-# Master Guardian Bot
+# Oxeign Telegram Guard
 
-Master Guardian Bot is a powerful, modular, and production-ready Telegram security bot built using Python and Pyrogram. It manages and moderates groups and channels with precision and stores data in MongoDB.
+Oxeign Telegram Guard is a modular security bot built with **Pyrogram**. It keeps groups clean using a mix of admin tools, approval flows and message filters powered by the Detoxify model. All persistent data is stored in MongoDB.
 
-Key features include:
+## Features
 
-- MongoDB-backed persistent storage.
-- Group/channel administration with an owner-sudo system.
-- Configurable long message deletion via `/setlongmode` and `/setlonglimit`.
-- Bio-based message control (`/biolink on|off`).
-- User approval system (`/approve`, `/disapprove`).
-- Admin tools for mute, ban, unban, kick, warn, and broadcast.
-- Async-safe broadcasting, permission checks, and auto-cleanup for muted or blacklisted users.
+- MongoDB backed storage
+- Owner and sudo system
+- Long message control: `/setlongmode`, `/setlonglimit`
+- Bio link filtering: `/biolink on|off`
+- Approval system: `/approve` and `/disapprove`
+- Moderation tools: `/mute`, `/unmute`, `/ban`, `/unban`, `/kick`, `/warn`
+- Sudo management: `/addsudo`, `/removesudo`
+- Broadcast messages: `/broadcast <text>`
+- View chat configuration: `/getconfig`
 
-The bot is fully configurable using a `.env` file. A sample environment file is provided at `sample.env`.
+## Setup
 
-The code is split into logical modules under `handlers/`, `database/`, `utils/`, and `config/` for easier maintenance.
+1. Install Python 3.10+ and clone the repo
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Copy `.env.example` to `.env` and fill in your API keys and database URI.
+4. Run the bot:
+   ```bash
+   python -m oxeign.main
+   ```
 
-## Deployment
+## Credits
 
-Follow these steps to deploy the bot on a Linux VPS with Python 3.10+:
-
-```bash
-# 1. Update system packages
-sudo apt update && sudo apt upgrade -y
-
-# 2. Install Python 3.10+ and pip
-sudo apt install python3 python3-pip -y
-
-# 3. Clone the repository
-git clone https://github.com/yourusername/master-guardian-bot.git
-cd master-guardian-bot
-
-# 4. Install requirements
-pip3 install -r requirements.txt
-
-# 5. Copy and edit the environment file
-cp sample.env .env
-nano .env  # Enter your API_ID, API_HASH, BOT_TOKEN, MONGO_URI, OWNER_ID, etc.
-
-# 6. Run the bot
-python3 main.py
-```
-
-Ensure you set the required environment variables for API credentials, MongoDB URI, and bot ownership.
+Developed by [@Oxeign](https://t.me/Oxeign) with help from [@MajorGameApp](https://t.me/MajorGameApp).

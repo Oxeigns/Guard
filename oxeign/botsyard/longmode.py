@@ -1,7 +1,8 @@
 from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler
-from utils.filters import admin_filter
-from database.settings import set_mode, set_limit
+from oxeign.utils.filters import admin_filter
+from oxeign.swagger.settings import get_settings, set_mode, set_limit
+from oxeign.swagger.biomode import is_biomode
 
 VALID_MODES = {"off", "split", "telegraph"}
 
@@ -24,7 +25,22 @@ async def set_longlimit(client: Client, message):
     await set_limit(message.chat.id, limit)
     await message.reply(f"Long limit set to {limit}")
 
+async def get_config(client: Client, message):
+    settings = await get_settings(message.chat.id)
+    biomode = await is_biomode(message.chat.id)
+    text = (
+        f"Long mode: {settings.get('mode')}\n"
+        f"Long limit: {settings.get('limit')}\n"
+        f"Bio link mode: {'on' if biomode else 'off'}"
+    )
+    await message.reply(text)
+
 
 def register(app: Client):
-    app.add_handler(MessageHandler(set_longmode, filters.command("setlongmode") & admin_filter))
-    app.add_handler(MessageHandler(set_longlimit, filters.command("setlonglimit") & admin_filter))
+    app.add_handler(
+        MessageHandler(set_longmode, filters.command("setlongmode") & admin_filter)
+    )
+    app.add_handler(
+        MessageHandler(set_longlimit, filters.command(["setlonglimit", "setlimit"]) & admin_filter)
+    )
+    app.add_handler(MessageHandler(get_config, filters.command("getconfig") & admin_filter))

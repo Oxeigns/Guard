@@ -1,7 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler
-from utils.filters import admin_filter
-from utils.logger import log_to_channel
+from oxeign.utils.filters import admin_filter
+from oxeign.utils.logger import log_to_channel
 
 
 async def broadcast(client: Client, message):

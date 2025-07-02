@@ -1,9 +1,9 @@
 from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler
-from utils.filters import admin_filter
-from database.sudo import add_sudo, remove_sudo
-from utils.logger import log_to_channel
-from utils.perms import is_sudo
+from oxeign.utils.filters import admin_filter
+from oxeign.swagger.sudo import add_sudo, remove_sudo
+from oxeign.utils.logger import log_to_channel
+from oxeign.utils.perms import is_sudo
 
 
 async def add_sudo_cmd(client: Client, message):

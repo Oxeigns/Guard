@@ -1,5 +1,5 @@
 from pyrogram import filters
-from utils.perms import is_admin
+from oxeign.utils.perms import is_admin
 
 
 async def admin_filter_func(_, client, message):
