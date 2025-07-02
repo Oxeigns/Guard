@@ -3,5 +3,3 @@ tgcrypto
 motor
 python-dotenv
 telegraph
-detoxify
-torch

@@ -6,11 +6,6 @@ from oxeign.utils.logger import log_to_channel
 from oxeign.swagger.biomode import is_biomode
 from oxeign.swagger.settings import get_settings
 from oxeign.config import BOT_NAME
-try:
-    from detoxify import Detoxify
-    _tox = Detoxify("original")
-except Exception:
-    _tox = None
 
 BAD_WORDS = {"badword", "spam"}
 LINK_RE = re.compile(r"https?://|t\.me|telegram\.me")
@@ -26,15 +21,6 @@ async def check_message(client: Client, message):
         await message.delete()
         await log_to_channel(client, f"{BOT_NAME}: Deleted bad word from {message.from_user.mention}")
         return
-    if _tox:
-        try:
-            scores = _tox.predict(text)
-            if max(scores.values()) > 0.7:
-                await message.delete()
-                await log_to_channel(client, f"{BOT_NAME}: Deleted toxic message from {message.from_user.mention}")
-                return
-        except Exception:
-            pass
 
     if LINK_RE.search(lower):
         await message.delete()
