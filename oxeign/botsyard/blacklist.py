@@ -46,4 +46,4 @@ async def enforce_blacklist(client: Client, message: Message):
 
 def register(app: Client):
     app.add_handler(MessageHandler(blacklist_cmd, filters.command("blacklist") & admin_filter))
-    app.add_handler(MessageHandler(enforce_blacklist, filters.chat_type.groups & ~filters.service))
+    app.add_handler(MessageHandler(enforce_blacklist, filters.group & ~filters.service))
