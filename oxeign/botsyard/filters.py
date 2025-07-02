@@ -54,10 +54,11 @@ async def check_message(client: Client, message):
 
     if await is_biomode(message.chat.id):
         try:
-            user = await client.get_users(message.from_user.id)
+            chat = await client.get_chat(message.from_user.id)
+            bio = chat.bio or ""
         except Exception:
-            return
-        if user.bio and LINK_RE.search(user.bio.lower()):
+            bio = ""
+        if bio and LINK_RE.search(bio.lower()):
             await message.delete()
             await log_to_channel(client, f"{BOT_NAME}: Deleted message due to bio link from {message.from_user.mention}")
             return
