@@ -13,6 +13,7 @@ from . import (
     welcome,
     blacklist,
     autodelete,
+    tagall,
     purge,
     status,
     settings_cmd,
