@@ -1,11 +1,11 @@
 import re
 from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler, EditedMessageHandler
-from utils.perms import is_admin
-from utils.logger import log_to_channel
-from database.biomode import is_biomode
-from database.settings import get_settings
-from config import BOT_NAME
+from oxeign.utils.perms import is_admin
+from oxeign.utils.logger import log_to_channel
+from oxeign.swagger.biomode import is_biomode
+from oxeign.swagger.settings import get_settings
+from oxeign.config import BOT_NAME
 try:
     from detoxify import Detoxify
     _tox = Detoxify("original")

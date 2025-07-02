@@ -1,5 +1,5 @@
 import logging
-from config import LOG_LEVEL, LOG_CHANNEL_ID
+from oxeign.config import LOG_LEVEL, LOG_CHANNEL_ID
 
 
 logging.basicConfig(level=getattr(logging, LOG_LEVEL))

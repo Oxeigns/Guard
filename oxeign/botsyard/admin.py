@@ -1,10 +1,10 @@
 from pyrogram import Client, filters
 from pyrogram.types import ChatPermissions, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from utils.filters import admin_filter
-from utils.perms import is_admin
-from database.warns import add_warn, clear_warns
-from utils.logger import log_to_channel
+from oxeign.utils.filters import admin_filter
+from oxeign.utils.perms import is_admin
+from oxeign.swagger.warns import add_warn, clear_warns
+from oxeign.utils.logger import log_to_channel
 
 
 async def mute(client: Client, message):

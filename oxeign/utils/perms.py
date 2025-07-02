@@ -1,7 +1,7 @@
 from pyrogram import Client
 from pyrogram.enums import ChatMemberStatus
-from config import OWNER_ID, SUDO_USERS
-from database.sudo import get_sudos
+from oxeign.config import OWNER_ID, SUDO_USERS
+from oxeign.swagger.sudo import get_sudos
 
 async def is_sudo(user_id: int) -> bool:
     sudos = SUDO_USERS + await get_sudos()

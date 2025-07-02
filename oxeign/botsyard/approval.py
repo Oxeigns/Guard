@@ -1,9 +1,9 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from utils.filters import admin_filter
-from database.approvals import add_approval, remove_approval
-from utils.logger import log_to_channel
+from oxeign.utils.filters import admin_filter
+from oxeign.swagger.approvals import add_approval, remove_approval
+from oxeign.utils.logger import log_to_channel
 
 
 async def approve(client: Client, message):

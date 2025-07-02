@@ -1,8 +1,8 @@
 from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler
-from utils.filters import admin_filter
-from database.biomode import set_biomode
-from utils.logger import log_to_channel
+from oxeign.utils.filters import admin_filter
+from oxeign.swagger.biomode import set_biomode
+from oxeign.utils.logger import log_to_channel
 
 
 async def toggle_biolink(client: Client, message):
