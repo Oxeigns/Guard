@@ -1,4 +1,5 @@
 from pyrogram import Client, filters
+from pyrogram.handlers import MessageHandler
 from utils.filters import admin_filter
 from database.biomode import set_biomode
 from utils.logger import log_to_channel
@@ -15,4 +16,4 @@ async def toggle_biolink(client: Client, message):
 
 
 def register(app: Client):
-    app.add_handler(filters.command("biolink") & admin_filter, toggle_biolink)
+    app.add_handler(MessageHandler(toggle_biolink, filters.command("biolink") & admin_filter))

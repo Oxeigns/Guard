@@ -6,7 +6,7 @@ Key features include:
 
 - MongoDB-backed persistent storage.
 - Group/channel administration with an owner-sudo system.
-- Advanced long message handling with Telegraph (`/echo`, `/setlongmode`, `/setlonglimit`).
+- Configurable long message deletion via `/setlongmode` and `/setlonglimit`.
 - Bio-based message control (`/biolink on|off`).
 - User approval system (`/approve`, `/disapprove`).
 - Admin tools for mute, ban, unban, kick, warn, and broadcast.

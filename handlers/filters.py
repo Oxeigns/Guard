@@ -1,9 +1,16 @@
 import re
 from pyrogram import Client, filters
+from pyrogram.handlers import MessageHandler, EditedMessageHandler
 from utils.perms import is_admin
 from utils.logger import log_to_channel
 from database.biomode import is_biomode
+from database.settings import get_settings
 from config import BOT_NAME
+try:
+    from detoxify import Detoxify
+    _tox = Detoxify("original")
+except Exception:
+    _tox = None
 
 BAD_WORDS = {"badword", "spam"}
 LINK_RE = re.compile(r"https?://|t\.me|telegram\.me")
@@ -19,6 +26,15 @@ async def check_message(client: Client, message):
         await message.delete()
         await log_to_channel(client, f"{BOT_NAME}: Deleted bad word from {message.from_user.mention}")
         return
+    if _tox:
+        try:
+            scores = _tox.predict(text)
+            if max(scores.values()) > 0.7:
+                await message.delete()
+                await log_to_channel(client, f"{BOT_NAME}: Deleted toxic message from {message.from_user.mention}")
+                return
+        except Exception:
+            pass
 
     if LINK_RE.search(lower):
         await message.delete()
@@ -28,6 +44,12 @@ async def check_message(client: Client, message):
     if message.chat.username and f"@{message.chat.username.lower()}" in lower:
         await message.delete()
         await log_to_channel(client, f"{BOT_NAME}: Removed username mention from {message.from_user.mention}")
+        return
+
+    settings = await get_settings(message.chat.id)
+    if settings.get("mode") != "off" and len(text) > settings.get("limit"):
+        await message.delete()
+        await log_to_channel(client, f"{BOT_NAME}: Deleted long message from {message.from_user.mention}")
         return
 
     if await is_biomode(message.chat.id):
@@ -53,5 +75,5 @@ async def check_edit(client: Client, message):
 
 
 def register(app: Client):
-    app.on_message(filters.group & ~filters.service)(check_message)
-    app.on_edited_message(filters.group)(check_edit)
+    app.add_handler(MessageHandler(check_message, filters.group & ~filters.service))
+    app.add_handler(EditedMessageHandler(check_edit, filters.group))

@@ -1,5 +1,6 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from utils.filters import admin_filter
 from database.approvals import add_approval, remove_approval
 from utils.logger import log_to_channel
@@ -35,6 +36,6 @@ async def disapprove_callback(client: Client, callback_query):
 
 
 def register(app: Client):
-    app.add_handler(filters.command("approve") & admin_filter, approve)
-    app.add_handler(filters.command("disapprove") & admin_filter, disapprove)
-    app.on_callback_query(filters.regex("^disapprove:"))(disapprove_callback)
+    app.add_handler(MessageHandler(approve, filters.command("approve") & admin_filter))
+    app.add_handler(MessageHandler(disapprove, filters.command("disapprove") & admin_filter))
+    app.add_handler(CallbackQueryHandler(disapprove_callback, filters.regex("^disapprove:")))

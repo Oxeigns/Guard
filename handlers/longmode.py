@@ -1,4 +1,5 @@
 from pyrogram import Client, filters
+from pyrogram.handlers import MessageHandler
 from utils.filters import admin_filter
 from database.settings import set_mode, set_limit
 
@@ -25,5 +26,5 @@ async def set_longlimit(client: Client, message):
 
 
 def register(app: Client):
-    app.add_handler(filters.command("setlongmode") & admin_filter, set_longmode)
-    app.add_handler(filters.command("setlonglimit") & admin_filter, set_longlimit)
+    app.add_handler(MessageHandler(set_longmode, filters.command("setlongmode") & admin_filter))
+    app.add_handler(MessageHandler(set_longlimit, filters.command("setlonglimit") & admin_filter))

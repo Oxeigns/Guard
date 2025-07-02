@@ -1,4 +1,5 @@
 from pyrogram import Client, filters
+from pyrogram.handlers import MessageHandler
 from utils.filters import admin_filter
 from utils.logger import log_to_channel
 
@@ -19,4 +20,4 @@ async def broadcast(client: Client, message):
 
 
 def register(app: Client):
-    app.add_handler(filters.command("broadcast") & admin_filter, broadcast)
+    app.add_handler(MessageHandler(broadcast, filters.command("broadcast") & admin_filter))

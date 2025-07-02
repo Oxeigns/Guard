@@ -1,4 +1,5 @@
 from pyrogram import Client, filters
+from pyrogram.handlers import MessageHandler
 from utils.filters import admin_filter
 from database.sudo import add_sudo, remove_sudo
 from utils.logger import log_to_channel
@@ -30,5 +31,5 @@ async def remove_sudo_cmd(client: Client, message):
 
 
 def register(app: Client):
-    app.add_handler(filters.command("addsudo") & admin_filter, add_sudo_cmd)
-    app.add_handler(filters.command("removesudo") & admin_filter, remove_sudo_cmd)
+    app.add_handler(MessageHandler(add_sudo_cmd, filters.command("addsudo") & admin_filter))
+    app.add_handler(MessageHandler(remove_sudo_cmd, filters.command("removesudo") & admin_filter))
