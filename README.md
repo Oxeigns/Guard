@@ -1,6 +1,6 @@
 # Master Guardian Bot
 
-Master Guardian Bot is a powerful, modular, and production-ready Telegram security bot built using Python and Pyrogram. It is designed to manage and moderate groups and channels with precision.
+Master Guardian Bot is a powerful, modular, and production-ready Telegram security bot built using Python and Pyrogram. It manages and moderates groups and channels with precision and stores data in MongoDB.
 
 Key features include:
 
@@ -13,6 +13,8 @@ Key features include:
 - Async-safe broadcasting, permission checks, and auto-cleanup for muted or blacklisted users.
 
 The bot is fully configurable using a `.env` file. A sample environment file is provided at `sample.env`.
+
+The code is split into logical modules under `handlers/`, `database/`, `utils/`, and `config/` for easier maintenance.
 
 ## Deployment
 
