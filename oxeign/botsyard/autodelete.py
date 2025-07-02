@@ -32,5 +32,5 @@ async def auto_delete_handler(client: Client, message: Message):
 
 def register(app: Client):
     app.add_handler(MessageHandler(set_autodelete_cmd, filters.command("setautodelete") & admin_filter))
-    app.add_handler(MessageHandler(auto_delete_handler, filters.chat_type.groups & ~filters.service))
+    app.add_handler(MessageHandler(auto_delete_handler, filters.group & ~filters.service))
 

@@ -29,4 +29,4 @@ async def new_member(client: Client, message: Message):
 
 def register(app: Client):
     app.add_handler(MessageHandler(set_welcome_cmd, filters.command("setwelcome") & admin_filter))
-    app.add_handler(MessageHandler(new_member, filters.chat_type.groups & filters.new_chat_members))
+    app.add_handler(MessageHandler(new_member, filters.group & filters.new_chat_members))
