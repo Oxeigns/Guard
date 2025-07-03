@@ -25,8 +25,7 @@ A lightweight Telegram bot built with **Pyrogram 2.x** for basic group moderatio
 ## Usage
 
 - Use `/panel` in a group to configure the bot.
-- To approve or unapprove someone, press the corresponding button and then reply
-  to that person's message in the chat.
+- Admins can `/approve` or `/unapprove` a user by replying to one of their messages.
 
 ## Credits
 
