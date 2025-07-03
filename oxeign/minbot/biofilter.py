@@ -2,7 +2,8 @@ import logging
 import re
 from typing import Dict
 
-from telegram import Update, ChatPermissions, ChatMemberStatus
+from telegram import Update, ChatPermissions
+from telegram.constants import ChatMemberStatus
 from telegram.ext import (
     Application,
     CallbackContext,
