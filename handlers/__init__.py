@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 MODULES = [
     p.stem
     for p in Path(__file__).parent.glob("*.py")
-    if p.stem not in {"__init__"}
+    if p.stem not in {"__init__", "logs"}
 ]
 
 __all__ = MODULES
