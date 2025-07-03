@@ -79,13 +79,8 @@ async def send_panel(client: Client, message: Message) -> None:
 
     if is_private:
         caption, markup = await build_private_panel()
-    elif await is_admin(client, message):
-        caption, markup = await build_group_panel(message.chat.id)
     else:
-        await message.reply_text(
-            "\u274c You must be an admin to use this command in groups."
-        )
-        return
+        caption, markup = await build_group_panel(message.chat.id)
 
     try:
         if BANNER_URL:
@@ -119,6 +114,7 @@ def register(app: Client) -> None:
     @catch_errors
     async def help_cb(client: Client, query: CallbackQuery):
         logger.info("help callback from %s", query.from_user.id)
+        await query.answer()
         help_text = (
             "*🧪‍💻 Commands Overview*\n\n"
             "\u2022 `/approve` \u2013 Approve a user\n"
@@ -132,7 +128,11 @@ def register(app: Client) -> None:
         markup = InlineKeyboardMarkup(
             [[InlineKeyboardButton("◀️ Back", callback_data="back_to_panel")]]
         )
-        await query.message.edit_text(help_text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
+        try:
+            await query.message.edit_text(help_text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
+        except Exception:
+            # Ignore if the message content is unchanged or cannot be edited
+            logger.debug("Help text not modified")
 
     @app.on_callback_query(filters.regex(r"^back_to_panel$"))
     @catch_errors
@@ -143,6 +143,9 @@ def register(app: Client) -> None:
     @app.on_callback_query(filters.regex(r"^cb_biolink_toggle$"))
     @catch_errors
     async def biolink_toggle_cb(client: Client, query: CallbackQuery):
+        if not await is_admin(client, query.message, query.from_user.id):
+            await query.answer("Admins only!", show_alert=True)
+            return
         state = await toggle_bio_filter(query.message.chat.id)
         await query.answer(f"Bio Filter is now {'ON ✅' if state else 'OFF ❌'}")
         await edit_panel(query)
