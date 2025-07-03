@@ -16,7 +16,7 @@ from utils.errors import catch_errors
 
 logger = logging.getLogger(__name__)
 
-# Updated button grid (as per user request: removed Anti-Spam, Alphabets, Porn, Night)
+# Button grid without anti-spam, alphabets, porn or night modes
 SETTINGS_PANEL = InlineKeyboardMarkup([
     [
         InlineKeyboardButton("📜 Regulation", callback_data="regulation"),
@@ -59,28 +59,41 @@ def register(app: Client) -> None:
     @catch_errors
     async def open_panel(client: Client, message: Message):
         logger.info("/panel from %s", message.chat.id)
-        if message.chat.type == ChatType.PRIVATE or await is_admin(client, message):
-            await message.reply_photo(
-                photo=BANNER_URL,
-                caption=(
-                    "🔧 <b>SETTINGS PANEL</b>\n"
-                    "Select one of the settings that you want to change.\n\n"
-                    "Group: <code>BOTS ✺ YARD DISCUSSION</code>"
-                ),
-                reply_markup=SETTINGS_PANEL,
+        is_priv = message.chat.type == ChatType.PRIVATE
+        if is_priv or await is_admin(client, message):
+            caption = (
+                "🔧 <b>SETTINGS PANEL</b>\n"
+                "Select one of the settings that you want to change.\n\n"
+                "Group: <code>BOTS ✺ YARD DISCUSSION</code>"
             )
+            if BANNER_URL:
+                await message.reply_photo(
+                    photo=BANNER_URL,
+                    caption=caption,
+                    reply_markup=SETTINGS_PANEL,
+                )
+            else:
+                await message.reply_text(
+                    caption,
+                    reply_markup=SETTINGS_PANEL,
+                )
         else:
-            await message.reply_text("❌ You must be an admin to open the panel.")
+            await message.reply_text("❌ Admins only.")
 
     @app.on_callback_query()
     @catch_errors
     async def handle_clicks(client: Client, query: CallbackQuery):
-        logger.info("panel callback %s from %s", query.data, query.from_user.id)
+        logger.info(
+            "panel callback %s from %s",
+            query.data,
+            query.from_user.id,
+        )
         if query.data == "close":
             await query.message.delete()
             return
 
         await query.answer()
         await query.message.edit_text(
-            f"🛠 <i>You selected:</i> <code>{query.data}</code>\nThat setting's options will be shown soon."
+            f"🛠 <i>You selected:</i> <code>{query.data}</code>\n"
+            "That setting's options will be shown soon."
         )
