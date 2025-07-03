@@ -12,11 +12,15 @@ async def log(client: Client, text: str) -> None:
     """Send a log message if a log channel is configured."""
     if not config.log_channel_id:
         return
-    await client.send_message(
-        config.log_channel_id,
-        text,
-        parse_mode=ParseMode.MARKDOWN,
-    )
+    try:
+        await client.send_message(
+            config.log_channel_id,
+            text,
+            parse_mode=ParseMode.MARKDOWN,
+        )
+    except Exception:
+        # Ignore logging errors such as invalid channel ID
+        pass
 
 
 async def start_log(client: Client, message: Message) -> None:
