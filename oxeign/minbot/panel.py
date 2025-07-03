@@ -15,17 +15,19 @@ from oxeign.config import SUPPORT_LINK, DEV_LINK, PANEL_HEADER_URL
 pending_actions: Dict[Tuple[int, int], str] = {}
 
 
-async def build_main_panel(client: Client, private: bool = False) -> InlineKeyboardMarkup:
+async def build_main_panel(
+    client: Client, private: bool = False
+) -> InlineKeyboardMarkup:
     if private:
         rows = [
             [
                 InlineKeyboardButton(
-                    "➕ Add Me to Group",
+                    "➕ Add To Group",
                     url=f"https://t.me/{client.me.username}?startgroup=true",
                 )
             ],
             [
-                InlineKeyboardButton("📣 Support Channel", url=SUPPORT_LINK),
+                InlineKeyboardButton("📣 Support", url=SUPPORT_LINK),
                 InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
             ],
         ]
@@ -33,25 +35,14 @@ async def build_main_panel(client: Client, private: bool = False) -> InlineKeybo
 
     rows = [
         [
-            InlineKeyboardButton("📣 Channel", url=SUPPORT_LINK),
-            InlineKeyboardButton("👨‍💻 Dev", url=DEV_LINK),
-        ],
-        [
-            InlineKeyboardButton("📘 Menu", callback_data="menu:features"),
-        ],
-    ]
-    return InlineKeyboardMarkup(rows)
-
-
-def feature_panel() -> InlineKeyboardMarkup:
-    rows = [
-        [
             InlineKeyboardButton("🛡 Bio", callback_data="menu:bio"),
             InlineKeyboardButton("✅ Approvals", callback_data="menu:approve"),
+            InlineKeyboardButton("⏱ AutoDel", callback_data="menu:autodel"),
         ],
         [
-            InlineKeyboardButton("⏱ AutoDel", callback_data="menu:autodel"),
-            InlineKeyboardButton("🔙 Back", callback_data="menu:main"),
+            InlineKeyboardButton("📣 Support", url=SUPPORT_LINK),
+            InlineKeyboardButton("👨‍💻 Dev", url=DEV_LINK),
+            InlineKeyboardButton("✖ Close", callback_data="close"),
         ],
     ]
     return InlineKeyboardMarkup(rows)
@@ -64,7 +55,7 @@ async def bio_panel(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
     callback = "bio:off" if enabled else "bio:on"
     rows = [
         [InlineKeyboardButton(toggle_text, callback_data=callback)],
-        [InlineKeyboardButton("🔙 Back", callback_data="menu:features")],
+        [InlineKeyboardButton("🔙 Back", callback_data="menu:main")],
     ]
     return f"🛡 Bio Link Filter: {status}", InlineKeyboardMarkup(rows)
 
@@ -76,7 +67,7 @@ def approve_panel() -> InlineKeyboardMarkup:
             InlineKeyboardButton("❌ Unapprove", callback_data="unapprove_user"),
         ],
         [InlineKeyboardButton("📋 List", callback_data="view_approved")],
-        [InlineKeyboardButton("🔙 Back", callback_data="menu:features")],
+        [InlineKeyboardButton("🔙 Back", callback_data="menu:main")],
     ]
     return InlineKeyboardMarkup(rows)
 
@@ -100,7 +91,7 @@ def autodelete_panel() -> InlineKeyboardMarkup:
             InlineKeyboardButton("24h", callback_data="set_autodel:86400"),
         ],
         [InlineKeyboardButton("Off", callback_data="set_autodel:0")],
-        [InlineKeyboardButton("🔙 Back", callback_data="menu:features")],
+        [InlineKeyboardButton("🔙 Back", callback_data="menu:main")],
     ]
     return InlineKeyboardMarkup(rows)
 
@@ -132,11 +123,10 @@ async def menu_router(client: Client, callback_query):
     data = callback_query.data.split(":", 1)[1]
     chat_id = callback_query.message.chat.id
     if data == "main":
-        markup = await build_main_panel(client, private=callback_query.message.chat.type == "private")
+        markup = await build_main_panel(
+            client, private=callback_query.message.chat.type == "private"
+        )
         text = "**Control Panel**"
-    elif data == "features":
-        markup = feature_panel()
-        text = "**Select Option**"
     elif data == "bio":
         text, markup = await bio_panel(chat_id)
     elif data == "approve":
@@ -147,48 +137,72 @@ async def menu_router(client: Client, callback_query):
         text = "**Auto Delete**"
     else:
         return
-    await callback_query.message.edit(text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
+    await callback_query.message.edit(
+        text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN
+    )
     await callback_query.answer()
 
 
 async def toggle_bio(client: Client, callback_query):
-    if not await is_admin(client, callback_query.message.chat.id, callback_query.from_user.id):
+    if not await is_admin(
+        client, callback_query.message.chat.id, callback_query.from_user.id
+    ):
         return await callback_query.answer("Admins only", show_alert=True)
     enable = callback_query.data.endswith("on")
     await set_biomode(callback_query.message.chat.id, enable)
     await callback_query.answer("Updated", show_alert=False)
     text, markup = await bio_panel(callback_query.message.chat.id)
-    await callback_query.message.edit(text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
+    await callback_query.message.edit(
+        text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN
+    )
 
 
 async def set_autodel_cb(client: Client, callback_query):
-    if not await is_admin(client, callback_query.message.chat.id, callback_query.from_user.id):
+    if not await is_admin(
+        client, callback_query.message.chat.id, callback_query.from_user.id
+    ):
         return await callback_query.answer("Admins only", show_alert=True)
     seconds = int(callback_query.data.split(":")[1])
     await set_autodelete(callback_query.message.chat.id, seconds)
     await callback_query.answer("Updated", show_alert=False)
     markup = autodelete_panel()
-    await callback_query.message.edit("**Auto Delete**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
+    await callback_query.message.edit(
+        "**Auto Delete**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN
+    )
 
 
 async def approve_user_cb(client: Client, callback_query):
-    if not await is_admin(client, callback_query.message.chat.id, callback_query.from_user.id):
+    if not await is_admin(
+        client, callback_query.message.chat.id, callback_query.from_user.id
+    ):
         return await callback_query.answer("Admins only", show_alert=True)
-    pending_actions[(callback_query.message.chat.id, callback_query.from_user.id)] = "approve"
+    pending_actions[(callback_query.message.chat.id, callback_query.from_user.id)] = (
+        "approve"
+    )
     await callback_query.answer()
-    await callback_query.message.reply("Reply to the user's message in this chat to approve them.")
+    await callback_query.message.reply(
+        "Reply to the user's message in this chat to approve them."
+    )
 
 
 async def unapprove_user_cb(client: Client, callback_query):
-    if not await is_admin(client, callback_query.message.chat.id, callback_query.from_user.id):
+    if not await is_admin(
+        client, callback_query.message.chat.id, callback_query.from_user.id
+    ):
         return await callback_query.answer("Admins only", show_alert=True)
-    pending_actions[(callback_query.message.chat.id, callback_query.from_user.id)] = "unapprove"
+    pending_actions[(callback_query.message.chat.id, callback_query.from_user.id)] = (
+        "unapprove"
+    )
     await callback_query.answer()
-    await callback_query.message.reply("Reply to the user's message in this chat to unapprove them.")
+    await callback_query.message.reply(
+        "Reply to the user's message in this chat to unapprove them."
+    )
 
 
 async def view_approved_cb(client: Client, callback_query):
-    if not await is_admin(client, callback_query.message.chat.id, callback_query.from_user.id):
+    if not await is_admin(
+        client, callback_query.message.chat.id, callback_query.from_user.id
+    ):
         return await callback_query.answer("Admins only", show_alert=True)
     doc = await approvals_col.find_one({"chat_id": callback_query.message.chat.id})
     users = doc.get("user_ids", []) if doc else []
@@ -197,8 +211,12 @@ async def view_approved_cb(client: Client, callback_query):
         text = "**Approved Users:**\n" + "\n".join(lines)
     else:
         text = "No approved users."
-    markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="menu:approve")]])
-    await callback_query.message.edit(text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
+    markup = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("🔙 Back", callback_data="menu:approve")]]
+    )
+    await callback_query.message.edit(
+        text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN
+    )
 
 
 async def handle_pending(client: Client, message: Message):
@@ -209,10 +227,15 @@ async def handle_pending(client: Client, message: Message):
     target_id = message.reply_to_message.from_user.id
     if action == "approve":
         await add_approval(message.chat.id, target_id)
-        await message.reply(f"Approved [user](tg://user?id={target_id})", parse_mode=ParseMode.MARKDOWN)
+        await message.reply(
+            f"Approved [user](tg://user?id={target_id})", parse_mode=ParseMode.MARKDOWN
+        )
     else:
         await remove_approval(message.chat.id, target_id)
-        await message.reply(f"Unapproved [user](tg://user?id={target_id})", parse_mode=ParseMode.MARKDOWN)
+        await message.reply(
+            f"Unapproved [user](tg://user?id={target_id})",
+            parse_mode=ParseMode.MARKDOWN,
+        )
 
 
 async def close_cb(client: Client, callback_query):
@@ -220,12 +243,24 @@ async def close_cb(client: Client, callback_query):
 
 
 def register(app: Client):
-    app.add_handler(MessageHandler(panel_cmd, filters.command(["panel", "start", "help", "menu"]) & filters.group))
+    app.add_handler(
+        MessageHandler(
+            panel_cmd, filters.command(["panel", "help", "menu"]) & filters.group
+        )
+    )
     app.add_handler(MessageHandler(handle_pending, filters.group), group=2)
     app.add_handler(CallbackQueryHandler(menu_router, filters.regex(r"^menu:")))
     app.add_handler(CallbackQueryHandler(toggle_bio, filters.regex(r"^bio:")))
-    app.add_handler(CallbackQueryHandler(set_autodel_cb, filters.regex(r"^set_autodel:")))
-    app.add_handler(CallbackQueryHandler(approve_user_cb, filters.regex(r"^approve_user$")))
-    app.add_handler(CallbackQueryHandler(unapprove_user_cb, filters.regex(r"^unapprove_user$")))
-    app.add_handler(CallbackQueryHandler(view_approved_cb, filters.regex(r"^view_approved$")))
+    app.add_handler(
+        CallbackQueryHandler(set_autodel_cb, filters.regex(r"^set_autodel:"))
+    )
+    app.add_handler(
+        CallbackQueryHandler(approve_user_cb, filters.regex(r"^approve_user$"))
+    )
+    app.add_handler(
+        CallbackQueryHandler(unapprove_user_cb, filters.regex(r"^unapprove_user$"))
+    )
+    app.add_handler(
+        CallbackQueryHandler(view_approved_cb, filters.regex(r"^view_approved$"))
+    )
     app.add_handler(CallbackQueryHandler(close_cb, filters.regex(r"^close$")))

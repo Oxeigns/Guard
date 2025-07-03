@@ -7,7 +7,8 @@ from oxeign.swagger.biomode import is_biomode
 from oxeign.swagger.approvals import is_approved, add_approval
 from oxeign.utils.perms import is_admin
 
-LINK_RE = re.compile(r"t\.me|telegram\.me|@")
+# detect telegram usernames/links and general web links
+LINK_RE = re.compile(r"(?:https?://|www\.|t\.me|telegram\.me|@)", re.I)
 
 
 async def check_bio(client: Client, message: Message):
@@ -31,9 +32,7 @@ async def check_bio(client: Client, message: Message):
             await message.delete()
         except Exception:
             pass
-        warn_text = (
-            f"{message.from_user.mention}, remove Telegram links from your bio."
-        )
+        warn_text = f"{message.from_user.mention}, remove Telegram links from your bio."
         buttons = InlineKeyboardMarkup(
             [
                 [
@@ -55,7 +54,9 @@ async def check_bio(client: Client, message: Message):
 
 async def approve_callback(client: Client, callback_query):
     user_id = int(callback_query.data.split(":")[1])
-    if not await is_admin(client, callback_query.message.chat.id, callback_query.from_user.id):
+    if not await is_admin(
+        client, callback_query.message.chat.id, callback_query.from_user.id
+    ):
         return await callback_query.answer("Admins only", show_alert=True)
     await add_approval(callback_query.message.chat.id, user_id)
     await callback_query.answer("User approved", show_alert=True)

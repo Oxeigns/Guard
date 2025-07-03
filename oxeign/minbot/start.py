@@ -8,8 +8,9 @@ from .panel import send_panel
 
 
 async def start_cmd(client: Client, message):
-    if message.chat.type == "private":
-        await send_panel(client, message)
+    private = message.chat.type == "private"
+    await send_panel(client, message, private=private)
+    if private:
         await log_to_channel(
             client,
             f"#START\nUser: {message.from_user.mention} ({message.from_user.id})",
@@ -18,4 +19,3 @@ async def start_cmd(client: Client, message):
 
 def register(app: Client):
     app.add_handler(MessageHandler(start_cmd, filters.command("start")))
-
