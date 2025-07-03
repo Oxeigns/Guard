@@ -9,7 +9,7 @@ from .panel import send_panel
 
 async def start_cmd(client: Client, message):
     private = message.chat.type == "private"
-    await send_panel(client, message, private=private)
+    await send_panel(client, message, private=private, start=True)
     if private:
         await log_to_channel(
             client,
