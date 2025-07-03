@@ -9,6 +9,7 @@ from config import API_HASH, API_ID, BOT_TOKEN, MONGO_URI
 from handlers import init_all
 from utils.storage import close_db, init_db
 from utils.errors import catch_errors
+from utils.webhook import set_webhook
 
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://guard-4nfv.onrender.com")
 
@@ -80,7 +81,7 @@ async def main() -> None:
     logger.info("Initializing database connection")
     await init_db(MONGO_URI)
     init_all(bot)
-    await bot.set_webhook(WEBHOOK_URL)
+    await set_webhook(BOT_TOKEN, WEBHOOK_URL)
     logger.info("Webhook set to %s", WEBHOOK_URL)
     logger.info("Bot started and waiting for events")
     await idle()
