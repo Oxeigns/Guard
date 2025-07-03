@@ -2,12 +2,14 @@
 
 import logging
 from pyrogram import Client, filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import Message, CallbackQuery, ChatPermissions
 
 from utils.perms import is_admin
 
 
 from utils.errors import catch_errors
+from utils.storage import toggle_bio_filter, set_bio_filter, get_bio_filter
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ def register(app: Client) -> None:
             return
 
         help_text = (
-            "<b>Commands:</b>\n"
+            "*Commands:*\n"
             "/approve - approve user\n"
             "/unapprove - unapprove user\n"
             "/viewapproved - list approved\n"
@@ -31,9 +33,10 @@ def register(app: Client) -> None:
             "/mute - mute replied user\n"
             "/kick - kick replied user\n"
             "/ban - ban replied user\n"
+            "/biolink [on|off] - toggle bio filter\n"
             "/start - open control panel"
         )
-        await message.reply_text(help_text)
+        await message.reply_text(help_text, parse_mode=ParseMode.MARKDOWN)
 
     @app.on_message(filters.command("auth"))
     @catch_errors
@@ -54,7 +57,7 @@ def register(app: Client) -> None:
     async def help_cb(client: Client, query: CallbackQuery):
         logger.info("help callback from %s", query.from_user.id)
         help_text = (
-            "<b>Commands:</b>\n"
+            "*Commands:*\n"
             "/approve - approve user\n"
             "/unapprove - unapprove user\n"
             "/viewapproved - list approved\n"
@@ -62,9 +65,10 @@ def register(app: Client) -> None:
             "/mute - mute replied user\n"
             "/kick - kick replied user\n"
             "/ban - ban replied user\n"
+            "/biolink [on|off] - toggle bio filter\n"
             "/start - open control panel"
         )
-        await query.message.edit_text(help_text)
+        await query.message.edit_text(help_text, parse_mode=ParseMode.MARKDOWN)
 
     @app.on_message(filters.command("mute") & filters.group)
     @catch_errors
@@ -120,4 +124,27 @@ def register(app: Client) -> None:
         except Exception as exc:
             logger.warning("ban failed: %s", exc)
             await message.reply_text("❌ Failed to ban. Do I have permission?")
+
+    @app.on_message(filters.command("biolink") & filters.group)
+    @catch_errors
+    async def biolink_cmd(client: Client, message: Message):
+        logger.info("/biolink in %s", message.chat.id)
+        if not await is_admin(client, message):
+            await message.reply_text("❌ You must be an admin to toggle bio link filter.")
+            return
+        if len(message.command) == 1:
+            enabled = await toggle_bio_filter(message.chat.id)
+        else:
+            arg = message.command[1].lower()
+            if arg in {"on", "enable", "true"}:
+                await set_bio_filter(message.chat.id, True)
+                enabled = True
+            elif arg in {"off", "disable", "false"}:
+                await set_bio_filter(message.chat.id, False)
+                enabled = False
+            else:
+                await message.reply_text("Usage: /biolink [on|off]")
+                return
+        state = "ON" if enabled else "OFF"
+        await message.reply_text(f"Bio link filter {state}")
 

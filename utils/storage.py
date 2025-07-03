@@ -75,3 +75,9 @@ async def toggle_bio_filter(chat_id: int) -> bool:
         {"chat_id": chat_id}, {"$set": {"bio_filter": not current}}, upsert=True
     )
     return not current
+
+async def set_bio_filter(chat_id: int, enabled: bool) -> None:
+    """Explicitly enable or disable the bio filter."""
+    await main.settings.update_one(
+        {"chat_id": chat_id}, {"$set": {"bio_filter": enabled}}, upsert=True
+    )
