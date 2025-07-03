@@ -4,7 +4,7 @@ import logging
 from pyrogram import Client
 
 from config import BOT_TOKEN, API_ID, API_HASH, MONGO_URI
-from handlers import biofilter, autodelete, approval, panel, logs
+from handlers import biofilter, autodelete, approval, panel, logs, commands
 from utils.storage import init_db, close_db
 
 logging.basicConfig(
@@ -27,6 +27,7 @@ def register_handlers():
     approval.register(app)
     panel.register(app)
     logs.register(app)
+    commands.register(app)
 
 
 async def main():

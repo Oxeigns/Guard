@@ -60,3 +60,39 @@ def register(app: Client):
             )
             await reset_warning(message.chat.id, user.id)
         await message.reply_text(warning, quote=True)
+
+    @app.on_message(filters.new_chat_members)
+    async def new_member_check(client: Client, message: Message):
+        if not await get_bio_filter(message.chat.id):
+            return
+        for user in message.new_chat_members:
+            if user.is_bot:
+                continue
+            if await is_admin(client, message, user.id):
+                continue
+            if await is_approved(message.chat.id, user.id):
+                continue
+            user_full = await client.get_users(user.id)
+            if not user_full.bio or not contains_link(user_full.bio):
+                continue
+            try:
+                await message.delete()
+            except Exception:
+                await message.reply_text(
+                    "❌ I can't delete messages. Please give me Delete rights.",
+                    quote=True,
+                )
+            count = await increment_warning(message.chat.id, user.id)
+            if count >= 3:
+                await client.restrict_chat_member(message.chat.id, user.id, ChatPermissions())
+                await log_event(
+                    client,
+                    f"🧹 User muted permanently in `{message.chat.id}`",
+                    user,
+                )
+                await reset_warning(message.chat.id, user.id)
+                warning = "⛔ Final Warning"
+            else:
+                warning = f"⚠️ Warning {count}"
+            await message.reply_text(warning, quote=True)
+

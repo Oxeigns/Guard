@@ -1,0 +1,59 @@
+"""Basic bot commands."""
+
+from pyrogram import Client, filters
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+
+from config import UPDATE_CHANNEL_ID, SUPPORT_CHAT_URL, DEVELOPER_URL
+from utils.perms import is_member_of
+
+
+def register(app: Client):
+    @app.on_message(filters.command(["start", "help", "menu"]))
+    async def start_cmd(client: Client, message: Message):
+        if message.chat.type != "private":
+            await message.reply_text("ℹ️ Please DM me for details.")
+            return
+
+        if UPDATE_CHANNEL_ID:
+            if not await is_member_of(client, UPDATE_CHANNEL_ID, message.from_user.id):
+                button = InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("Join Updates", url=f"https://t.me/{UPDATE_CHANNEL_ID}")]]
+                )
+                await message.reply_text("Please join the update channel to use me.", reply_markup=button)
+                return
+
+        user = message.from_user
+        profile = [
+            "**👤 Profile**",
+            f"**Name:** {user.mention}",
+            f"**ID:** `{user.id}`",
+        ]
+        if user.username:
+            profile.append(f"**Username:** @{user.username}")
+        text = "\n".join(profile)
+
+        me = await client.get_me()
+        buttons = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("➕ Add to Group", url=f"https://t.me/{me.username}?startgroup=true")],
+                [InlineKeyboardButton("ℹ️ Help", callback_data="help_tab")],
+                [
+                    InlineKeyboardButton("👤 Developer", url=DEVELOPER_URL),
+                    InlineKeyboardButton("📣 Support", url=SUPPORT_CHAT_URL),
+                ],
+            ]
+        )
+        await message.reply_text(text, reply_markup=buttons, parse_mode="Markdown")
+
+    @app.on_callback_query(filters.regex("^help_tab$"))
+    async def help_cb(client: Client, query: CallbackQuery):
+        help_text = (
+            "**Commands:**\n"
+            "/approve - approve user\n"
+            "/unapprove - unapprove user\n"
+            "/viewapproved - list approved\n"
+            "/setautodelete <sec> - auto delete messages\n"
+            "/panel - open control panel"
+        )
+        await query.message.edit_text(help_text, parse_mode="Markdown")
+
