@@ -1,6 +1,8 @@
 """MongoDB storage utilities."""
 
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.errors import ConfigurationError
+from config import MONGO_DB_NAME
 
 client: AsyncIOMotorClient | None = None
 main = None
@@ -9,7 +11,12 @@ async def init_db(mongo_uri: str):
     """Initialise database connection."""
     global client, main
     client = AsyncIOMotorClient(mongo_uri)
-    main = client.get_default_database()
+    try:
+        main = client.get_default_database()
+    except ConfigurationError:
+        if not MONGO_DB_NAME:
+            raise
+        main = client[MONGO_DB_NAME]
 
 async def close_db():
     if client:
