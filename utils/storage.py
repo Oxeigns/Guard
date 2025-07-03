@@ -14,8 +14,6 @@ async def init_db(mongo_uri: str):
     try:
         main = client.get_default_database()
     except ConfigurationError:
-        if not MONGO_DB_NAME:
-            raise
         main = client[MONGO_DB_NAME]
 
 async def close_db():
