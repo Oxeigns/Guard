@@ -33,12 +33,11 @@ async def build_main_panel(client: Client, private: bool = False) -> InlineKeybo
 
     rows = [
         [
-            InlineKeyboardButton("📣 Support Channel", url=SUPPORT_LINK),
-            InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
+            InlineKeyboardButton("📣 Channel", url=SUPPORT_LINK),
+            InlineKeyboardButton("👨‍💻 Dev", url=DEV_LINK),
         ],
         [
-            InlineKeyboardButton("📘 Help", callback_data="menu:features"),
-            InlineKeyboardButton("⚙️ Commands", callback_data="menu:features"),
+            InlineKeyboardButton("📘 Menu", callback_data="menu:features"),
         ],
     ]
     return InlineKeyboardMarkup(rows)
@@ -47,27 +46,27 @@ async def build_main_panel(client: Client, private: bool = False) -> InlineKeybo
 def feature_panel() -> InlineKeyboardMarkup:
     rows = [
         [
-            InlineKeyboardButton("🛡 Bio Link", callback_data="menu:bio"),
-            InlineKeyboardButton("✅ Approve System", callback_data="menu:approve"),
+            InlineKeyboardButton("🛡 Bio", callback_data="menu:bio"),
+            InlineKeyboardButton("✅ Approvals", callback_data="menu:approve"),
         ],
         [
-            InlineKeyboardButton("⏱ Auto Delete", callback_data="menu:autodel"),
+            InlineKeyboardButton("⏱ AutoDel", callback_data="menu:autodel"),
             InlineKeyboardButton("🔙 Back", callback_data="menu:main"),
         ],
     ]
     return InlineKeyboardMarkup(rows)
 
 
-async def bio_panel(chat_id: int) -> InlineKeyboardMarkup:
+async def bio_panel(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
     enabled = await is_biomode(chat_id)
+    status = "ON" if enabled else "OFF"
+    toggle_text = "Turn OFF" if enabled else "Turn ON"
+    callback = "bio:off" if enabled else "bio:on"
     rows = [
-        [
-            InlineKeyboardButton("🔐 Enable", callback_data="bio:on"),
-            InlineKeyboardButton("🚫 Disable", callback_data="bio:off"),
-        ],
+        [InlineKeyboardButton(toggle_text, callback_data=callback)],
         [InlineKeyboardButton("🔙 Back", callback_data="menu:features")],
     ]
-    return InlineKeyboardMarkup(rows)
+    return f"🛡 Bio Link Filter: {status}", InlineKeyboardMarkup(rows)
 
 
 def approve_panel() -> InlineKeyboardMarkup:
@@ -139,8 +138,7 @@ async def menu_router(client: Client, callback_query):
         markup = feature_panel()
         text = "**Select Option**"
     elif data == "bio":
-        markup = await bio_panel(chat_id)
-        text = "**Bio Link Protection**"
+        text, markup = await bio_panel(chat_id)
     elif data == "approve":
         markup = approve_panel()
         text = "**Approve System**"
@@ -159,8 +157,8 @@ async def toggle_bio(client: Client, callback_query):
     enable = callback_query.data.endswith("on")
     await set_biomode(callback_query.message.chat.id, enable)
     await callback_query.answer("Updated", show_alert=False)
-    markup = await bio_panel(callback_query.message.chat.id)
-    await callback_query.message.edit("**Bio Link Protection**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
+    text, markup = await bio_panel(callback_query.message.chat.id)
+    await callback_query.message.edit(text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
 
 
 async def set_autodel_cb(client: Client, callback_query):
@@ -222,7 +220,7 @@ async def close_cb(client: Client, callback_query):
 
 
 def register(app: Client):
-    app.add_handler(MessageHandler(panel_cmd, filters.command(["panel", "like", "start"])) )
+    app.add_handler(MessageHandler(panel_cmd, filters.command(["panel", "start", "help", "menu"]) & filters.group))
     app.add_handler(MessageHandler(handle_pending, filters.group), group=2)
     app.add_handler(CallbackQueryHandler(menu_router, filters.regex(r"^menu:")))
     app.add_handler(CallbackQueryHandler(toggle_bio, filters.regex(r"^bio:")))
