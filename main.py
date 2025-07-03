@@ -27,15 +27,12 @@ def register_handlers():
 async def main():
     await init_db(MONGO_URI)
     register_handlers()
-    await app.start()
-    logger.info("Bot started")
-    await asyncio.Event().wait()
+    async with app:
+        logger.info("Bot started")
+        await asyncio.Event().wait()
+    await close_db()
+    logger.info("Bot stopped")
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    finally:
-        asyncio.run(close_db())
-        app.stop()
-        logger.info("Bot stopped")
+    asyncio.run(main())
