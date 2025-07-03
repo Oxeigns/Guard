@@ -15,35 +15,45 @@ from oxeign.config import SUPPORT_LINK, DEV_LINK, PANEL_HEADER_URL
 pending_actions: Dict[Tuple[int, int], str] = {}
 
 
-async def build_main_panel(
-    client: Client, private: bool = False
-) -> InlineKeyboardMarkup:
-    if private:
-        rows = [
-            [
-                InlineKeyboardButton(
-                    "➕ Add To Group",
-                    url=f"https://t.me/{client.me.username}?startgroup=true",
-                )
-            ],
-            [
-                InlineKeyboardButton("📣 Support", url=SUPPORT_LINK),
-                InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
-            ],
-        ]
-        return InlineKeyboardMarkup(rows)
+async def build_start_panel(client: Client) -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton("📖 Help & Commands", callback_data="menu:main")],
+        [
+            InlineKeyboardButton("📣 Support Channel", url=SUPPORT_LINK),
+            InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
+        ],
+    ]
+    return InlineKeyboardMarkup(rows)
 
+
+async def build_private_panel(client: Client) -> InlineKeyboardMarkup:
     rows = [
         [
-            InlineKeyboardButton("🛡 Bio", callback_data="menu:bio"),
-            InlineKeyboardButton("✅ Approvals", callback_data="menu:approve"),
-            InlineKeyboardButton("⏱ AutoDel", callback_data="menu:autodel"),
+            InlineKeyboardButton(
+                "➕ Add to Group",
+                url=f"https://t.me/{client.me.username}?startgroup=true",
+            )
         ],
+        [InlineKeyboardButton("📖 Help & Commands", callback_data="menu:main")],
+        [InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK)],
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+async def build_main_panel(client: Client, private: bool = False) -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton("🛡️ Bio Link Settings", callback_data="menu:bio")],
+        [InlineKeyboardButton("🕒 AutoDelete Settings", callback_data="menu:autodel")],
         [
-            InlineKeyboardButton("📣 Support", url=SUPPORT_LINK),
-            InlineKeyboardButton("👨‍💻 Dev", url=DEV_LINK),
-            InlineKeyboardButton("✖ Close", callback_data="close"),
+            InlineKeyboardButton("✅ Approve User", callback_data="approve_user"),
+            InlineKeyboardButton("❌ Unapprove User", callback_data="unapprove_user"),
         ],
+        [InlineKeyboardButton("📋 View Approved", callback_data="view_approved")],
+        [
+            InlineKeyboardButton("📣 Support Channel", url=SUPPORT_LINK),
+            InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
+        ],
+        [InlineKeyboardButton("❎ Close Panel", callback_data="close")],
     ]
     return InlineKeyboardMarkup(rows)
 
@@ -51,11 +61,12 @@ async def build_main_panel(
 async def bio_panel(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
     enabled = await is_biomode(chat_id)
     status = "ON" if enabled else "OFF"
-    toggle_text = "Turn OFF" if enabled else "Turn ON"
-    callback = "bio:off" if enabled else "bio:on"
     rows = [
-        [InlineKeyboardButton(toggle_text, callback_data=callback)],
-        [InlineKeyboardButton("🔙 Back", callback_data="menu:main")],
+        [
+            InlineKeyboardButton("🔘 Turn On", callback_data="bio:on"),
+            InlineKeyboardButton("🔴 Turn Off", callback_data="bio:off"),
+        ],
+        [InlineKeyboardButton("🔙 Back to Control Panel", callback_data="menu:main")],
     ]
     return f"🛡 Bio Link Filter: {status}", InlineKeyboardMarkup(rows)
 
@@ -77,25 +88,10 @@ def approve_panel() -> InlineKeyboardMarkup:
 def autodelete_panel() -> InlineKeyboardMarkup:
     rows = [
         [
-            InlineKeyboardButton("10s", callback_data="set_autodel:10"),
-            InlineKeyboardButton("30s", callback_data="set_autodel:30"),
+            InlineKeyboardButton("⏱️ Enable", callback_data="set_autodel:60"),
+            InlineKeyboardButton("❌ Disable", callback_data="set_autodel:0"),
         ],
-        [
-            InlineKeyboardButton("1m", callback_data="set_autodel:60"),
-            InlineKeyboardButton("5m", callback_data="set_autodel:300"),
-        ],
-        [
-            InlineKeyboardButton("10m", callback_data="set_autodel:600"),
-            InlineKeyboardButton("30m", callback_data="set_autodel:1800"),
-        ],
-        [
-            InlineKeyboardButton("1h", callback_data="set_autodel:3600"),
-            InlineKeyboardButton("24h", callback_data="set_autodel:86400"),
-        ],
-        [
-            InlineKeyboardButton("Off", callback_data="set_autodel:0"),
-            InlineKeyboardButton("🔙 Back", callback_data="menu:main"),
-        ],
+        [InlineKeyboardButton("🔙 Back to Control Panel", callback_data="menu:main")],
     ]
     return InlineKeyboardMarkup(rows)
 
@@ -104,10 +100,21 @@ async def panel_cmd(client: Client, message: Message):
     await send_panel(client, message)
 
 
-async def send_panel(client: Client, message: Message, private: bool | None = None):
+async def send_panel(
+    client: Client, message: Message, private: bool | None = None, start: bool = False
+):
     if private is None:
         private = message.chat.type == "private"
-    markup = await build_main_panel(client, private=private)
+
+    if start:
+        markup = (
+            await build_private_panel(client)
+            if private
+            else await build_start_panel(client)
+        )
+    else:
+        markup = await build_main_panel(client, private=private)
+
     if not private:
         await message.reply_photo(
             PANEL_HEADER_URL,
