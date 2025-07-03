@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 async def _send_menu(client: Client, message: Message) -> None:
     user = message.from_user
     text = [
-        "<b>👋 Welcome!</b>",
+        "👋 Welcome! I'm alive and working.",
         "I'm a simple moderation bot.",
     ]
     if user:
@@ -43,6 +43,12 @@ def init(app: Client) -> None:
     async def start_cmd(client: Client, message: Message):
         logger.info("/start from %s", message.from_user.id if message.from_user else None)
         await _send_menu(client, message)
+
+    @app.on_message(filters.command("start") & ~filters.private)
+    @catch_errors
+    async def start_group_cmd(client: Client, message: Message):
+        logger.info("/start in %s", message.chat.id)
+        await message.reply_text("👋 Welcome! I'm alive and working. Please DM me to access the menu.")
 
     @app.on_message(filters.command("menu"))
     @catch_errors
