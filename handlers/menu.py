@@ -1,6 +1,6 @@
 import logging
 from pyrogram import Client, filters
-from pyrogram.enums import ParseMode
+from pyrogram.enums import ParseMode, ChatType
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, CallbackQuery
 
 from config import SUPPORT_CHAT_URL, DEVELOPER_URL
@@ -53,7 +53,7 @@ def register(app: Client) -> None:
     @catch_errors
     async def start_menu(client: Client, message: Message):
         logger.info("%s in %s", message.command[0], message.chat.id)
-        if message.chat.type != "private" and not await is_admin(client, message):
+        if message.chat.type != ChatType.PRIVATE and not await is_admin(client, message):
             await message.reply_text("❌ You must be an admin to use this command.")
             return
         await send_panel(client, message)

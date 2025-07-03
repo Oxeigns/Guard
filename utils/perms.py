@@ -3,13 +3,13 @@
 import logging
 from pyrogram import Client
 from pyrogram.types import Message
-from pyrogram.enums import ChatMemberStatus
+from pyrogram.enums import ChatMemberStatus, ChatType
 
 logger = logging.getLogger(__name__)
 
 async def is_admin(client: Client, message: Message, user_id: int | None = None) -> bool:
     """Return ``True`` if the user is an admin of the chat."""
-    if message.chat.type == "private":
+    if message.chat.type == ChatType.PRIVATE:
         return True
 
     user_id = user_id or message.from_user.id
