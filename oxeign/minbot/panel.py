@@ -19,8 +19,8 @@ async def build_start_panel(client: Client) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton("📖 Help & Commands", callback_data="menu:main")],
         [
-            InlineKeyboardButton("📣 Support Channel", url=SUPPORT_LINK),
-            InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
+            InlineKeyboardButton("📣 Support Channel", callback_data="menu:support"),
+            InlineKeyboardButton("👨‍💻 Developer", callback_data="menu:developer"),
         ],
     ]
     return InlineKeyboardMarkup(rows)
@@ -35,7 +35,7 @@ async def build_private_panel(client: Client) -> InlineKeyboardMarkup:
             )
         ],
         [InlineKeyboardButton("📖 Help & Commands", callback_data="menu:main")],
-        [InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK)],
+        [InlineKeyboardButton("👨‍💻 Developer", callback_data="menu:developer")],
     ]
     return InlineKeyboardMarkup(rows)
 
@@ -50,8 +50,8 @@ async def build_main_panel(client: Client, private: bool = False) -> InlineKeybo
         ],
         [InlineKeyboardButton("📋 View Approved", callback_data="view_approved")],
         [
-            InlineKeyboardButton("📣 Support Channel", url=SUPPORT_LINK),
-            InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
+            InlineKeyboardButton("📣 Support Channel", callback_data="menu:support"),
+            InlineKeyboardButton("👨‍💻 Developer", callback_data="menu:developer"),
         ],
         [InlineKeyboardButton("❎ Close Panel", callback_data="close")],
     ]
@@ -146,6 +146,22 @@ async def menu_router(client: Client, callback_query):
     elif data == "autodel":
         markup = autodelete_panel()
         text = "**Auto Delete**"
+    elif data == "support":
+        markup = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("📣 Open Channel", url=SUPPORT_LINK)],
+                [InlineKeyboardButton("🔙 Back", callback_data="menu:main")],
+            ]
+        )
+        text = "**Support**"
+    elif data == "developer":
+        markup = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK)],
+                [InlineKeyboardButton("🔙 Back", callback_data="menu:main")],
+            ]
+        )
+        text = "**Developer**"
     else:
         return
     await callback_query.message.edit(
