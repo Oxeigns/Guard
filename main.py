@@ -3,7 +3,7 @@ import logging
 
 from pyrogram import Client
 
-from config import BOT_TOKEN, MONGO_URI
+from config import BOT_TOKEN, API_ID, API_HASH, MONGO_URI
 from handlers import biofilter, autodelete, approval, panel, logs
 from utils.storage import init_db, close_db
 
@@ -13,7 +13,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = Client("moderation-bot", bot_token=BOT_TOKEN)
+app = Client(
+    "moderation-bot",
+    bot_token=BOT_TOKEN,
+    api_id=API_ID,
+    api_hash=API_HASH,
+)
 
 
 def register_handlers():

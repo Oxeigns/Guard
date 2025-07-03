@@ -5,6 +5,8 @@ Guard is a simple moderation bot built with Pyrogram. It stores data in MongoDB 
 ## Required environment variables
 
 - `BOT_TOKEN` – Telegram bot token for your bot.
+- `API_ID` – integer API ID from https://my.telegram.org.
+- `API_HASH` – API hash from https://my.telegram.org.
 - `MONGO_URI` – MongoDB connection string. If the URI does not include a database name, also set `MONGO_DB_NAME`.
 - `MONGO_DB_NAME` – *(optional)* name of the MongoDB database when it is not part of `MONGO_URI`. Defaults to `guard`.
 - `LOG_CHANNEL_ID` – Telegram channel ID where the bot sends log messages.
@@ -17,6 +19,8 @@ Install dependencies and create a `.env` file with the required values:
 pip install -r requirements.txt
 cat <<EOF > .env
 BOT_TOKEN=your_bot_token
+API_ID=123456
+API_HASH=0123456789abcdef0123456789abcdef
 MONGO_URI=mongodb://localhost:27017/guard
 # Optional when the URI does not contain a DB name; defaults to "guard"
 MONGO_DB_NAME=guard
