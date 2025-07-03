@@ -1,5 +1,6 @@
 """Bio link detection and progressive moderation."""
 
+import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message, ChatPermissions
 
@@ -12,6 +13,8 @@ from utils.storage import (
 )
 from handlers.logs import log_event
 
+logger = logging.getLogger(__name__)
+
 LINK_KEYWORDS = ["http", "https", "t.me", ".me", ".com", ".link"]
 
 
@@ -23,6 +26,7 @@ def contains_link(text: str) -> bool:
 def register(app: Client):
     @app.on_message(filters.group & filters.text)
     async def bio_filter(client: Client, message: Message):
+        logger.debug("bio_filter check in %s from %s", message.chat.id, message.from_user.id if message.from_user else None)
         user = message.from_user
         if not user or user.is_bot:
             return
@@ -63,6 +67,7 @@ def register(app: Client):
 
     @app.on_message(filters.new_chat_members)
     async def new_member_check(client: Client, message: Message):
+        logger.debug("new_member_check in %s", message.chat.id)
         if not await get_bio_filter(message.chat.id):
             return
         for user in message.new_chat_members:

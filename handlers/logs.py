@@ -1,9 +1,12 @@
 """Logging utilities and handlers."""
 
+import logging
 from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.types import Chat, User, Message, ChatMemberUpdated
 from config import LOG_CHANNEL_ID
+
+logger = logging.getLogger(__name__)
 
 
 async def log_action_tracker(client: Client, chat: Chat, actor: User | None, action: str) -> None:
@@ -60,10 +63,12 @@ async def log_event(client: Client, action: str, source: Chat | User):
 def register(app: Client):
     @app.on_message(filters.command("start") & filters.private)
     async def private_start(client: Client, message: Message):
+        logger.debug("log private_start from %s", message.from_user.id)
         await log_event(client, "Bot started in private", message.from_user)
 
     @app.on_chat_member_updated()
     async def member_updates(client: Client, update: ChatMemberUpdated):
+        logger.debug("chat member update in %s", update.chat.id)
         if not update.new_chat_member.user.is_self:
             return
         if update.new_chat_member.status == "kicked":

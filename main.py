@@ -46,24 +46,15 @@ def run_flask() -> None:
     flask_app.run(host="0.0.0.0", port=port, use_reloader=False)
 
 
-@bot.on_message(filters.command("start"))
-async def start_cmd(_, message):
-    logger.info("/start command received")
-    print("start handler executed")
-    await message.reply_text("Hello! I'm alive.")
-
-
 @bot.on_message(filters.command("ping"))
 async def ping_cmd(_, message):
     logger.info("/ping command received")
-    print("ping handler executed")
     await message.reply_text("pong")
 
 
-@bot.on_message(filters.private & ~filters.command(["start", "ping"]), group=1)
+@bot.on_message(filters.private & ~filters.command(["start", "help", "ping", "panel"]), group=1)
 async def fallback_cmd(_, message):
-    logger.info("Fallback message: %s", message.text)
-    print("fallback handler executed")
+    logger.info("Fallback handler triggered with text: %s", message.text)
     await message.reply_text("Received: " + (message.text or ""))
 
 

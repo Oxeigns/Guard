@@ -1,5 +1,6 @@
 """Settings panel with inline buttons."""
 
+import logging
 from pyrogram import Client, filters
 from pyrogram.types import (
     Message,
@@ -10,6 +11,8 @@ from pyrogram.types import (
 
 from config import BANNER_URL
 from utils.perms import is_admin
+
+logger = logging.getLogger(__name__)
 
 # Updated button grid (as per user request: removed Anti-Spam, Alphabets, Porn, Night)
 SETTINGS_PANEL = InlineKeyboardMarkup([
@@ -50,8 +53,9 @@ SETTINGS_PANEL = InlineKeyboardMarkup([
 
 
 def register(app: Client):
-    @app.on_message(filters.command(["start", "help", "menu"]))
+    @app.on_message(filters.command("panel"))
     async def open_panel(client: Client, message: Message):
+        logger.info("/panel from %s", message.chat.id)
         if message.chat.type == "private" or await is_admin(client, message):
             await message.reply_photo(
                 photo=BANNER_URL,
@@ -66,6 +70,7 @@ def register(app: Client):
 
     @app.on_callback_query()
     async def handle_clicks(client: Client, query: CallbackQuery):
+        logger.info("panel callback %s from %s", query.data, query.from_user.id)
         if query.data == "close":
             await query.message.delete()
             return
