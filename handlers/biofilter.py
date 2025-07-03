@@ -34,14 +34,14 @@ def build_warning_message(
 ) -> tuple[str, InlineKeyboardMarkup | None]:
     if restricted:
         msg = (
-            "\ud83d\udd1e *Final Warning:* You have been restricted due to repeated"
+            "🔞 *Final Warning:* You have been restricted due to repeated"
             " violations."
         )
         buttons = InlineKeyboardMarkup(
             [
                 [
                     InlineKeyboardButton(
-                        "\ud83d\udd98 Appeal Restriction",
+                        "🖘 Appeal Restriction",
                         url="https://t.me/your_support_bot",
                     )
                 ]

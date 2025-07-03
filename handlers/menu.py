@@ -23,28 +23,28 @@ def elid(text: str, max_len: int = 25) -> str:
 async def build_group_panel(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
     status = await get_bio_filter(chat_id)
     caption = (
-        "\ud83d\udded\ufe0f *Guard Control Panel*\n\n"
-        f"\ud83d\udd17 Bio Filter: {'\u2705 ON' if status else '\u274c OFF'}"
+        "🗭️ *Guard Control Panel*\n\n"
+        f"🔗 Bio Filter: {'✅ ON' if status else '❌ OFF'}"
     )
 
     buttons = [
         [
-            InlineKeyboardButton("\u2705 Approve", callback_data="cb_approve"),
-            InlineKeyboardButton("\ud83d\udeab Unapprove", callback_data="cb_unapprove"),
+            InlineKeyboardButton("✅ Approve", callback_data="cb_approve"),
+            InlineKeyboardButton("🚫 Unapprove", callback_data="cb_unapprove"),
         ],
         [
-            InlineKeyboardButton("\ud83d\uddd1\ufe0f AutoDelete", callback_data="cb_autodel"),
+            InlineKeyboardButton("🗑️ AutoDelete", callback_data="cb_autodel"),
             InlineKeyboardButton(
-                "\ud83d\udd17 Toggle Bio Filter", callback_data="cb_biolink_toggle"
+                "🔗 Toggle Bio Filter", callback_data="cb_biolink_toggle"
             ),
         ],
         [
-            InlineKeyboardButton("\ud83d\udcd6 Help", callback_data="help"),
-            InlineKeyboardButton("\ud83d\udce1 Ping", callback_data="ping"),
+            InlineKeyboardButton("📖 Help", callback_data="help"),
+            InlineKeyboardButton("📡 Ping", callback_data="ping"),
         ],
         [
-            InlineKeyboardButton("\ud83d\udc68\u200d\ud83d\udcbb Developer", url=DEVELOPER_URL),
-            InlineKeyboardButton("\ud83d\udcac Support", url=SUPPORT_CHAT_URL),
+            InlineKeyboardButton("👨‍💻 Developer", url=DEVELOPER_URL),
+            InlineKeyboardButton("💬 Support", url=SUPPORT_CHAT_URL),
         ],
     ]
 
@@ -53,17 +53,17 @@ async def build_group_panel(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
 
 async def build_private_panel() -> tuple[str, InlineKeyboardMarkup]:
     caption = (
-        "*\ud83e\udd16 Bot Control Panel*\n\n"
+        "*🤖 Bot Control Panel*\n\n"
         "Use the buttons below to manage the bot or get help."
     )
 
     buttons = [
         [
-            InlineKeyboardButton("\ud83d\udcd6 Help", callback_data="help"),
-            InlineKeyboardButton("\ud83d\udcac Support", url=SUPPORT_CHAT_URL),
+            InlineKeyboardButton("📖 Help", callback_data="help"),
+            InlineKeyboardButton("💬 Support", url=SUPPORT_CHAT_URL),
         ],
         [
-            InlineKeyboardButton("\ud83d\udc68\u200d\ud83d\udcbb Developer", url=DEVELOPER_URL),
+            InlineKeyboardButton("👨‍💻 Developer", url=DEVELOPER_URL),
             InlineKeyboardButton(
                 "\u2795 Add me to Group",
                 url="https://t.me/YOUR_BOT_USERNAME?startgroup=true",
@@ -120,7 +120,7 @@ def register(app: Client) -> None:
     async def help_cb(client: Client, query: CallbackQuery):
         logger.info("help callback from %s", query.from_user.id)
         help_text = (
-            "*\ud83e\uddea\u200d\ud83d\udcbb Commands Overview*\n\n"
+            "*🧪‍💻 Commands Overview*\n\n"
             "\u2022 `/approve` \u2013 Approve a user\n"
             "\u2022 `/unapprove` \u2013 Unapprove a user\n"
             "\u2022 `/viewapproved` \u2013 List approved users\n"
@@ -161,7 +161,7 @@ def register(app: Client) -> None:
     async def unapprove_info(client: Client, query: CallbackQuery):
         await query.answer()
         await query.message.reply_text(
-            "\ud83d\udeab Reply to a user with `/unapprove` to remove from whitelist.",
+            "🚫 Reply to a user with `/unapprove` to remove from whitelist.",
             parse_mode=ParseMode.MARKDOWN,
         )
 
@@ -170,7 +170,7 @@ def register(app: Client) -> None:
     async def autodel_info(client: Client, query: CallbackQuery):
         await query.answer()
         await query.message.reply_text(
-            "\ud83d\uddd1\ufe0f Use `/setautodelete <seconds>` to auto-delete user messages.",
+            "🗑️ Use `/setautodelete <seconds>` to auto-delete user messages.",
             parse_mode=ParseMode.MARKDOWN,
         )
 
@@ -180,8 +180,8 @@ def register(app: Client) -> None:
         from time import perf_counter
 
         start = perf_counter()
-        await query.answer("\ud83d\udce1 Pinging...")
+        await query.answer("📡 Pinging...")
         latency = round((perf_counter() - start) * 1000, 2)
         await query.message.reply_text(
-            f"\ud83c\udf89 Pong! `{latency}ms`", parse_mode=ParseMode.MARKDOWN
+            f"🎉 Pong! `{latency}ms`", parse_mode=ParseMode.MARKDOWN
         )
