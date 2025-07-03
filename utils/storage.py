@@ -1,6 +1,6 @@
 """MongoDB storage helpers."""
 
-from typing import List, Optional
+from typing import List
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import ReturnDocument
 
