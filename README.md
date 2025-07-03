@@ -13,3 +13,10 @@ A modern Telegram moderation bot built with Pyrogram and MongoDB. The bot scans 
 - `API_ID` and `API_HASH` from [my.telegram.org](https://my.telegram.org)
 - `BOT_TOKEN` from [@BotFather](https://t.me/BotFather)
 - `MONGO_URI` connection string to your MongoDB instance
+
+### Optional Environment Variables
+
+- `OWNER_ID` user ID for bot owner commands
+- `LOG_LEVEL` logging verbosity (default `INFO`)
+- `LOG_CHANNEL_ID` chat ID for log messages
+- `START_IMAGE` URL of the image to show on `/start`

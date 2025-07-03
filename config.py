@@ -2,22 +2,39 @@
 
 from dataclasses import dataclass
 from os import getenv
+from typing import Any, Callable
+
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def get_env(name: str, default: Any = "", *, cast: Callable[[str], Any] | None = None) -> Any:
+    """Return an environment variable with optional casting."""
+    value = getenv(name)
+    if value is None or value == "":
+        return default
+    if cast is None or cast is str:
+        return value
+    if cast is bool:
+        return value.lower() in {"1", "true", "yes", "on"}
+    try:
+        return cast(value)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(f"Invalid value for {name}: {value}") from exc
 
 @dataclass
 class Config:
     """Dataclass for global configuration."""
 
-    api_id: int = int(getenv("API_ID", 0))
-    api_hash: str = getenv("API_HASH", "")
-    bot_token: str = getenv("BOT_TOKEN", "")
-    mongo_uri: str = getenv("MONGO_URI", "")
-    owner_id: int = int(getenv("OWNER_ID", 0))
-    log_level: str = getenv("LOG_LEVEL", "INFO")
-    log_channel_id: int = int(getenv("LOG_CHANNEL_ID", 0))
-    start_image: str = getenv("START_IMAGE", "")
+    api_id: int = get_env("API_ID", 0, cast=int)
+    api_hash: str = get_env("API_HASH", "")
+    bot_token: str = get_env("BOT_TOKEN", "")
+    mongo_uri: str = get_env("MONGO_URI", "")
+    owner_id: int = get_env("OWNER_ID", 0, cast=int)
+    log_level: str = get_env("LOG_LEVEL", "INFO")
+    log_channel_id: int = get_env("LOG_CHANNEL_ID", 0, cast=int)
+    start_image: str = get_env("START_IMAGE", "")
 
     def validate(self) -> None:
         """Ensure required configuration values are present."""
