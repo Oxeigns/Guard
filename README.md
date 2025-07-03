@@ -71,7 +71,7 @@ The bot offers a set of moderation tools:
 - `/help` – display available commands.
 - `/ping` – simple health check.
 - `/approve` and `/unapprove` – manage approved users.
-- `/setautodelete <seconds>` – automatically delete messages from non‑admins.
+- `/autodelete <seconds>` – automatically delete messages from non‑admins (use `/autodelete` alone to view the current delay). `/setautodelete` remains as an alias.
 - `/biolink [on|off]` – toggle the bio link filter.
 - `/viewapproved` – list approved users.
 
