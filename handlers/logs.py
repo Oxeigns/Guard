@@ -15,50 +15,50 @@ async def log_action_tracker(client: Client, chat: Chat, actor: User | None, act
     time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if actor:
-        user_line = f"👤 [{actor.first_name}](tg://user?id={actor.id})"
-        id_line = f"🆔 `{actor.id}`"
+        user_line = f"👤 <a href=\"tg://user?id={actor.id}\">{actor.first_name}</a>"
+        id_line = f"🆔 <code>{actor.id}</code>"
     else:
         user_line = "👤 Unknown"
-        id_line = "🆔 `?`"
+        id_line = "🆔 <code>?</code>"
 
     lines = [
         "━━━━━━━━━━━━━━━━━━━━━━",
-        "📍 **BOT ACTION TRACKER**",
+        "📍 <b>BOT ACTION TRACKER</b>",
         user_line,
         id_line,
-        f"🕒 `{time_str}`",
+        f"🕒 <code>{time_str}</code>",
         "",
     ]
 
     if action == "removed":
         lines.extend([
-            "🗑️ *Removed from Group*",
-            f"Chat ID: `{chat.id}`",
+            "🗑️ <i>Removed from Group</i>",
+            f"Chat ID: <code>{chat.id}</code>",
             f"Chat Name: {chat.title or 'Private'}",
         ])
     elif action == "readded":
         lines.extend([
-            "➕ *Re-added to Group*",
+            "➕ <i>Re-added to Group</i>",
             f"By: {user_line if actor else 'Unknown'}",
         ])
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━")
-    await client.send_message(LOG_CHANNEL_ID, "\n".join(lines), parse_mode="markdown")
+    await client.send_message(LOG_CHANNEL_ID, "\n".join(lines), parse_mode="html")
 
 async def log_event(client: Client, action: str, source: Chat | User):
     if isinstance(source, Chat):
         name = source.title or "Private"
-        ident = f"🏷 {name}\n🆔 `{source.id}`"
+        ident = f"🏷 {name}\n🆔 <code>{source.id}</code>"
     else:
-        ident = f"[{source.first_name}](tg://user?id={source.id})\n🆔 `{source.id}`"
+        ident = f"<a href=\"tg://user?id={source.id}\">{source.first_name}</a>\n🆔 <code>{source.id}</code>"
 
     text = (
-        f"**📘 Bot Log**\n"
+        f"<b>📘 Bot Log</b>\n"
         f"🔹 Action: {action}\n"
         f"{ident}\n"
-        f"🕒 `{datetime.utcnow().isoformat()}`"
+        f"🕒 <code>{datetime.utcnow().isoformat()}</code>"
     )
-    await client.send_message(LOG_CHANNEL_ID, text, parse_mode="markdown")
+    await client.send_message(LOG_CHANNEL_ID, text, parse_mode="html")
 
 
 def init(app: Client) -> None:

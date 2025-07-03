@@ -21,14 +21,14 @@ def init(app: Client) -> None:
             return
 
         help_text = (
-            "**Commands:**\n"
+            "<b>Commands:</b>\n"
             "/approve - approve user\n"
             "/unapprove - unapprove user\n"
             "/viewapproved - list approved\n"
             "/setautodelete <sec> - auto delete messages\n"
             "/start - open control panel"
         )
-        await message.reply_text(help_text, parse_mode="markdown")
+        await message.reply_text(help_text, parse_mode="html")
 
     @app.on_message(filters.command("auth"))
     @catch_errors
@@ -39,7 +39,7 @@ def init(app: Client) -> None:
             return
         try:
             member = await client.get_chat_member(message.chat.id, message.from_user.id)
-            await message.reply_text(f"Your status: `{member.status}`", parse_mode="markdown")
+            await message.reply_text(f"Your status: <code>{member.status}</code>", parse_mode="html")
         except Exception as exc:
             logger.warning("auth check failed: %s", exc)
             await message.reply_text("Couldn't check your status.")
@@ -49,12 +49,12 @@ def init(app: Client) -> None:
     async def help_cb(client: Client, query: CallbackQuery):
         logger.info("help callback from %s", query.from_user.id)
         help_text = (
-            "**Commands:**\n"
+            "<b>Commands:</b>\n"
             "/approve - approve user\n"
             "/unapprove - unapprove user\n"
             "/viewapproved - list approved\n"
             "/setautodelete <sec> - auto delete messages\n"
             "/start - open control panel"
         )
-        await query.message.edit_text(help_text, parse_mode="markdown")
+        await query.message.edit_text(help_text, parse_mode="html")
 
