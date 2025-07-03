@@ -1,7 +1,8 @@
 """MongoDB storage helpers."""
 
-from typing import Optional
+from typing import List, Optional
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ReturnDocument
 
 from config import config
 
@@ -22,7 +23,7 @@ class Storage:
             {"chat_id": chat_id, "user_id": user_id},
             {"$inc": {"count": 1}},
             upsert=True,
-            return_document=True,
+            return_document=ReturnDocument.AFTER,
         )
         return res["count"]
 
@@ -48,6 +49,10 @@ class Storage:
             await self.approvals.find_one({"chat_id": chat_id, "user_id": user_id})
         )
 
+    async def get_approved_users(self, chat_id: int) -> List[int]:
+        """Return a list of approved user IDs for a chat."""
+        cursor = self.approvals.find({"chat_id": chat_id})
+        return [doc["user_id"] async for doc in cursor]
     async def get_settings(self, chat_id: int) -> dict:
         """Retrieve group settings."""
         data = await self.settings.find_one({"chat_id": chat_id})

@@ -18,6 +18,25 @@ WARN_TEXT = {
 }
 
 
+@Client.on_message(filters.command("biomode") & filters.group)
+async def set_bio_mode(client: Client, message: Message) -> None:
+    """Enable or disable bio filtering."""
+    member = await client.get_chat_member(message.chat.id, message.from_user.id)
+    if not await is_user_admin(member):
+        return
+    if len(message.command) < 2:
+        mode = (await storage.get_settings(message.chat.id)).get("biomode", True)
+        text = "Bio mode is on" if mode else "Bio mode is off"
+        await message.reply_text(text)
+        return
+    enabled = message.command[1].lower() in {"on", "yes", "enable", "true"}
+    await storage.update_settings(message.chat.id, biomode=enabled)
+    await message.reply_text("Bio mode enabled" if enabled else "Bio mode disabled")
+    await log(
+        client,
+        f"🧹 Bio mode set to {enabled} in `{message.chat.id}` by `{message.from_user.id}`",
+    )
+
 @Client.on_message(filters.group & ~filters.service)
 async def bio_scan(client: Client, message: Message) -> None:
     """Scan user bios for links."""
@@ -40,6 +59,7 @@ async def bio_scan(client: Client, message: Message) -> None:
 
     count = await storage.increment_warning(message.chat.id, message.from_user.id)
     await message.delete()
+    await log(client, f"🧹 Deleted bio link message from `{message.from_user.id}` in `{message.chat.id}`")
     await message.chat.send_message(
         WARN_TEXT.get(count, WARN_TEXT[3]),
         reply_to_message_id=message.id,
