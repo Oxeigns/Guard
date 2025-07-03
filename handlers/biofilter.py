@@ -1,8 +1,8 @@
 """Bio filter and mute logic."""
 
 import re
-from pyrogram import Client, filters, ChatPermissions
-from pyrogram.types import Message
+from pyrogram import Client, filters
+from pyrogram.types import Message, ChatPermissions
 
 from utils.storage import Storage
 from utils.perms import is_user_admin
