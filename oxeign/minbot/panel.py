@@ -89,8 +89,10 @@ def approve_panel() -> InlineKeyboardMarkup:
 def autodelete_panel() -> InlineKeyboardMarkup:
     rows = [
         [
-            InlineKeyboardButton("⏱️ Enable", callback_data="set_autodel:60"),
-            InlineKeyboardButton("❌ Disable", callback_data="set_autodel:0"),
+            InlineKeyboardButton("30s", callback_data="set_autodel:30"),
+            InlineKeyboardButton("60s", callback_data="set_autodel:60"),
+            InlineKeyboardButton("5m", callback_data="set_autodel:300"),
+            InlineKeyboardButton("Off", callback_data="set_autodel:0"),
         ],
         [InlineKeyboardButton("🔙 Back to Control Panel", callback_data="menu:main")],
     ]

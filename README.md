@@ -27,6 +27,9 @@ A lightweight Telegram bot built with **Pyrogram 2.x** for basic group moderatio
 
 - Use `/panel`, `/start`, `/help` or `/menu` in a group to open the control panel.
 - Admins can `/approve` or `/unapprove` a user by replying to one of their messages.
+- Use `/autodelete <seconds>` to configure the auto delete delay.
+- Admins may run `/warnlist` to view current warnings and `/clearwarn` on a user
+  to reset their count.
 
 ## Credits
 
