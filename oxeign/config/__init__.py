@@ -13,3 +13,5 @@ LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID", 0))
 
 # Derived constants
 BOT_NAME = os.getenv('BOT_NAME', 'MasterGuardianBot')
+SUPPORT_LINK = os.getenv('SUPPORT_LINK', 'https://t.me/Botsyard')
+DEV_LINK = os.getenv('DEV_LINK', 'https://t.me/oxeign')

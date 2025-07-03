@@ -8,11 +8,12 @@ from oxeign.swagger.biomode import is_biomode, set_biomode
 from oxeign.swagger.autodelete import get_autodelete, set_autodelete
 from oxeign.swagger.approvals import add_approval, remove_approval, approvals_col
 from oxeign.utils.perms import is_admin
+from oxeign.config import SUPPORT_LINK, DEV_LINK
 
 pending_actions: Dict[Tuple[int, int], str] = {}
 
 
-async def build_panel(chat_id: int) -> InlineKeyboardMarkup:
+async def build_panel(client: Client, chat_id: int) -> InlineKeyboardMarkup:
     biomode = await is_biomode(chat_id)
     autodel = await get_autodelete(chat_id)
     rows = [
@@ -29,15 +30,25 @@ async def build_panel(chat_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton("❌ Unapprove User", callback_data="unapprove_user"),
         ],
         [InlineKeyboardButton("📋 View Approved", callback_data="view_approved")],
+        [InlineKeyboardButton(
+            "🔗 Add Bot to Group",
+            url=f"https://t.me/{client.me.username}?startgroup=true",
+        )],
+        [
+            InlineKeyboardButton("📣 Support Channel", url=SUPPORT_LINK),
+            InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
+        ],
         [InlineKeyboardButton("Close", callback_data="close")],
     ]
     return InlineKeyboardMarkup(rows)
 
 
 async def panel_cmd(client: Client, message: Message):
-    if not await is_admin(client, message.chat.id, message.from_user.id):
-        return
-    markup = await build_panel(message.chat.id)
+    await send_panel(client, message)
+
+
+async def send_panel(client: Client, message: Message):
+    markup = await build_panel(client, message.chat.id)
     await message.reply("**Control Panel**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
 
 
@@ -47,7 +58,7 @@ async def toggle_biolink_cb(client: Client, callback_query):
     enabled = not await is_biomode(callback_query.message.chat.id)
     await set_biomode(callback_query.message.chat.id, enabled)
     await callback_query.answer("Updated", show_alert=False)
-    markup = await build_panel(callback_query.message.chat.id)
+    markup = await build_panel(client, callback_query.message.chat.id)
     await callback_query.message.edit("**Control Panel**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
 
 
@@ -56,6 +67,7 @@ autodel_menu = InlineKeyboardMarkup([
         InlineKeyboardButton("10s", callback_data="set_autodel:10"),
         InlineKeyboardButton("30s", callback_data="set_autodel:30"),
         InlineKeyboardButton("1m", callback_data="set_autodel:60"),
+        InlineKeyboardButton("5m", callback_data="set_autodel:300"),
     ],
     [InlineKeyboardButton("Off", callback_data="set_autodel:0")],
     [InlineKeyboardButton("⬅️ Back", callback_data="back")],
@@ -78,7 +90,7 @@ async def set_autodel_cb(client: Client, callback_query):
     seconds = int(callback_query.data.split(":")[1])
     await set_autodelete(callback_query.message.chat.id, seconds)
     await callback_query.answer("Updated", show_alert=False)
-    markup = await build_panel(callback_query.message.chat.id)
+    markup = await build_panel(client, callback_query.message.chat.id)
     await callback_query.message.edit("**Control Panel**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
 
 
@@ -113,7 +125,7 @@ async def view_approved_cb(client: Client, callback_query):
 
 
 async def back_cb(client: Client, callback_query):
-    markup = await build_panel(callback_query.message.chat.id)
+    markup = await build_panel(client, callback_query.message.chat.id)
     await callback_query.message.edit("**Control Panel**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
 
 
@@ -136,7 +148,7 @@ async def handle_pending(client: Client, message: Message):
 
 
 def register(app: Client):
-    app.add_handler(MessageHandler(panel_cmd, filters.command("panel")))
+    app.add_handler(MessageHandler(panel_cmd, filters.command(["panel", "like"])))
     app.add_handler(MessageHandler(handle_pending, filters.group), group=2)
     app.add_handler(CallbackQueryHandler(toggle_biolink_cb, filters.regex("^toggle_biolink$")))
     app.add_handler(CallbackQueryHandler(autodelete_cb, filters.regex("^autodelete$")))
