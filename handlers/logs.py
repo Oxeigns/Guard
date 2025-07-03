@@ -26,7 +26,7 @@ def register(app: Client):
     async def private_start(client: Client, message: Message):
         await log_event(client, "Bot started in private", message.from_user)
 
-    @app.on_my_chat_member()
+    @app.on_chat_member_updated()
     async def member_updates(client: Client, update: ChatMemberUpdated):
         if update.new_chat_member.status == "kicked":
             await log_event(client, "Bot was kicked", update.chat)
