@@ -23,7 +23,7 @@ def contains_link(text: str) -> bool:
     return any(k in lower for k in LINK_KEYWORDS)
 
 
-def register(app: Client):
+def init(app: Client) -> None:
     @app.on_message(filters.group & filters.text)
     async def bio_filter(client: Client, message: Message):
         logger.debug("bio_filter check in %s from %s", message.chat.id, message.from_user.id if message.from_user else None)

@@ -15,10 +15,10 @@ from utils.perms import is_member_of
 logger = logging.getLogger(__name__)
 
 
-def register(app: Client):
-    @app.on_message(filters.command("start"))
+def init(app: Client) -> None:
+    @app.on_message(filters.command("menu"))
     async def start_cmd(client: Client, message: Message):
-        logger.info("/start from %s", message.chat.id)
+        logger.info("/menu from %s", message.chat.id)
         if message.chat.type != "private":
             await message.reply_text("ℹ️ Please DM me for details.")
             return
@@ -67,7 +67,7 @@ def register(app: Client):
                 ],
             ]
         )
-        await message.reply_text(text, reply_markup=buttons, parse_mode="Markdown")
+        await message.reply_text(text, reply_markup=buttons, parse_mode="markdown")
 
     @app.on_message(filters.command("help"))
     async def help_cmd(client: Client, message: Message):
@@ -82,9 +82,9 @@ def register(app: Client):
             "/unapprove - unapprove user\n"
             "/viewapproved - list approved\n"
             "/setautodelete <sec> - auto delete messages\n"
-            "/panel - open control panel"
+            "/start - open control panel"
         )
-        await message.reply_text(help_text, parse_mode="Markdown")
+        await message.reply_text(help_text, parse_mode="markdown")
 
     @app.on_message(filters.command("auth"))
     async def auth_cmd(client: Client, message: Message):
@@ -94,7 +94,7 @@ def register(app: Client):
             return
         try:
             member = await client.get_chat_member(message.chat.id, message.from_user.id)
-            await message.reply_text(f"Your status: `{member.status}`", parse_mode="Markdown")
+            await message.reply_text(f"Your status: `{member.status}`", parse_mode="markdown")
         except Exception as exc:
             logger.warning("auth check failed: %s", exc)
             await message.reply_text("Couldn't check your status.")
@@ -108,7 +108,7 @@ def register(app: Client):
             "/unapprove - unapprove user\n"
             "/viewapproved - list approved\n"
             "/setautodelete <sec> - auto delete messages\n"
-            "/panel - open control panel"
+            "/start - open control panel"
         )
-        await query.message.edit_text(help_text, parse_mode="Markdown")
+        await query.message.edit_text(help_text, parse_mode="markdown")
 

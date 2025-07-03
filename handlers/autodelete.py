@@ -10,7 +10,7 @@ from utils.perms import is_admin
 logger = logging.getLogger(__name__)
 
 
-def register(app: Client):
+def init(app: Client) -> None:
     @app.on_message(filters.command("setautodelete") & filters.group)
     async def set_autodel(client: Client, message: Message):
         logger.info("setautodelete command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
@@ -24,7 +24,7 @@ def register(app: Client):
         await set_autodelete(message.chat.id, seconds)
         if seconds > 0:
             await message.reply_text(
-                f"🕒 Auto-delete set to {seconds} seconds.", parse_mode="Markdown"
+                f"🕒 Auto-delete set to {seconds} seconds.", parse_mode="markdown"
             )
         else:
             await message.reply_text("❌ Auto-delete disabled.")

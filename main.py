@@ -2,16 +2,12 @@ import os
 import logging
 import threading
 
-from dotenv import load_dotenv
 from flask import Flask
 from pyrogram import Client, filters, idle
 
 from config import API_HASH, API_ID, BOT_TOKEN, MONGO_URI
-from handlers import register_all
+from handlers import init_all
 from utils.storage import close_db, init_db
-
-
-load_dotenv()
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -30,6 +26,7 @@ bot = Client(
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN,
+    parse_mode="markdown",
 )
 
 flask_app = Flask(__name__)
@@ -41,7 +38,7 @@ def index() -> str:
 
 
 def run_flask() -> None:
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 10000))
     logger.info("Starting Flask server on port %s", port)
     flask_app.run(host="0.0.0.0", port=port, use_reloader=False)
 
@@ -54,7 +51,7 @@ async def ping_cmd(_, message):
 
 @bot.on_message(
     filters.private
-    & ~filters.command(["start", "help", "ping", "panel"])
+    & ~filters.command(["start", "help", "ping", "menu"])
     & ~filters.me,
     group=1,
 )
@@ -67,7 +64,7 @@ async def fallback_cmd(_, message):
 async def main() -> None:
     logger.info("Initializing database connection")
     await init_db(MONGO_URI)
-    register_all(bot)
+    init_all(bot)
     logger.info("Bot started and waiting for events")
     await idle()
     await close_db()
@@ -78,5 +75,4 @@ if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
     logger.info("Flask thread started")
-    with bot:
-        bot.loop.run_until_complete(main())
+    bot.run(main())
