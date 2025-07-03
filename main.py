@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from pyrogram import Client, filters, idle
 
 from config import config
@@ -11,6 +12,7 @@ import handlers.logs
 
 async def main() -> None:
     """Start the Telegram bot."""
+    logging.basicConfig(level=getattr(logging, config.log_level.upper(), "INFO"))
     app = Client(
         "guard_bot",
         api_id=config.api_id,
