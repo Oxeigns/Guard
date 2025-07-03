@@ -146,6 +146,16 @@ async def warn(client: Client, message):
     client.loop.create_task(auto_delete(client, message, reply))
 
 
+async def removewarn(client: Client, message):
+    if not message.reply_to_message:
+        return await message.reply("❌ Reply to a user to clear warns")
+    user_id = message.reply_to_message.from_user.id
+    await clear_warns(message.chat.id, user_id)
+    reply = await message.reply("✅ <b>Warns cleared</b>", parse_mode=ParseMode.HTML)
+    await log_to_channel(client, f"Cleared warns for {user_id} in {message.chat.id}")
+    client.loop.create_task(auto_delete(client, message, reply))
+
+
 async def clear_warn_callback(client: Client, callback_query):
     data = callback_query.data.split(":")
     user_id = int(data[1])
@@ -163,6 +173,7 @@ def register(app: Client):
     app.add_handler(MessageHandler(unban, filters.command("unban") & admin_filter))
     app.add_handler(MessageHandler(kick, filters.command("kick") & admin_filter))
     app.add_handler(MessageHandler(warn, filters.command("warn") & admin_filter))
+    app.add_handler(MessageHandler(removewarn, filters.command("removewarn") & admin_filter))
     app.add_handler(CallbackQueryHandler(clear_warn_callback, filters.regex("^clearwarn:")))
     app.add_handler(MessageHandler(gban, filters.command("gban")))
     app.add_handler(MessageHandler(gunban, filters.command("gunban")))

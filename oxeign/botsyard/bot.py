@@ -2,6 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.enums import ParseMode
+from pyrogram.errors import MessageNotModified
 from oxeign.config import START_IMAGE, BOT_NAME
 from oxeign.utils.perms import get_role
 from oxeign.utils.logger import log_to_channel
@@ -42,15 +43,16 @@ async def start(client: Client, message):
 
 
 
-    log_text = (
-        f"#START\n"
-        f"Name: {full_name}\n"
-        f"ID: {user.id}\n"
-        f"Username: {username}\n"
-        f"Link: {user.mention('link')}\n"
-        f"Timestamp: {datetime.utcnow().isoformat()}\n"
-    )
-    await log_to_channel(client, log_text)
+    if message.chat.type == "private":
+        log_text = (
+            f"#START\n"
+            f"Name: {full_name}\n"
+            f"ID: {user.id}\n"
+            f"Username: {username}\n"
+            f"Link: {user.mention('link')}\n"
+            f"Timestamp: {datetime.utcnow().isoformat()}\n"
+        )
+        await log_to_channel(client, log_text)
 
 def help_content():
     text = "<b>📚 Help Panel</b>\nSelect a category below."
@@ -77,7 +79,7 @@ async def menu_cmd(client: Client, message, user=None):
 
     user_cmds = ["/help", "/menu"]
     admin_cmds = [
-        "/ban", "/unban", "/mute", "/unmute", "/kick", "/warn",
+        "/ban", "/unban", "/mute", "/unmute", "/kick", "/warn", "/removewarn",
         "/approve", "/disapprove", "/setautodelete", "/setwelcome",
         "/blacklist", "/biolink", "/setlongmode", "/setlonglimit", "/getconfig",
     ]
@@ -104,13 +106,16 @@ async def menu_cmd(client: Client, message, user=None):
 async def help_callback(client: Client, callback_query):
     await callback_query.answer()
     text, buttons = help_content()
-    await callback_query.message.edit_text(text, reply_markup=buttons, parse_mode=ParseMode.HTML)
+    try:
+        await callback_query.message.edit_text(text, reply_markup=buttons, parse_mode=ParseMode.HTML)
+    except MessageNotModified:
+        pass
 
 async def help_section_callback(client: Client, callback_query):
     await callback_query.answer()
     section = callback_query.data.split("_")[1]
     if section == "moderation":
-        text = "<b>Moderation Commands</b>\n/ban /unban /kick /mute /unmute /warn"
+        text = "<b>Moderation Commands</b>\n/ban /unban /kick /mute /unmute /warn /removewarn"
     elif section == "antispam":
         text = "<b>Anti-Spam</b>\n/biolink on|off \n/setlongmode <mode> \n/setlonglimit <num>"
     elif section == "filters":
@@ -122,7 +127,10 @@ async def help_section_callback(client: Client, callback_query):
     buttons = InlineKeyboardMarkup(
         [[InlineKeyboardButton("⬅️ Back", callback_data="help"), InlineKeyboardButton("❌ Close", callback_data="close")]]
     )
-    await callback_query.message.edit_text(text, reply_markup=buttons, parse_mode=ParseMode.HTML)
+    try:
+        await callback_query.message.edit_text(text, reply_markup=buttons, parse_mode=ParseMode.HTML)
+    except MessageNotModified:
+        pass
 
 CMD_HELP = {
     "ban": "Ban a user",
@@ -131,6 +139,7 @@ CMD_HELP = {
     "unmute": "Unmute a user",
     "kick": "Kick a user",
     "warn": "Warn a user",
+    "removewarn": "Clear a user's warns",
     "approve": "Approve member",
     "disapprove": "Disapprove member",
     "setautodelete": "Set auto delete seconds",
@@ -151,7 +160,10 @@ async def cmd_callback(client: Client, callback_query):
     desc = CMD_HELP.get(cmd, "No description")
     text = f"<b>/{cmd}</b> - {desc}"
     buttons = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="menu")], [InlineKeyboardButton("❌ Close", callback_data="close")]])
-    await callback_query.message.edit_text(text, reply_markup=buttons, parse_mode=ParseMode.HTML)
+    try:
+        await callback_query.message.edit_text(text, reply_markup=buttons, parse_mode=ParseMode.HTML)
+    except MessageNotModified:
+        pass
 
 async def menu_callback(client: Client, callback_query):
     await callback_query.answer()
