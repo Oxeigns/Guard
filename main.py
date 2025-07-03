@@ -6,10 +6,6 @@ from pyrogram import Client, filters, idle
 from pyrogram.enums import ParseMode
 
 from config import config
-import handlers.biofilter  # noqa: F401
-import handlers.autodelete  # noqa: F401
-import handlers.approval  # noqa: F401
-import handlers.panel  # noqa: F401
 import handlers.logs
 
 
@@ -17,14 +13,18 @@ async def main() -> None:
     """Start the Telegram bot."""
     logging.basicConfig(
         level=getattr(logging, config.log_level.upper(), "INFO"),
-        filename=config.log_file,
         format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler(config.log_file),
+            logging.StreamHandler(),
+        ],
     )
     app = Client(
         "guard_bot",
         api_id=config.api_id,
         api_hash=config.api_hash,
         bot_token=config.bot_token,
+        plugins={"root": "handlers"},
     )
 
     @app.on_message(filters.private & filters.command("start"))
@@ -62,11 +62,33 @@ async def main() -> None:
             except Exception as exc:
                 logging.exception("Failed to send %s: %s", cmd, exc)
 
+    async def start_http_server(port: int):
+        """Run a minimal HTTP server for health checks."""
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            try:
+                await reader.read(1024)
+                writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nok")
+                await writer.drain()
+            finally:
+                writer.close()
+        server = await asyncio.start_server(handle, "0.0.0.0", port)
+        logging.info("Health server running on port %s", port)
+        return server
+
     await app.start()
+    server = None
+    if config.port:
+        try:
+            server = await start_http_server(config.port)
+        except Exception as exc:
+            logging.exception("Failed to start health server: %s", exc)
     if config.run_self_tests:
         await run_self_tests(["/panel", "/approved", "/biomode", "/setautodelete off"])
     await idle()
     await app.stop()
+    if server:
+        server.close()
+        await server.wait_closed()
 
 
 if __name__ == "__main__":

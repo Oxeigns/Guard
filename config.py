@@ -37,6 +37,7 @@ class Config:
     start_image: str = get_env("START_IMAGE", "")
     log_file: str = get_env("LOG_FILE", "bot.log")
     run_self_tests: bool = get_env("RUN_SELF_TESTS", False, cast=bool)
+    port: int = get_env("PORT", 0, cast=int)
 
     def validate(self) -> None:
         """Ensure required configuration values are present."""

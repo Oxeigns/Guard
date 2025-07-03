@@ -22,3 +22,4 @@ A modern Telegram moderation bot built with Pyrogram and MongoDB. The bot scans 
 - `START_IMAGE` URL of the image to show on `/start`
 - `LOG_FILE` path to the log file (default `bot.log`)
 - `RUN_SELF_TESTS` run built-in command tests on startup (`true`/`false`)
+- `PORT` port for optional HTTP health server
