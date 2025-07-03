@@ -1,17 +1,11 @@
-import os
 import logging
-import threading
 
-from flask import Flask, request
 from pyrogram import Client, filters, idle
 
 from config import API_HASH, API_ID, BOT_TOKEN, MONGO_URI
 from handlers import init_all
 from utils.storage import close_db, init_db
 from utils.errors import catch_errors
-from utils.webhook import set_webhook
-
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://guard-4nfv.onrender.com")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -32,29 +26,6 @@ bot = Client(
     bot_token=BOT_TOKEN,
     parse_mode="markdown",
 )
-
-flask_app = Flask(__name__)
-
-
-@flask_app.route("/", methods=["GET", "POST"])
-def webhook() -> str:
-    if request.method == "POST":
-        update = request.get_json(force=True, silent=True)
-        if update:
-            logger.info("Received update via webhook")
-            bot.process_update(update)
-    return "OK"
-
-
-@flask_app.route("/health")
-def health() -> str:
-    return "OK"
-
-
-def run_flask() -> None:
-    port = int(os.environ.get("PORT", 10000))
-    logger.info("Starting Flask server on port %s", port)
-    flask_app.run(host="0.0.0.0", port=port, use_reloader=False, threaded=True)
 
 
 @bot.on_message(filters.command("ping"))
@@ -81,8 +52,6 @@ async def main() -> None:
     logger.info("Initializing database connection")
     await init_db(MONGO_URI)
     init_all(bot)
-    await set_webhook(BOT_TOKEN, WEBHOOK_URL)
-    logger.info("Webhook set to %s", WEBHOOK_URL)
     logger.info("Bot started and waiting for events")
     await idle()
     await close_db()
@@ -90,7 +59,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    flask_thread = threading.Thread(target=run_flask, name="flask", daemon=True)
-    flask_thread.start()
-    logger.info("Flask thread started")
     bot.run(main())
