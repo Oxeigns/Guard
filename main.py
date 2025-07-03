@@ -2,13 +2,15 @@ import os
 import logging
 import threading
 
-from flask import Flask
+from flask import Flask, request
 from pyrogram import Client, filters, idle
 
 from config import API_HASH, API_ID, BOT_TOKEN, MONGO_URI
 from handlers import init_all
 from utils.storage import close_db, init_db
 from utils.errors import catch_errors
+
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://guard-4nfv.onrender.com")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -33,9 +35,14 @@ bot = Client(
 flask_app = Flask(__name__)
 
 
-@flask_app.route("/")
-def index() -> str:
-    return "Bot is running"
+@flask_app.route("/", methods=["GET", "POST"])
+def webhook() -> str:
+    if request.method == "POST":
+        update = request.get_json(force=True, silent=True)
+        if update:
+            logger.info("Received update via webhook")
+            bot.process_update(update)
+    return "OK"
 
 
 @flask_app.route("/health")
@@ -73,6 +80,8 @@ async def main() -> None:
     logger.info("Initializing database connection")
     await init_db(MONGO_URI)
     init_all(bot)
+    await bot.set_webhook(WEBHOOK_URL)
+    logger.info("Webhook set to %s", WEBHOOK_URL)
     logger.info("Bot started and waiting for events")
     await idle()
     await close_db()
