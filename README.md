@@ -45,5 +45,6 @@ Only group admins can use these commands.
 
 
 If you encounter a `ConfigurationError` complaining about the default database,
-make sure the MongoDB URI contains a database name or set `MONGO_DB_NAME`
-explicitly.
+ensure that the `MONGO_URI` includes a database name or set the `MONGO_DB_NAME`
+environment variable. Without either of these, the application cannot determine
+which MongoDB database to use.
