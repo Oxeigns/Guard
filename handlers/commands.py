@@ -2,7 +2,7 @@
 
 import logging
 from pyrogram import Client, filters
-from pyrogram.enums import ParseMode
+from pyrogram.enums import ParseMode, ChatType
 from pyrogram.types import Message, CallbackQuery, ChatPermissions
 
 from utils.perms import is_admin
@@ -20,7 +20,7 @@ def register(app: Client) -> None:
     @catch_errors
     async def help_cmd(client: Client, message: Message):
         logger.info("/help from %s", message.chat.id)
-        if message.chat.type != "private":
+        if message.chat.type != ChatType.PRIVATE:
             await message.reply_text("ℹ️ Please DM me for help.")
             return
 
@@ -42,7 +42,7 @@ def register(app: Client) -> None:
     @catch_errors
     async def auth_cmd(client: Client, message: Message):
         logger.info("/auth from %s", message.chat.id)
-        if message.chat.type == "private":
+        if message.chat.type == ChatType.PRIVATE:
             await message.reply_text("This command can only be used in groups.")
             return
         try:

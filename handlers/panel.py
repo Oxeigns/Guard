@@ -2,6 +2,7 @@
 
 import logging
 from pyrogram import Client, filters
+from pyrogram.enums import ChatType
 from pyrogram.types import (
     Message,
     InlineKeyboardMarkup,
@@ -58,7 +59,7 @@ def register(app: Client) -> None:
     @catch_errors
     async def open_panel(client: Client, message: Message):
         logger.info("/panel from %s", message.chat.id)
-        if message.chat.type == "private" or await is_admin(client, message):
+        if message.chat.type == ChatType.PRIVATE or await is_admin(client, message):
             await message.reply_photo(
                 photo=BANNER_URL,
                 caption=(
