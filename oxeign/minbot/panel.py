@@ -66,8 +66,10 @@ def approve_panel() -> InlineKeyboardMarkup:
             InlineKeyboardButton("✅ Approve", callback_data="approve_user"),
             InlineKeyboardButton("❌ Unapprove", callback_data="unapprove_user"),
         ],
-        [InlineKeyboardButton("📋 List", callback_data="view_approved")],
-        [InlineKeyboardButton("🔙 Back", callback_data="menu:main")],
+        [
+            InlineKeyboardButton("📋 List", callback_data="view_approved"),
+            InlineKeyboardButton("🔙 Back", callback_data="menu:main"),
+        ],
     ]
     return InlineKeyboardMarkup(rows)
 
@@ -90,8 +92,10 @@ def autodelete_panel() -> InlineKeyboardMarkup:
             InlineKeyboardButton("1h", callback_data="set_autodel:3600"),
             InlineKeyboardButton("24h", callback_data="set_autodel:86400"),
         ],
-        [InlineKeyboardButton("Off", callback_data="set_autodel:0")],
-        [InlineKeyboardButton("🔙 Back", callback_data="menu:main")],
+        [
+            InlineKeyboardButton("Off", callback_data="set_autodel:0"),
+            InlineKeyboardButton("🔙 Back", callback_data="menu:main"),
+        ],
     ]
     return InlineKeyboardMarkup(rows)
 
