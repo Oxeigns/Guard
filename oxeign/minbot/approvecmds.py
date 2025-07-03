@@ -10,7 +10,7 @@ from oxeign.swagger.approvals import add_approval, remove_approval
 async def approve_cmd(client: Client, message: Message):
     if not await is_admin(client, message.chat.id, message.from_user.id):
         return
-    if not message.reply_to_message:
+    if not message.reply_to_message or not message.reply_to_message.from_user:
         await message.reply("Reply to a user's message to approve them.")
         return
     target_id = message.reply_to_message.from_user.id
@@ -24,7 +24,7 @@ async def approve_cmd(client: Client, message: Message):
 async def unapprove_cmd(client: Client, message: Message):
     if not await is_admin(client, message.chat.id, message.from_user.id):
         return
-    if not message.reply_to_message:
+    if not message.reply_to_message or not message.reply_to_message.from_user:
         await message.reply("Reply to a user's message to unapprove them.")
         return
     target_id = message.reply_to_message.from_user.id

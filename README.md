@@ -24,7 +24,7 @@ A lightweight Telegram bot built with **Pyrogram 2.x** for basic group moderatio
 
 ## Usage
 
-- Use `/panel` in a group to configure the bot.
+- Use `/panel`, `/start`, `/help` or `/menu` in a group to open the control panel.
 - Admins can `/approve` or `/unapprove` a user by replying to one of their messages.
 
 ## Credits
