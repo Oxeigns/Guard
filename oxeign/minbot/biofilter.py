@@ -1,75 +1,131 @@
+import logging
 import re
-from pyrogram import Client, filters
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
+from typing import Dict
 
+from telegram import Update, ChatPermissions, ChatMemberStatus
+from telegram.ext import (
+    Application,
+    CallbackContext,
+    CommandHandler,
+    MessageHandler,
+    filters,
+)
+
+from oxeign.config import OWNER_ID
 from oxeign.swagger.biomode import is_biomode
-from oxeign.swagger.approvals import is_approved, add_approval
-from oxeign.utils.perms import is_admin
-from oxeign.config import BOT_NAME
+from oxeign.swagger.approvals import is_approved
+from oxeign.swagger.warnings import (
+    add_warning,
+    clear_warnings,
+    get_all_warnings,
+)
 
-# detect telegram usernames/links and general web links
-LINK_RE = re.compile(r"(?:https?://|www\.|t\.me|telegram\.me|@)", re.I)
+BIO_KEYWORDS = ["t.me", "joinchat", "onlyfans", "wa.me", "http", "https"]
+logger = logging.getLogger(__name__)
 
 
-async def check_bio(client: Client, message: Message):
-    if message.chat.type not in ("supergroup", "group"):
+async def _is_admin(context: CallbackContext, chat_id: int, user_id: int) -> bool:
+    if user_id == OWNER_ID:
+        return True
+    try:
+        member = await context.bot.get_chat_member(chat_id, user_id)
+    except Exception:
+        return False
+    return member.status in (
+        ChatMemberStatus.ADMINISTRATOR,
+        ChatMemberStatus.OWNER,
+    )
+
+
+async def check_bio(update: Update, context: CallbackContext) -> None:
+    if update.effective_chat is None or update.effective_user is None:
         return
-    if not await is_biomode(message.chat.id):
+    if update.effective_chat.type not in ("group", "supergroup"):
         return
-    if not message.from_user:
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    if not await is_biomode(chat_id):
         return
-    if await is_admin(client, message.chat.id, message.from_user.id):
+    if await _is_admin(context, chat_id, user_id):
         return
-    if await is_approved(message.chat.id, message.from_user.id):
+    if await is_approved(chat_id, user_id):
         return
     try:
-        user = await client.get_chat(message.from_user.id)
-        bio = user.bio or ""
+        user_chat = await context.bot.get_chat(user_id)
+        bio = user_chat.bio or ""
     except Exception:
         bio = ""
-    if bio and LINK_RE.search(bio.lower()):
-        try:
-            await message.delete()
-        except Exception:
-            pass
-        warn_text = (
-            f"{BOT_NAME}: Deleted message due to bio link from {message.from_user.mention}"
+    lower_bio = bio.lower()
+    if any(key in lower_bio for key in BIO_KEYWORDS):
+        warns = await add_warning(chat_id, user_id)
+        logger.info(
+            "Bio warning %s/%s for user %s in chat %s",
+            warns,
+            3,
+            user_id,
+            chat_id,
         )
-        info_text = (
-            f"{message.from_user.mention}, remove Telegram links from your bio."
-        )
-        buttons = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "Approve", callback_data=f"approve:{message.from_user.id}"
-                    )
-                ]
-            ]
-        )
-        await client.send_message(message.chat.id, warn_text)
-        await client.send_message(message.chat.id, info_text, reply_markup=buttons)
-        try:
-            await client.send_message(
-                message.from_user.id,
-                "Please remove Telegram links from your bio to chat here.",
+        if warns >= 3:
+            try:
+                await context.bot.restrict_chat_member(
+                    chat_id, user_id, ChatPermissions(can_send_messages=False)
+                )
+            except Exception as exc:
+                logger.warning("Failed to mute user %s: %s", user_id, exc)
+            await update.effective_chat.send_message(
+                "🚫 You’ve been muted for having a spammy bio."
             )
+        else:
+            await update.effective_chat.send_message(
+                f"⚠️ Warning {warns}/3 – Please remove bio link or you’ll be muted."
+            )
+
+
+async def clearwarn(update: Update, context: CallbackContext) -> None:
+    if update.effective_chat is None or update.effective_user is None:
+        return
+    chat_id = update.effective_chat.id
+    if not await _is_admin(context, chat_id, update.effective_user.id):
+        return
+    target = None
+    if update.message.reply_to_message:
+        target = update.message.reply_to_message.from_user
+    elif context.args:
+        try:
+            target = await context.bot.get_chat(context.args[0])
         except Exception:
-            pass
+            await update.message.reply_text("User not found")
+            return
+    if not target:
+        await update.message.reply_text("Reply to a user or specify a username/ID")
+        return
+    await clear_warnings(chat_id, target.id)
+    await update.message.reply_html(f"Cleared warnings for {target.mention_html()}")
 
 
-async def approve_callback(client: Client, callback_query):
-    user_id = int(callback_query.data.split(":")[1])
-    if not await is_admin(
-        client, callback_query.message.chat.id, callback_query.from_user.id
-    ):
-        return await callback_query.answer("Admins only", show_alert=True)
-    await add_approval(callback_query.message.chat.id, user_id)
-    await callback_query.answer("User approved", show_alert=True)
-    await callback_query.message.edit("User approved")
+async def warnlist(update: Update, context: CallbackContext) -> None:
+    if update.effective_chat is None or update.effective_user is None:
+        return
+    chat_id = update.effective_chat.id
+    if not await _is_admin(context, chat_id, update.effective_user.id):
+        return
+    warns: Dict[int, int] = await get_all_warnings(chat_id)
+    if not warns:
+        await update.message.reply_text("No warnings.")
+        return
+    lines = ["Current warnings:"]
+    for uid, count in warns.items():
+        try:
+            user = await context.bot.get_chat(uid)
+            mention = user.mention_html()
+        except Exception:
+            mention = str(uid)
+        lines.append(f"- {mention}: {count}")
+    await update.message.reply_html("\n".join(lines))
 
 
-def register(app: Client):
-    app.add_handler(MessageHandler(check_bio, filters.group & ~filters.service))
-    app.add_handler(CallbackQueryHandler(approve_callback, filters.regex("^approve:")))
+def register(app: Application) -> None:
+    app.add_handler(MessageHandler(filters.ALL & ~filters.StatusUpdate.ALL, check_bio))
+    app.add_handler(CommandHandler("clearwarn", clearwarn))
+    app.add_handler(CommandHandler("warnlist", warnlist))
+
