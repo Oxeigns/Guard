@@ -1,11 +1,11 @@
 import asyncio
 import logging
 
-from pyrogram import Client
+from pyrogram import Client, idle
 
-from config import BOT_TOKEN, API_ID, API_HASH, MONGO_URI
+from config import API_HASH, API_ID, BOT_TOKEN, MONGO_URI
 from handlers import register_all
-from utils.storage import init_db, close_db
+from utils.storage import close_db, init_db
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -26,15 +26,20 @@ def register_handlers() -> None:
     register_all(app)
 
 
-async def main():
+async def main() -> None:
+    logger.info("Initializing database")
     await init_db(MONGO_URI)
     register_handlers()
-    async with app:
-        logger.info("Bot started")
-        await asyncio.Event().wait()
+    await app.start()
+    logger.info("Bot started")
+    await idle()
+    await app.stop()
     await close_db()
     logger.info("Bot stopped")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception:  # pragma: no cover - log any startup error
+        logger.exception("Bot crashed")

@@ -1,2 +1,3 @@
 #!/bin/sh
-python main.py
+set -e
+python -u main.py
