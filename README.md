@@ -9,7 +9,6 @@ Guard is a simple moderation bot built with Pyrogram. It stores data in MongoDB 
 - `API_HASH` – API hash from https://my.telegram.org.
 - `MONGO_URI` – MongoDB connection string. If the URI does not include a database name, also set `MONGO_DB_NAME`.
 - `MONGO_DB_NAME` – *(optional)* name of the MongoDB database when it is not part of `MONGO_URI`. Defaults to `guard`.
-- `LOG_CHANNEL_ID` – Telegram channel ID where the bot sends log messages.
 - `BANNER_URL` – *(optional)* image URL displayed on the settings panel.
 
 ## Setup
@@ -26,7 +25,6 @@ API_HASH=0123456789abcdef0123456789abcdef
 MONGO_URI=mongodb://localhost:27017/guard
 # Optional when the URI does not contain a DB name; defaults to "guard"
 MONGO_DB_NAME=guard
-LOG_CHANNEL_ID=-1001234567890
 # Optional image to display on the settings panel
 BANNER_URL=
 EOF
