@@ -22,6 +22,12 @@ A lightweight Telegram bot built with **Pyrogram 2.x** for basic group moderatio
    python -m oxeign.main
    ```
 
+## Usage
+
+- Use `/panel` in a group to configure the bot.
+- To approve or unapprove someone, press the corresponding button and then reply
+  to that person's message in the chat.
+
 ## Credits
 
 Based on the original project by [@Oxeign](https://t.me/Oxeign).

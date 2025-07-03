@@ -16,12 +16,14 @@ pending_actions: Dict[Tuple[int, int], str] = {}
 async def build_panel(client: Client, chat_id: int, private: bool = False) -> InlineKeyboardMarkup:
     if private:
         rows = [
-            [InlineKeyboardButton(
-                "➕ Add to Group",
-                url=f"https://t.me/{client.me.username}?startgroup=true",
-            )],
             [
-                InlineKeyboardButton("📣 Support Channel", url=SUPPORT_LINK),
+                InlineKeyboardButton(
+                    "➕ Add to Group",
+                    url=f"https://t.me/{client.me.username}?startgroup=true",
+                )
+            ],
+            [
+                InlineKeyboardButton("📣 Support", url=SUPPORT_LINK),
                 InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
             ],
         ]
@@ -30,21 +32,23 @@ async def build_panel(client: Client, chat_id: int, private: bool = False) -> In
     biomode = await is_biomode(chat_id)
     autodel = await get_autodelete(chat_id)
     rows = [
-        [InlineKeyboardButton(
-            f"🛡 Filter {'On' if biomode else 'Off'}",
-            callback_data="toggle_biolink",
-        )],
-        [InlineKeyboardButton(
-            f"⏱ AutoDelete ({autodel if autodel else 'Off'})",
-            callback_data="autodelete",
-        )],
+        [
+            InlineKeyboardButton(
+                f"🛡 Bio Filter {'On' if biomode else 'Off'}",
+                callback_data="toggle_biolink",
+            ),
+            InlineKeyboardButton(
+                f"⏱ AutoDelete ({autodel if autodel else 'Off'})",
+                callback_data="autodelete",
+            ),
+        ],
         [
             InlineKeyboardButton("✅ Approve", callback_data="approve_user"),
             InlineKeyboardButton("❌ Unapprove", callback_data="unapprove_user"),
         ],
         [InlineKeyboardButton("📋 Approved", callback_data="view_approved")],
         [
-            InlineKeyboardButton("📣 Support Channel", url=SUPPORT_LINK),
+            InlineKeyboardButton("📣 Support", url=SUPPORT_LINK),
             InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
         ],
         [InlineKeyboardButton("Close", callback_data="close")],
@@ -128,7 +132,9 @@ async def approve_user_cb(client: Client, callback_query):
         return await callback_query.answer("Admins only", show_alert=True)
     pending_actions[(callback_query.message.chat.id, callback_query.from_user.id)] = "approve"
     await callback_query.answer()
-    await callback_query.message.reply("Reply to the user's message to approve.")
+    await callback_query.message.reply(
+        "Reply to the user's message in this chat to approve them."
+    )
 
 
 async def unapprove_user_cb(client: Client, callback_query):
@@ -136,7 +142,9 @@ async def unapprove_user_cb(client: Client, callback_query):
         return await callback_query.answer("Admins only", show_alert=True)
     pending_actions[(callback_query.message.chat.id, callback_query.from_user.id)] = "unapprove"
     await callback_query.answer()
-    await callback_query.message.reply("Reply to the user's message to unapprove.")
+    await callback_query.message.reply(
+        "Reply to the user's message in this chat to unapprove them."
+    )
 
 
 async def view_approved_cb(client: Client, callback_query):
