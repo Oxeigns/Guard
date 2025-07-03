@@ -9,7 +9,7 @@ from utils.perms import is_admin
 
 
 from utils.errors import catch_errors
-from utils.storage import toggle_bio_filter, set_bio_filter, get_bio_filter
+from utils.db import toggle_bio_filter, set_bio_filter, get_bio_filter
 
 logger = logging.getLogger(__name__)
 

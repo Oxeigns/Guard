@@ -7,7 +7,7 @@ from pyrogram.types import Message, ChatPermissions
 
 from utils.perms import is_admin
 from utils.errors import catch_errors
-from utils.storage import (
+from utils.db import (
     is_approved,
     increment_warning,
     reset_warning,
