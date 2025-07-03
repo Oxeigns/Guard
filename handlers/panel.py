@@ -3,7 +3,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
-from utils.storage import toggle_bio_filter, get_bio_filter, set_autodelete, get_autodelete
+from utils.storage import toggle_bio_filter, set_autodelete
 from utils.perms import is_admin
 
 PANEL_BUTTONS = [

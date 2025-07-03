@@ -13,11 +13,7 @@ async def init_db(mongo_uri: str):
     client = AsyncIOMotorClient(mongo_uri)
     try:
         main = client.get_default_database()
-    except ConfigurationError as e:
-        if not MONGO_DB_NAME:
-            raise ConfigurationError(
-                "No default database name defined in MONGO_URI and MONGO_DB_NAME is not set"
-            ) from e
+    except ConfigurationError:
         main = client[MONGO_DB_NAME]
 
 async def close_db():
