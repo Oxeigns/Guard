@@ -17,6 +17,7 @@ def init(app: Client) -> None:
     async def approve_cmd(client: Client, message: Message):
         logger.info("approve command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
         if not await is_admin(client, message):
+            await message.reply_text("❌ You must be an admin to use this command.")
             return
         if not message.reply_to_message or not message.reply_to_message.from_user:
             await message.reply_text("Reply to a user to approve.")
@@ -30,6 +31,7 @@ def init(app: Client) -> None:
     async def unapprove_cmd(client: Client, message: Message):
         logger.info("unapprove command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
         if not await is_admin(client, message):
+            await message.reply_text("❌ You must be an admin to use this command.")
             return
         if not message.reply_to_message or not message.reply_to_message.from_user:
             await message.reply_text("Reply to a user to unapprove.")
@@ -43,6 +45,7 @@ def init(app: Client) -> None:
     async def view_approved(client: Client, message: Message):
         logger.info("viewapproved command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
         if not await is_admin(client, message):
+            await message.reply_text("❌ You must be an admin to use this command.")
             return
         users = await get_approved(message.chat.id)
         if not users:

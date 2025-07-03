@@ -68,6 +68,8 @@ def init(app: Client) -> None:
                 ),
                 reply_markup=SETTINGS_PANEL,
             )
+        else:
+            await message.reply_text("❌ You must be an admin to open the panel.")
 
     @app.on_callback_query()
     @catch_errors

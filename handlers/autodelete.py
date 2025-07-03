@@ -17,6 +17,7 @@ def init(app: Client) -> None:
     async def set_autodel(client: Client, message: Message):
         logger.info("setautodelete command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
         if not await is_admin(client, message):
+            await message.reply_text("❌ You must be an admin to use this command.")
             return
         try:
             seconds = int(message.command[1])
