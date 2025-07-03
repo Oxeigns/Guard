@@ -2,6 +2,7 @@
 
 import re
 from pyrogram import Client, filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import Message, ChatPermissions
 
 from utils.storage import Storage
@@ -63,7 +64,7 @@ async def bio_scan(client: Client, message: Message) -> None:
     await message.chat.send_message(
         WARN_TEXT.get(count, WARN_TEXT[3]),
         reply_to_message_id=message.id,
-        parse_mode="Markdown",
+        parse_mode=ParseMode.MARKDOWN,
     )
 
     await log(client, f"⚠️ User `{message.from_user.id}` warned ({count}) in `{message.chat.id}`")

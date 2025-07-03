@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from pyrogram import Client
+from pyrogram.enums import ParseMode
 from pyrogram.types import Message
 
 from config import config
@@ -11,7 +12,11 @@ async def log(client: Client, text: str) -> None:
     """Send a log message if a log channel is configured."""
     if not config.log_channel_id:
         return
-    await client.send_message(config.log_channel_id, text, parse_mode="Markdown")
+    await client.send_message(
+        config.log_channel_id,
+        text,
+        parse_mode=ParseMode.MARKDOWN,
+    )
 
 
 async def start_log(client: Client, message: Message) -> None:

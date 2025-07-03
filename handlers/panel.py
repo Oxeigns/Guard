@@ -1,6 +1,7 @@
 """Inline control panel."""
 
 from pyrogram import Client, filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -33,7 +34,7 @@ async def open_panel(client: Client, message: Message) -> None:
     await message.reply(
         "*Control Panel*",
         reply_markup=PANEL,
-        parse_mode="Markdown",
+        parse_mode=ParseMode.MARKDOWN,
         disable_web_page_preview=True,
     )
 
@@ -55,5 +56,5 @@ async def show_approved(client: Client, query: CallbackQuery) -> None:
             user = await client.get_users(uid)
             mentions.append(user.mention)
         text = "*Approved users:*\n" + "\n".join(mentions)
-    await query.message.edit_text(text, parse_mode="Markdown")
+    await query.message.edit_text(text, parse_mode=ParseMode.MARKDOWN)
 

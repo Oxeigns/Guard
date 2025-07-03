@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from pyrogram import Client, filters, idle
+from pyrogram.enums import ParseMode
 
 from config import config
 import handlers.biofilter  # noqa: F401
@@ -25,7 +26,7 @@ async def main() -> None:
         await msg.reply_photo(
             config.start_image,
             caption="Welcome!",
-            parse_mode="Markdown",
+            parse_mode=ParseMode.MARKDOWN,
         )
         await handlers.logs.start_log(app, msg)
 
