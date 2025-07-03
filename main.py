@@ -4,7 +4,7 @@ import logging
 from pyrogram import Client
 
 from config import BOT_TOKEN, API_ID, API_HASH, MONGO_URI
-from handlers import biofilter, autodelete, approval, panel, logs, commands
+from handlers import register_all
 from utils.storage import init_db, close_db
 
 logging.basicConfig(
@@ -21,13 +21,9 @@ app = Client(
 )
 
 
-def register_handlers():
-    biofilter.register(app)
-    autodelete.register(app)
-    approval.register(app)
-    panel.register(app)
-    logs.register(app)
-    commands.register(app)
+def register_handlers() -> None:
+    """Register all handler modules on the global ``app`` instance."""
+    register_all(app)
 
 
 async def main():
