@@ -60,7 +60,7 @@ async def ping_cmd(_, message):
     await message.reply_text("pong")
 
 
-@bot.on_message(filters.private & ~filters.command(["start", "ping"]))
+@bot.on_message(filters.private & ~filters.command(["start", "ping"]), group=1)
 async def fallback_cmd(_, message):
     logger.info("Fallback message: %s", message.text)
     print("fallback handler executed")
