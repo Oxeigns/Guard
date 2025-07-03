@@ -1,6 +1,7 @@
 import logging
 
 from pyrogram import Client, filters, idle
+from pyrogram.enums import ParseMode
 
 from config import API_HASH, API_ID, BOT_TOKEN, MONGO_URI
 from handlers import init_all
@@ -24,7 +25,7 @@ bot = Client(
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN,
-    parse_mode="html",
+    parse_mode=ParseMode.HTML,
 )
 
 

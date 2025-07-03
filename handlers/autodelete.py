@@ -25,9 +25,7 @@ def init(app: Client) -> None:
             return
         await set_autodelete(message.chat.id, seconds)
         if seconds > 0:
-            await message.reply_text(
-                f"🕒 Auto-delete set to {seconds} seconds.", parse_mode="html"
-            )
+            await message.reply_text(f"🕒 Auto-delete set to {seconds} seconds.")
         else:
             await message.reply_text("❌ Auto-delete disabled.")
 

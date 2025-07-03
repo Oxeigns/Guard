@@ -34,7 +34,7 @@ async def _send_menu(client: Client, message: Message) -> None:
             ],
         ]
     )
-    await message.reply_text("\n".join(text), reply_markup=buttons, parse_mode="html")
+    await message.reply_text("\n".join(text), reply_markup=buttons)
 
 
 def init(app: Client) -> None:
