@@ -52,8 +52,9 @@ async def main() -> None:
     logger.info("Initializing database connection")
     await init_db(MONGO_URI)
     init_all(bot)
-    logger.info("Bot started and waiting for events")
-    await idle()
+    async with bot:
+        logger.info("Bot started and waiting for events")
+        await idle()
     await close_db()
     logger.info("Bot stopped")
 
