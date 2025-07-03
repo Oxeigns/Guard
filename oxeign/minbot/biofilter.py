@@ -1,18 +1,11 @@
 import logging
-import re
 from typing import Dict
 
-from telegram import Update, ChatPermissions
-from telegram.constants import ChatMemberStatus
-from telegram.ext import (
-    Application,
-    CallbackContext,
-    CommandHandler,
-    MessageHandler,
-    filters,
-)
+from pyrogram import Client, filters
+from pyrogram.handlers import MessageHandler
+from pyrogram.types import Message, ChatPermissions
 
-from oxeign.config import OWNER_ID
+from oxeign.utils.perms import is_admin
 from oxeign.swagger.biomode import is_biomode
 from oxeign.swagger.approvals import is_approved
 from oxeign.swagger.warnings import (
@@ -25,34 +18,21 @@ BIO_KEYWORDS = ["t.me", "joinchat", "onlyfans", "wa.me", "http", "https"]
 logger = logging.getLogger(__name__)
 
 
-async def _is_admin(context: CallbackContext, chat_id: int, user_id: int) -> bool:
-    if user_id == OWNER_ID:
-        return True
-    try:
-        member = await context.bot.get_chat_member(chat_id, user_id)
-    except Exception:
-        return False
-    return member.status in (
-        ChatMemberStatus.ADMINISTRATOR,
-        ChatMemberStatus.OWNER,
-    )
-
-
-async def check_bio(update: Update, context: CallbackContext) -> None:
-    if update.effective_chat is None or update.effective_user is None:
+async def check_bio(client: Client, message: Message) -> None:
+    if message.chat.type not in ("group", "supergroup"):
         return
-    if update.effective_chat.type not in ("group", "supergroup"):
+    if not message.from_user:
         return
-    chat_id = update.effective_chat.id
-    user_id = update.effective_user.id
+    chat_id = message.chat.id
+    user_id = message.from_user.id
     if not await is_biomode(chat_id):
         return
-    if await _is_admin(context, chat_id, user_id):
+    if await is_admin(client, chat_id, user_id):
         return
     if await is_approved(chat_id, user_id):
         return
     try:
-        user_chat = await context.bot.get_chat(user_id)
+        user_chat = await client.get_users(user_id)
         bio = user_chat.bio or ""
     except Exception:
         bio = ""
@@ -68,65 +48,68 @@ async def check_bio(update: Update, context: CallbackContext) -> None:
         )
         if warns >= 3:
             try:
-                await context.bot.restrict_chat_member(
+                await client.restrict_chat_member(
                     chat_id, user_id, ChatPermissions(can_send_messages=False)
                 )
             except Exception as exc:
                 logger.warning("Failed to mute user %s: %s", user_id, exc)
-            await update.effective_chat.send_message(
+            await message.chat.send_message(
                 "🚫 You’ve been muted for having a spammy bio."
             )
         else:
-            await update.effective_chat.send_message(
+            await message.chat.send_message(
                 f"⚠️ Warning {warns}/3 – Please remove bio link or you’ll be muted."
             )
 
 
-async def clearwarn(update: Update, context: CallbackContext) -> None:
-    if update.effective_chat is None or update.effective_user is None:
+async def clearwarn(client: Client, message: Message) -> None:
+    if message.chat.type not in ("group", "supergroup"):
         return
-    chat_id = update.effective_chat.id
-    if not await _is_admin(context, chat_id, update.effective_user.id):
+    if not await is_admin(client, message.chat.id, message.from_user.id):
         return
     target = None
-    if update.message.reply_to_message:
-        target = update.message.reply_to_message.from_user
-    elif context.args:
-        try:
-            target = await context.bot.get_chat(context.args[0])
-        except Exception:
-            await update.message.reply_text("User not found")
-            return
+    if message.reply_to_message:
+        target = message.reply_to_message.from_user
+    else:
+        parts = message.text.split(maxsplit=1)
+        if len(parts) > 1:
+            try:
+                target = await client.get_users(parts[1])
+            except Exception:
+                await message.reply_text("User not found")
+                return
     if not target:
-        await update.message.reply_text("Reply to a user or specify a username/ID")
+        await message.reply_text("Reply to a user or specify a username/ID")
         return
-    await clear_warnings(chat_id, target.id)
-    await update.message.reply_html(f"Cleared warnings for {target.mention_html()}")
+    await clear_warnings(message.chat.id, target.id)
+    await message.reply_html(f"Cleared warnings for {target.mention_html()}")
 
 
-async def warnlist(update: Update, context: CallbackContext) -> None:
-    if update.effective_chat is None or update.effective_user is None:
+async def warnlist(client: Client, message: Message) -> None:
+    if message.chat.type not in ("group", "supergroup"):
         return
-    chat_id = update.effective_chat.id
-    if not await _is_admin(context, chat_id, update.effective_user.id):
+    if not await is_admin(client, message.chat.id, message.from_user.id):
         return
-    warns: Dict[int, int] = await get_all_warnings(chat_id)
+    warns: Dict[int, int] = await get_all_warnings(message.chat.id)
     if not warns:
-        await update.message.reply_text("No warnings.")
+        await message.reply_text("No warnings.")
         return
     lines = ["Current warnings:"]
     for uid, count in warns.items():
         try:
-            user = await context.bot.get_chat(uid)
+            user = await client.get_users(uid)
             mention = user.mention_html()
         except Exception:
             mention = str(uid)
         lines.append(f"- {mention}: {count}")
-    await update.message.reply_html("\n".join(lines))
+    await message.reply_html("\n".join(lines))
 
 
-def register(app: Application) -> None:
-    app.add_handler(MessageHandler(filters.ALL & ~filters.StatusUpdate.ALL, check_bio))
-    app.add_handler(CommandHandler("clearwarn", clearwarn))
-    app.add_handler(CommandHandler("warnlist", warnlist))
-
+def register(app: Client) -> None:
+    app.add_handler(MessageHandler(check_bio, filters.group & ~filters.service))
+    app.add_handler(
+        MessageHandler(clearwarn, filters.command("clearwarn") & filters.group)
+    )
+    app.add_handler(
+        MessageHandler(warnlist, filters.command("warnlist") & filters.group)
+    )
