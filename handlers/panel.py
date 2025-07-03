@@ -62,12 +62,12 @@ def init(app: Client) -> None:
             await message.reply_photo(
                 photo=BANNER_URL,
                 caption=(
-                    "🔧 **SETTINGS PANEL**\n"
+                    "🔧 <b>SETTINGS PANEL</b>\n"
                     "Select one of the settings that you want to change.\n\n"
-                    "Group: `BOTS ✺ YARD DISCUSSION`"
+                    "Group: <code>BOTS ✺ YARD DISCUSSION</code>"
                 ),
                 reply_markup=SETTINGS_PANEL,
-                parse_mode="markdown",
+                parse_mode="html",
             )
 
     @app.on_callback_query()
@@ -80,6 +80,6 @@ def init(app: Client) -> None:
 
         await query.answer()
         await query.message.edit_text(
-            f"🛠 *You selected:* `{query.data}`\nThat setting's options will be shown soon.",
-            parse_mode="markdown",
+            f"🛠 <i>You selected:</i> <code>{query.data}</code>\nThat setting's options will be shown soon.",
+            parse_mode="html",
         )

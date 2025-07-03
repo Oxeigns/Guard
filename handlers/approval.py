@@ -24,7 +24,7 @@ def init(app: Client) -> None:
         user_id = message.reply_to_message.from_user.id
         await approve_user(message.chat.id, user_id)
         await message.reply_text(
-            f"✅ Approved `{user_id}`", parse_mode="markdown"
+            f"✅ Approved <code>{user_id}</code>", parse_mode="html"
         )
 
     @app.on_message(filters.command("unapprove") & filters.group)
@@ -39,7 +39,7 @@ def init(app: Client) -> None:
         user_id = message.reply_to_message.from_user.id
         await unapprove_user(message.chat.id, user_id)
         await message.reply_text(
-            f"❌ Unapproved `{user_id}`", parse_mode="markdown"
+            f"❌ Unapproved <code>{user_id}</code>", parse_mode="html"
         )
 
     @app.on_message(filters.command("viewapproved") & filters.group)
@@ -52,5 +52,5 @@ def init(app: Client) -> None:
         if not users:
             await message.reply_text("📭 No approved users.")
             return
-        text = "**📋 Approved Users:**\n" + "\n".join(f"`{u}`" for u in users)
-        await message.reply_text(text, parse_mode="markdown")
+        text = "<b>📋 Approved Users:</b>\n" + "\n".join(f"<code>{u}</code>" for u in users)
+        await message.reply_text(text, parse_mode="html")

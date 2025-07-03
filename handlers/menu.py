@@ -13,11 +13,11 @@ logger = logging.getLogger(__name__)
 async def _send_menu(client: Client, message: Message) -> None:
     user = message.from_user
     text = [
-        "**👋 Welcome!**",
+        "<b>👋 Welcome!</b>",
         "I'm a simple moderation bot.",
     ]
     if user:
-        text.append(f"Your ID: `{user.id}`")
+        text.append(f"Your ID: <code>{user.id}</code>")
     me = await client.get_me()
     buttons = InlineKeyboardMarkup(
         [
@@ -34,7 +34,7 @@ async def _send_menu(client: Client, message: Message) -> None:
             ],
         ]
     )
-    await message.reply_text("\n".join(text), reply_markup=buttons, parse_mode="markdown")
+    await message.reply_text("\n".join(text), reply_markup=buttons, parse_mode="html")
 
 
 def init(app: Client) -> None:
