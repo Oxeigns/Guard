@@ -13,4 +13,4 @@ LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID"))
 # Optional configuration
 UPDATE_CHANNEL_ID = int(os.getenv("UPDATE_CHANNEL_ID", "0"))
 SUPPORT_CHAT_URL = os.getenv("SUPPORT_CHAT_URL", "https://t.me/botsyard")
-DEVELOPER_URL = os.getenv("DEVELOPER_URL", "https://t.me/oxeigm")
+DEVELOPER_URL = os.getenv("DEVELOPER_URL", "https://t.me/oxeign")
