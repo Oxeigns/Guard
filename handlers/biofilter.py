@@ -3,7 +3,12 @@
 import logging
 import re
 from pyrogram import Client, filters
-from pyrogram.types import Message, ChatPermissions
+from pyrogram.types import (
+    Message,
+    ChatPermissions,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 
 from utils.perms import is_admin
 from utils.errors import catch_errors
@@ -24,77 +29,142 @@ def contains_link(text: str) -> bool:
     return bool(LINK_RE.search(text))
 
 
+def build_warning_message(
+    count: int, restricted: bool = False
+) -> tuple[str, InlineKeyboardMarkup | None]:
+    if restricted:
+        msg = (
+            "\ud83d\udd1e *Final Warning:* You have been restricted due to repeated"
+            " violations."
+        )
+        buttons = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "\ud83d\udd98 Appeal Restriction",
+                        url="https://t.me/your_support_bot",
+                    )
+                ]
+            ]
+        )
+    elif count == 2:
+        msg = (
+            "\u26a0\ufe0f *Warning 2:* Last chance! Please remove links or long bio"
+            " content."
+        )
+        buttons = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("\u2753 What\u2019s Wrong?", callback_data="why_bio_block")]]
+        )
+    elif count == 1:
+        msg = (
+            "\u26a0\ufe0f *Warning 1:* Bio with links or excessive length is not"
+            " allowed."
+        )
+        buttons = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("\u2139\ufe0f Learn More", callback_data="why_bio_block")]]
+        )
+    else:
+        msg = "\u26a0\ufe0f Warning issued."
+        buttons = None
+    return msg, buttons
+
+
 def register(app: Client) -> None:
+
     @app.on_message(filters.group & filters.text)
     @catch_errors
     async def bio_filter(client: Client, message: Message):
-        logger.debug("bio_filter check in %s from %s", message.chat.id, message.from_user.id if message.from_user else None)
+        chat_id = message.chat.id
         user = message.from_user
+
         if not user or user.is_bot:
             return
-        if not await get_bio_filter(message.chat.id):
+        if not await get_bio_filter(chat_id):
             return
-        if await is_admin(client, message, user.id):
-            return
-        if await is_approved(message.chat.id, user.id):
+        if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
             return
 
-        # Fetch full user info to access bio
-        user_full = await client.get_users(user.id)
-        bio = user_full.bio
-        if not bio:
-            return
-        if len(bio) <= MAX_BIO_LENGTH and not contains_link(bio):
+        try:
+            user_full = await client.get_users(user.id)
+            bio = user_full.bio
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to fetch bio for user %s: %s", user.id, exc)
             return
 
-        await message.delete()
-        count = await increment_warning(message.chat.id, user.id)
-        if count == 1:
-            warning = "⚠️ Warning 1"
-        elif count == 2:
-            warning = "⚠️ Warning 2"
-        else:
-            warning = "⛔ Final Warning"
-            await client.restrict_chat_member(
-                message.chat.id,
-                user.id,
-                ChatPermissions(),
-            )
-            await reset_warning(message.chat.id, user.id)
-        await message.reply_text(warning, quote=True)
+        if not bio or (len(bio) <= MAX_BIO_LENGTH and not contains_link(bio)):
+            return
+
+        try:
+            await message.delete()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to delete message in chat %s: %s", chat_id, exc)
+
+        count = await increment_warning(chat_id, user.id)
+        restricted = False
+
+        if count >= 3:
+            await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
+            await reset_warning(chat_id, user.id)
+            restricted = True
+
+        msg, buttons = build_warning_message(count, restricted)
+        await message.reply_text(
+            msg, reply_markup=buttons, quote=True, parse_mode="Markdown"
+        )
 
     @app.on_message(filters.new_chat_members)
     @catch_errors
     async def new_member_check(client: Client, message: Message):
-        logger.debug("new_member_check in %s", message.chat.id)
-        if not await get_bio_filter(message.chat.id):
+        chat_id = message.chat.id
+
+        if not await get_bio_filter(chat_id):
             return
+
         for user in message.new_chat_members:
             if user.is_bot:
                 continue
-            if await is_admin(client, message, user.id):
+            if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
                 continue
-            if await is_approved(message.chat.id, user.id):
+
+            try:
+                user_full = await client.get_users(user.id)
+                bio = user_full.bio
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to get bio for user %s: %s", user.id, exc)
                 continue
-            user_full = await client.get_users(user.id)
-            bio = user_full.bio
-            if not bio:
+
+            if not bio or (len(bio) <= MAX_BIO_LENGTH and not contains_link(bio)):
                 continue
-            if len(bio) <= MAX_BIO_LENGTH and not contains_link(bio):
-                continue
+
             try:
                 await message.delete()
-            except Exception:
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Cannot delete new member message: %s", exc)
                 await message.reply_text(
-                    "❌ I can't delete messages. Please give me Delete rights.",
+                    "\u274c I can't delete system messages. Please ensure I have 'Delete Messages' rights.",
                     quote=True,
+                    parse_mode="Markdown",
                 )
-            count = await increment_warning(message.chat.id, user.id)
+
+            count = await increment_warning(chat_id, user.id)
+            restricted = False
+
             if count >= 3:
-                await client.restrict_chat_member(message.chat.id, user.id, ChatPermissions())
-                await reset_warning(message.chat.id, user.id)
-                warning = "⛔ Final Warning"
-            else:
-                warning = f"⚠️ Warning {count}"
-            await message.reply_text(warning, quote=True)
+                await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
+                await reset_warning(chat_id, user.id)
+                restricted = True
+
+            msg, buttons = build_warning_message(count, restricted)
+            await message.reply_text(
+                msg, reply_markup=buttons, quote=True, parse_mode="Markdown"
+            )
+
+    @app.on_callback_query(filters.regex("why_bio_block"))
+    async def explain_bio_block(client: Client, callback_query):
+        await callback_query.answer()
+        await callback_query.message.reply_text(
+            "Your profile bio may contain links or be too long. This is restricted to protect the group from spam/scams. "
+            "Please edit your bio to avoid moderation.",
+            parse_mode="Markdown",
+        )
 
