@@ -1,96 +1,71 @@
-import asyncio
 import logging
-from typing import Iterable
+import asyncio
+from pyrogram import Client, filters
+from motor.motor_asyncio import AsyncIOMotorClient
+from config import BOT_TOKEN, MONGO_URI, LOG_CHANNEL_ID
 
-from pyrogram import Client, filters, idle
-from pyrogram.enums import ParseMode
+from handlers import biofilter, autodelete, approval, logs
+from utils.storage import db
 
-from config import config
-import handlers.logs
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
+app = Client(
+    name="TelegramModerationBot",
+    bot_token=BOT_TOKEN
+)
 
-async def main() -> None:
-    """Start the Telegram bot."""
-    logging.basicConfig(
-        level=getattr(logging, config.log_level.upper(), "INFO"),
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.FileHandler(config.log_file),
-            logging.StreamHandler(),
-        ],
-    )
-    app = Client(
-        "guard_bot",
-        api_id=config.api_id,
-        api_hash=config.api_hash,
-        bot_token=config.bot_token,
-        plugins={"root": "handlers"},
-    )
+mongo_client = AsyncIOMotorClient(MONGO_URI)
+db.client = mongo_client
+db.main = mongo_client.get_default_database()
 
-    @app.on_message(filters.private & filters.command("start"))
-    async def start_handler(_, msg):
-        if config.start_image:
-            await msg.reply_photo(
-                config.start_image,
-                caption="Welcome!",
-                parse_mode=ParseMode.MARKDOWN,
-            )
-        else:
-            await msg.reply_text("Welcome!", parse_mode=ParseMode.MARKDOWN)
-        await handlers.logs.start_log(app, msg)
+HELP_TEXT = """**🤖 Telegram Moderation Bot Help Menu**
 
-    @app.on_message(filters.new_chat_members)
-    async def join_handler(_, msg):
-        if msg.new_chat_members and any(u.is_self for u in msg.new_chat_members):
-            await handlers.logs.added_to_group(app, msg)
+Commands:
+/start - Show this help menu
+/approve - Whitelist a user from bio filter
+/unapprove - Remove a user from the whitelist
+/viewapproved - View all approved users
+/setautodelete <seconds> - Set auto-delete delay (0 to disable)
+/togglebio - Toggle bio link filter on/off
 
-    @app.on_message(filters.left_chat_member)
-    async def left_handler(_, msg):
-        if msg.left_chat_member and msg.left_chat_member.is_self:
-            await handlers.logs.removed_from_group(app, msg.chat)
+This bot protects your group from users with promotional links in their bio and handles spam via a progressive warning system.
 
-    async def run_self_tests(commands: Iterable[str]) -> None:
-        """Run a series of bot commands for diagnostics."""
-        if not config.log_channel_id:
-            logging.info("No LOG_CHANNEL_ID set; skipping self tests")
-            return
-        for cmd in commands:
-            try:
-                await app.send_message(config.log_channel_id, cmd)
-                logging.info("Self test command sent: %s", cmd)
-                await asyncio.sleep(1)
-            except Exception as exc:
-                logging.exception("Failed to send %s: %s", cmd, exc)
+🔐 Admins only can use moderation commands."""
 
-    async def start_http_server(port: int):
-        """Run a minimal HTTP server for health checks."""
-        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-            try:
-                await reader.read(1024)
-                writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nok")
-                await writer.drain()
-            finally:
-                writer.close()
-        server = await asyncio.start_server(handle, "0.0.0.0", port)
-        logging.info("Health server running on port %s", port)
-        return server
+@app.on_message(filters.command("start") & filters.private)
+async def start_private(client, message):
+    await message.reply_text(HELP_TEXT, parse_mode="Markdown")
+    await logs.log_event("Bot started in private chat", message.from_user)
+
+@app.on_message(filters.command("start") & filters.group)
+async def start_group(client, message):
+    await message.reply_text("✅ Bot is active.")
+    await logs.log_event("Bot added to a group", message.chat)
+
+@app.on_my_chat_member()
+async def monitor_membership(client, message):
+    status = message.new_chat_member.status
+    if status == "kicked":
+        await logs.log_event("Bot was kicked from a group", message.chat)
+    elif status == "member":
+        await logs.log_event("Bot was added to a group", message.chat)
+
+async def main():
+    biofilter.register(app)
+    autodelete.register(app)
+    approval.register(app)
+    logs.register(app)
 
     await app.start()
-    server = None
-    if config.port:
-        try:
-            server = await start_http_server(config.port)
-        except Exception as exc:
-            logging.exception("Failed to start health server: %s", exc)
-    if config.run_self_tests:
-        await run_self_tests(["/panel", "/approved", "/biomode", "/setautodelete off"])
+    logger.info("Bot has started.")
     await idle()
     await app.stop()
-    if server:
-        server.close()
-        await server.wait_closed()
-
+    logger.info("Bot has stopped.")
 
 if __name__ == "__main__":
+    from pyrogram import idle
     asyncio.run(main())
-
