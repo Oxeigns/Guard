@@ -20,7 +20,7 @@ def init_all(app: Client) -> None:
     """Register all handlers on the provided ``Client`` instance."""
     for name in MODULES:
         module = import_module(f".{name}", __name__)
-        init = getattr(module, "init", None)
-        if callable(init):
+        register = getattr(module, "register", None)
+        if callable(register):
             logger.info("Registering handlers from %s", name)
-            init(app)
+            register(app)

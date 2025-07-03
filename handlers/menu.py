@@ -37,7 +37,7 @@ async def _send_menu(client: Client, message: Message) -> None:
     await message.reply_text("\n".join(text), reply_markup=buttons)
 
 
-def init(app: Client) -> None:
+def register(app: Client) -> None:
     @app.on_message(filters.command("start") & filters.private)
     @catch_errors
     async def start_cmd(client: Client, message: Message):

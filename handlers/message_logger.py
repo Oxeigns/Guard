@@ -9,7 +9,7 @@ from utils.errors import catch_errors
 logger = logging.getLogger(__name__)
 
 
-def init(app: Client) -> None:
+def register(app: Client) -> None:
     @app.on_message(filters.all, group=-1)
     @catch_errors
     async def log_messages(client: Client, message: Message):

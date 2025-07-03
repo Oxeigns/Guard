@@ -11,7 +11,7 @@ from utils.errors import catch_errors
 logger = logging.getLogger(__name__)
 
 
-def init(app: Client) -> None:
+def register(app: Client) -> None:
     @app.on_message(filters.command("approve") & filters.group)
     @catch_errors
     async def approve_cmd(client: Client, message: Message):

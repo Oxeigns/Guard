@@ -4,7 +4,15 @@ from pyrogram import Client, filters, idle
 from pyrogram.enums import ParseMode
 
 from config import API_HASH, API_ID, BOT_TOKEN, MONGO_URI
-from handlers import init_all
+from handlers import (
+    biofilter,
+    approval,
+    commands,
+    menu,
+    panel,
+    message_logger,
+    autodelete,
+)
 from utils.storage import close_db, init_db
 from utils.errors import catch_errors
 
@@ -52,7 +60,16 @@ async def fallback_cmd(_, message):
 async def main() -> None:
     logger.info("Initializing database connection")
     await init_db(MONGO_URI)
-    init_all(bot)
+    for handler in [
+        biofilter,
+        approval,
+        commands,
+        menu,
+        panel,
+        message_logger,
+        autodelete,
+    ]:
+        handler.register(bot)
     async with bot:
         logger.info("Bot started and waiting for events")
         await idle()

@@ -70,6 +70,7 @@ The bot offers a few moderation tools:
 - `/approve` and `/unapprove` – manage approved users in a group.
 - `/viewapproved` – list approved users.
 - `/setautodelete <seconds>` – automatically delete messages from non‑admins.
+- `/mute`, `/kick`, `/ban` – basic moderation actions on a replied user.
 - `/start` – open the settings panel in private chat or for group admins.
 
 Only group admins can use these commands.
