@@ -35,6 +35,8 @@ class Config:
     log_level: str = get_env("LOG_LEVEL", "INFO")
     log_channel_id: int = get_env("LOG_CHANNEL_ID", 0, cast=int)
     start_image: str = get_env("START_IMAGE", "")
+    log_file: str = get_env("LOG_FILE", "bot.log")
+    run_self_tests: bool = get_env("RUN_SELF_TESTS", False, cast=bool)
 
     def validate(self) -> None:
         """Ensure required configuration values are present."""
