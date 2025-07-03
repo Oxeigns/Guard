@@ -11,3 +11,7 @@ async def remove_approval(chat_id: int, user_id: int):
 async def is_approved(chat_id: int, user_id: int) -> bool:
     data = await approvals_col.find_one({"chat_id": chat_id})
     return bool(data and user_id in data.get("user_ids", []))
+
+async def get_approvals(chat_id: int) -> list[int]:
+    data = await approvals_col.find_one({"chat_id": chat_id})
+    return list(data.get("user_ids", [])) if data else []

@@ -1,6 +1,6 @@
 from pyrogram import Client
 from oxeign.config import API_ID, API_HASH, BOT_TOKEN
-from oxeign.botsyard import register_handlers
+from oxeign.minbot import register_handlers
 from oxeign.utils.logger import get_logger
 
 logger = get_logger(__name__)
