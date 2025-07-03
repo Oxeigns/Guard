@@ -44,6 +44,16 @@ For hosting platforms such as Heroku or Railway, this repository includes a
 `Procfile`, `runtime.txt`, and `start.sh` so the bot can be launched directly
 after deployment.
 
+## Docker
+
+A `Dockerfile` is included for containerized deployments. Build the image and
+run the bot with:
+
+```bash
+docker build -t guard .
+docker run --env-file .env guard
+```
+
 ## Usage
 
 The bot offers a few moderation tools:
