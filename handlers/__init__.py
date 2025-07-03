@@ -3,7 +3,7 @@
 from importlib import import_module
 from pyrogram import Client
 
-MODULES = [
+__all__ = [
     "biofilter",
     "autodelete",
     "approval",
@@ -12,10 +12,17 @@ MODULES = [
     "commands",
 ]
 
-# Pre-import modules so they are available when ``from handlers import ...`` is used
-from . import biofilter, autodelete, approval, panel, logs, commands
+MODULES = __all__
 
-__all__ = MODULES
+# Pre-import modules so they are available when ``from handlers import ...`` is used
+from . import (  # noqa: E402
+    biofilter as _biofilter,  # noqa: F401
+    autodelete as _autodelete,  # noqa: F401
+    approval as _approval,  # noqa: F401
+    panel as _panel,  # noqa: F401
+    logs as _logs,  # noqa: F401
+    commands as _commands,  # noqa: F401
+)
 
 
 def register_all(app: Client) -> None:

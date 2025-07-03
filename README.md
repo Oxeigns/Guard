@@ -14,7 +14,8 @@ Guard is a simple moderation bot built with Pyrogram. It stores data in MongoDB 
 
 ## Setup
 
-Install dependencies and create a `.env` file with the required values:
+Install dependencies and create a `.env` file with the required values. An
+example is provided in `.env.example`:
 
 ```bash
 pip install -r requirements.txt
@@ -33,11 +34,15 @@ EOF
 
 ## Running
 
-Start the bot with:
+Start the bot locally with:
 
 ```bash
 python main.py
 ```
+
+For hosting platforms such as Heroku or Railway, this repository includes a
+`Procfile`, `runtime.txt`, and `start.sh` so the bot can be launched directly
+after deployment.
 
 ## Usage
 
