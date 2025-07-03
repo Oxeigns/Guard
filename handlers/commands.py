@@ -28,7 +28,7 @@ def init(app: Client) -> None:
             "/setautodelete <sec> - auto delete messages\n"
             "/start - open control panel"
         )
-        await message.reply_text(help_text, parse_mode="html")
+        await message.reply_text(help_text)
 
     @app.on_message(filters.command("auth"))
     @catch_errors
@@ -39,7 +39,7 @@ def init(app: Client) -> None:
             return
         try:
             member = await client.get_chat_member(message.chat.id, message.from_user.id)
-            await message.reply_text(f"Your status: <code>{member.status}</code>", parse_mode="html")
+            await message.reply_text(f"Your status: <code>{member.status}</code>")
         except Exception as exc:
             logger.warning("auth check failed: %s", exc)
             await message.reply_text("Couldn't check your status.")
@@ -56,5 +56,5 @@ def init(app: Client) -> None:
             "/setautodelete <sec> - auto delete messages\n"
             "/start - open control panel"
         )
-        await query.message.edit_text(help_text, parse_mode="html")
+        await query.message.edit_text(help_text)
 

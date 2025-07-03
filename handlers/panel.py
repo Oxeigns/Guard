@@ -67,7 +67,6 @@ def init(app: Client) -> None:
                     "Group: <code>BOTS ✺ YARD DISCUSSION</code>"
                 ),
                 reply_markup=SETTINGS_PANEL,
-                parse_mode="html",
             )
 
     @app.on_callback_query()
@@ -80,6 +79,5 @@ def init(app: Client) -> None:
 
         await query.answer()
         await query.message.edit_text(
-            f"🛠 <i>You selected:</i> <code>{query.data}</code>\nThat setting's options will be shown soon.",
-            parse_mode="html",
+            f"🛠 <i>You selected:</i> <code>{query.data}</code>\nThat setting's options will be shown soon."
         )
