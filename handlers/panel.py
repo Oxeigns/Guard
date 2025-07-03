@@ -53,7 +53,7 @@ SETTINGS_PANEL = InlineKeyboardMarkup([
 ])
 
 
-def init(app: Client) -> None:
+def register(app: Client) -> None:
     @app.on_message(filters.command("panel"))
     @catch_errors
     async def open_panel(client: Client, message: Message):

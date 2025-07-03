@@ -1,6 +1,7 @@
 """Bio link detection and progressive moderation."""
 
 import logging
+import re
 from pyrogram import Client, filters
 from pyrogram.types import Message, ChatPermissions
 
@@ -15,15 +16,15 @@ from utils.storage import (
 
 logger = logging.getLogger(__name__)
 
-LINK_KEYWORDS = ["http", "https", "t.me", ".me", ".com", ".link"]
+LINK_RE = re.compile(r"https?://\S+|t\.me/\S+|\w+\.\w{2,}", re.IGNORECASE)
+MAX_BIO_LENGTH = 800
 
 
 def contains_link(text: str) -> bool:
-    lower = text.lower()
-    return any(k in lower for k in LINK_KEYWORDS)
+    return bool(LINK_RE.search(text))
 
 
-def init(app: Client) -> None:
+def register(app: Client) -> None:
     @app.on_message(filters.group & filters.text)
     @catch_errors
     async def bio_filter(client: Client, message: Message):
@@ -40,9 +41,10 @@ def init(app: Client) -> None:
 
         # Fetch full user info to access bio
         user_full = await client.get_users(user.id)
-        if not user_full.bio:
+        bio = user_full.bio
+        if not bio:
             return
-        if not contains_link(user_full.bio):
+        if len(bio) <= MAX_BIO_LENGTH and not contains_link(bio):
             return
 
         await message.delete()
@@ -75,7 +77,10 @@ def init(app: Client) -> None:
             if await is_approved(message.chat.id, user.id):
                 continue
             user_full = await client.get_users(user.id)
-            if not user_full.bio or not contains_link(user_full.bio):
+            bio = user_full.bio
+            if not bio:
+                continue
+            if len(bio) <= MAX_BIO_LENGTH and not contains_link(bio):
                 continue
             try:
                 await message.delete()

@@ -11,7 +11,7 @@ from utils.errors import catch_errors
 logger = logging.getLogger(__name__)
 
 
-def init(app: Client) -> None:
+def register(app: Client) -> None:
     @app.on_message(filters.command("setautodelete") & filters.group)
     @catch_errors
     async def set_autodel(client: Client, message: Message):
