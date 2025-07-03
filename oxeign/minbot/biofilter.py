@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Dict
 
 from pyrogram import Client, filters
@@ -14,46 +15,82 @@ from oxeign.swagger.warnings import (
     get_all_warnings,
 )
 
-BIO_KEYWORDS = ["t.me", "joinchat", "onlyfans", "wa.me", "http", "https"]
+# detect any obvious invite or external links in bios/messages
+LINK_RE = re.compile(r"(https?://|t\.me|telegram\.me|wa\.me|joinchat|onlyfans)", re.I)
+
+
+def has_spam_link(text: str) -> bool:
+    """Return True if the text contains a spam or invite link."""
+    return bool(LINK_RE.search(text))
+
+
 logger = logging.getLogger(__name__)
+
+
+async def _warn(
+    client: Client, chat_id: int, user_id: int, message: Message, reason: str
+) -> None:
+    warns = await add_warning(chat_id, user_id)
+    logger.info(
+        "%s warning %s/%s for user %s in chat %s",
+        reason,
+        warns,
+        3,
+        user_id,
+        chat_id,
+    )
+    if warns >= 3:
+        try:
+            await client.restrict_chat_member(
+                chat_id, user_id, ChatPermissions(can_send_messages=False)
+            )
+        except Exception as exc:
+            logger.warning("Failed to mute user %s: %s", user_id, exc)
+        await message.chat.send_message("🚫 You’ve been muted for spam.")
+    else:
+        await message.chat.send_message(
+            f"⚠️ Warning {warns}/3 – Stop posting spam links or you’ll be muted."
+        )
 
 
 async def _process_user_bio(
     client: Client, chat_id: int, user_id: int, message: Message
-) -> None:
+) -> bool:
     if await is_admin(client, chat_id, user_id):
-        return
+        return False
     if await is_approved(chat_id, user_id):
-        return
+        return False
     try:
         user_chat = await client.get_users(user_id)
         bio = user_chat.bio or ""
     except Exception:
         bio = ""
-    lower_bio = bio.lower()
-    if any(key in lower_bio for key in BIO_KEYWORDS):
-        warns = await add_warning(chat_id, user_id)
-        logger.info(
-            "Bio warning %s/%s for user %s in chat %s",
-            warns,
-            3,
-            user_id,
-            chat_id,
-        )
-        if warns >= 3:
-            try:
-                await client.restrict_chat_member(
-                    chat_id, user_id, ChatPermissions(can_send_messages=False)
-                )
-            except Exception as exc:
-                logger.warning("Failed to mute user %s: %s", user_id, exc)
-            await message.chat.send_message(
-                "🚫 You’ve been muted for having a spammy bio."
-            )
-        else:
-            await message.chat.send_message(
-                f"⚠️ Warning {warns}/3 – Please remove bio link or you’ll be muted."
-            )
+    if has_spam_link(bio or ""):
+        try:
+            await message.delete()
+        except Exception:
+            pass
+        await _warn(client, chat_id, user_id, message, "Bio")
+        return True
+    return False
+
+
+async def _process_message_links(
+    client: Client, chat_id: int, user_id: int, message: Message
+) -> bool:
+    if await is_admin(client, chat_id, user_id):
+        return False
+    if await is_approved(chat_id, user_id):
+        return False
+    text = message.text or message.caption or ""
+    if has_spam_link(text):
+        try:
+            await message.delete()
+        except Exception:
+            pass
+        await _warn(client, chat_id, user_id, message, "Message")
+        return True
+    return False
 
 
 async def check_bio(client: Client, message: Message) -> None:
@@ -65,7 +102,8 @@ async def check_bio(client: Client, message: Message) -> None:
     user_id = message.from_user.id
     if not await is_biomode(chat_id):
         return
-    await _process_user_bio(client, chat_id, user_id, message)
+    flagged = await _process_message_links(client, chat_id, user_id, message)
+    flagged |= await _process_user_bio(client, chat_id, user_id, message)
 
 
 async def check_new_members(client: Client, message: Message) -> None:
@@ -76,8 +114,15 @@ async def check_new_members(client: Client, message: Message) -> None:
     chat_id = message.chat.id
     if not await is_biomode(chat_id):
         return
+    flagged = False
     for member in message.new_chat_members:
-        await _process_user_bio(client, chat_id, member.id, message)
+        if await _process_user_bio(client, chat_id, member.id, message):
+            flagged = True
+    if flagged:
+        try:
+            await message.delete()
+        except Exception:
+            pass
 
 
 async def clearwarn(client: Client, message: Message) -> None:
