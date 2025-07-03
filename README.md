@@ -1,6 +1,6 @@
 # Guard
 
-Guard is a simple moderation bot built with Pyrogram. It stores data in a local SQLite database and requires a few environment variables before running. The bot reads these variables from the environment (or a `.env` file) on startup.
+Guard is a modular Telegram bot built with Pyrogram. It stores data in a local SQLite database and automatically initialises the tables on startup. The bot reads its configuration from the environment (or a `.env` file) and runs in polling mode which makes it suitable for platforms such as Render or Railway without any open ports.
 
 ## Required environment variables
 
@@ -9,6 +9,7 @@ Guard is a simple moderation bot built with Pyrogram. It stores data in a local 
 - `API_HASH` – API hash from https://my.telegram.org.
 - `DB_PATH` – *(optional)* path to the SQLite database file. Defaults to `guard.db`.
 - `BANNER_URL` – *(optional)* image URL displayed on the settings panel.
+- `LOG_LEVEL` – *(optional)* logging level, e.g. `INFO` or `DEBUG`.
 
 ## Setup
 
@@ -25,6 +26,7 @@ API_HASH=0123456789abcdef0123456789abcdef
 DB_PATH=guard.db
 # Optional image to display on the settings panel
 BANNER_URL=
+LOG_LEVEL=INFO
 EOF
 ```
 
@@ -63,15 +65,20 @@ docker run --env-file .env guard
 
 ## Usage
 
-The bot offers a few moderation tools:
+The bot offers a set of moderation tools:
 
-- `/approve` and `/unapprove` – manage approved users in a group.
-- `/viewapproved` – list approved users.
+- `/start` or `/menu` – open the inline control panel.
+- `/help` – display available commands.
+- `/ping` – simple health check.
+- `/approve` and `/unapprove` – manage approved users.
 - `/setautodelete <seconds>` – automatically delete messages from non‑admins.
-- `/mute`, `/kick`, `/ban` – basic moderation actions on a replied user.
-- `/start` – open the settings panel in private chat or for group admins.
+- `/biolink [on|off]` – toggle the bio link filter.
+- `/viewapproved` – list approved users.
 
-Only group admins can use these commands.
+Only group admins can use these commands in group chats.
+
+Most commands present inline buttons for quick access to approval actions and
+setting toggles.
 
 
 The bot stores all data in a local SQLite database by default. Set the

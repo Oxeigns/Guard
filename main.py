@@ -3,22 +3,14 @@ import logging
 from pyrogram import Client, filters, idle
 from pyrogram.enums import ParseMode
 
-from config import API_HASH, API_ID, BOT_TOKEN, DB_PATH
-from handlers import (
-    biofilter,
-    approval,
-    commands,
-    menu,
-    panel,
-    message_logger,
-    autodelete,
-)
+from config import API_HASH, API_ID, BOT_TOKEN, DB_PATH, LOG_LEVEL
+from handlers import init_all
 from utils.db import close_db, init_db
 from utils.errors import catch_errors
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
 )
 logger = logging.getLogger(__name__)
 
@@ -61,16 +53,7 @@ async def fallback_cmd(_, message):
 async def main() -> None:
     logger.info("Initializing database connection")
     await init_db(DB_PATH)
-    for handler in [
-        biofilter,
-        approval,
-        commands,
-        menu,
-        panel,
-        message_logger,
-        autodelete,
-    ]:
-        handler.register(bot)
+    init_all(bot)
     async with bot:
         logger.info("Bot started and waiting for events")
         await idle()
