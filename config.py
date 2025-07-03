@@ -11,9 +11,6 @@ API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH", "")
 MONGO_URI = os.getenv("MONGO_URI", "")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "guard")
-# Channel used for sending log messages. This value is hardcoded so the
-# bot always knows where to report its activity.
-LOG_CHANNEL_ID = -1001002625483900
 
 _missing = [
     name

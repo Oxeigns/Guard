@@ -12,7 +12,6 @@ from utils.storage import (
     reset_warning,
     get_bio_filter,
 )
-from handlers.logs import log_event
 
 logger = logging.getLogger(__name__)
 
@@ -59,11 +58,6 @@ def init(app: Client) -> None:
                 user.id,
                 ChatPermissions(),
             )
-            await log_event(
-                client,
-                f"🧹 User muted permanently in `{message.chat.id}`",
-                user,
-            )
             await reset_warning(message.chat.id, user.id)
         await message.reply_text(warning, quote=True)
 
@@ -93,11 +87,6 @@ def init(app: Client) -> None:
             count = await increment_warning(message.chat.id, user.id)
             if count >= 3:
                 await client.restrict_chat_member(message.chat.id, user.id, ChatPermissions())
-                await log_event(
-                    client,
-                    f"🧹 User muted permanently in `{message.chat.id}`",
-                    user,
-                )
                 await reset_warning(message.chat.id, user.id)
                 warning = "⛔ Final Warning"
             else:
