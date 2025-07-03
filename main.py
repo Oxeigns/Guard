@@ -52,8 +52,14 @@ async def ping_cmd(_, message):
     await message.reply_text("pong")
 
 
-@bot.on_message(filters.private & ~filters.command(["start", "help", "ping", "panel"]), group=1)
+@bot.on_message(
+    filters.private
+    & ~filters.command(["start", "help", "ping", "panel"])
+    & ~filters.me,
+    group=1,
+)
 async def fallback_cmd(_, message):
+    """Reply in private chats when no command matches."""
     logger.info("Fallback handler triggered with text: %s", message.text)
     await message.reply_text("Received: " + (message.text or ""))
 
