@@ -9,8 +9,7 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH", "")
-MONGO_URI = os.getenv("MONGO_URI", "")
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "guard")
+DB_PATH = os.getenv("DB_PATH", "guard.db")
 
 _missing = [
     name

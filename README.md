@@ -1,14 +1,13 @@
 # Guard
 
-Guard is a simple moderation bot built with Pyrogram. It stores data in MongoDB and requires a few environment variables before running. The bot reads these variables from the environment (or a `.env` file) on startup.
+Guard is a simple moderation bot built with Pyrogram. It stores data in a local SQLite database and requires a few environment variables before running. The bot reads these variables from the environment (or a `.env` file) on startup.
 
 ## Required environment variables
 
 - `BOT_TOKEN` – Telegram bot token for your bot.
 - `API_ID` – integer API ID from https://my.telegram.org.
 - `API_HASH` – API hash from https://my.telegram.org.
-- `MONGO_URI` – MongoDB connection string. If the URI does not include a database name, also set `MONGO_DB_NAME`.
-- `MONGO_DB_NAME` – *(optional)* name of the MongoDB database when it is not part of `MONGO_URI`. Defaults to `guard`.
+- `DB_PATH` – *(optional)* path to the SQLite database file. Defaults to `guard.db`.
 - `BANNER_URL` – *(optional)* image URL displayed on the settings panel.
 
 ## Setup
@@ -22,9 +21,8 @@ cat <<EOF > .env
 BOT_TOKEN=your_bot_token
 API_ID=123456
 API_HASH=0123456789abcdef0123456789abcdef
-MONGO_URI=mongodb://localhost:27017/guard
-# Optional when the URI does not contain a DB name; defaults to "guard"
-MONGO_DB_NAME=guard
+# Path to the SQLite database file
+DB_PATH=guard.db
 # Optional image to display on the settings panel
 BANNER_URL=
 EOF
@@ -76,7 +74,5 @@ The bot offers a few moderation tools:
 Only group admins can use these commands.
 
 
-If you encounter a `ConfigurationError` complaining about the default database,
-ensure that the `MONGO_URI` includes a database name or set the `MONGO_DB_NAME`
-environment variable. When neither is provided, the bot falls back to a
-database named `guard`.
+The bot stores all data in a local SQLite database by default. Set the
+`DB_PATH` environment variable to choose a different location.

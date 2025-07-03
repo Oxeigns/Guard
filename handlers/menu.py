@@ -5,7 +5,7 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, 
 
 from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 from utils.errors import catch_errors
-from utils.storage import get_bio_filter, set_bio_filter
+from utils.db import get_bio_filter, set_bio_filter, toggle_bio_filter
 from utils.perms import is_admin
 
 logger = logging.getLogger(__name__)
@@ -18,16 +18,21 @@ def elid(text: str, max_len: int = 20) -> str:
 
 async def build_panel(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
     status = await get_bio_filter(chat_id)
-    caption = f"🛡 Bio Filter: {'ON' if status else 'OFF'}"
+    caption = f"*Guard Control Panel*\nBio filter is {'ON' if status else 'OFF'}"
     buttons = [
-        [InlineKeyboardButton(elid("📖 Help & Commands"), callback_data="help")],
         [
-            InlineKeyboardButton(elid("📣 Support Channel"), url=SUPPORT_CHAT_URL),
-            InlineKeyboardButton(elid("👨‍💻 Developer"), url=DEVELOPER_URL),
+            InlineKeyboardButton("Approve", callback_data="cb_approve"),
+            InlineKeyboardButton("Unapprove", callback_data="cb_unapprove"),
         ],
         [
-            InlineKeyboardButton(elid("⚪ Turn On"), callback_data="biolink_on"),
-            InlineKeyboardButton(elid("🔴 Turn Off"), callback_data="biolink_off"),
+            InlineKeyboardButton("Autodelete", callback_data="cb_autodel"),
+            InlineKeyboardButton(
+                "BioLink On/Off", callback_data="cb_biolink_toggle"
+            ),
+        ],
+        [
+            InlineKeyboardButton("Help", callback_data="help"),
+            InlineKeyboardButton("Ping", callback_data="ping"),
         ],
     ]
     return caption, InlineKeyboardMarkup(buttons)
@@ -78,16 +83,32 @@ def register(app: Client) -> None:
         await query.answer()
         await edit_panel(query)
 
-    @app.on_callback_query(filters.regex(r"^biolink_on$"))
+    @app.on_callback_query(filters.regex(r"^cb_biolink_toggle$"))
     @catch_errors
-    async def biolink_on_cb(client: Client, query: CallbackQuery):
-        await set_bio_filter(query.message.chat.id, True)
-        await query.answer("Enabled")
+    async def biolink_toggle_cb(client: Client, query: CallbackQuery):
+        state = await toggle_bio_filter(query.message.chat.id)
+        await query.answer("ON" if state else "OFF")
         await edit_panel(query)
 
-    @app.on_callback_query(filters.regex(r"^biolink_off$"))
+    @app.on_callback_query(filters.regex(r"^cb_approve$"))
     @catch_errors
-    async def biolink_off_cb(client: Client, query: CallbackQuery):
-        await set_bio_filter(query.message.chat.id, False)
-        await query.answer("Disabled")
-        await edit_panel(query)
+    async def approve_info(client: Client, query: CallbackQuery):
+        await query.answer()
+        await query.message.reply_text("Reply to a user with /approve to whitelist them.")
+
+    @app.on_callback_query(filters.regex(r"^cb_unapprove$"))
+    @catch_errors
+    async def unapprove_info(client: Client, query: CallbackQuery):
+        await query.answer()
+        await query.message.reply_text("Reply to a user with /unapprove to remove them from the whitelist.")
+
+    @app.on_callback_query(filters.regex(r"^cb_autodel$"))
+    @catch_errors
+    async def autodel_info(client: Client, query: CallbackQuery):
+        await query.answer()
+        await query.message.reply_text("Use /setautodelete <seconds> to configure auto deletion.")
+
+    @app.on_callback_query(filters.regex(r"^ping$"))
+    @catch_errors
+    async def ping_cb(client: Client, query: CallbackQuery):
+        await query.answer("pong")

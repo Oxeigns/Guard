@@ -1,10 +1,11 @@
 """Auto-delete messages after a delay."""
 
 import logging
+import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message
 
-from utils.storage import set_autodelete, get_autodelete
+from utils.db import set_autodelete, get_autodelete
 from utils.perms import is_admin
 from utils.errors import catch_errors
 
@@ -34,10 +35,11 @@ def register(app: Client) -> None:
     @catch_errors
     async def autodelete_handler(client: Client, message: Message):
         logger.debug("autodelete check in %s", message.chat.id)
-        if message.service:
+        if not (message.text or message.caption):
             return
         if await is_admin(client, message, message.from_user.id):
             return
         delay = await get_autodelete(message.chat.id)
         if delay > 0:
-            await message.delete(delay)
+            await asyncio.sleep(delay)
+            await message.delete()
