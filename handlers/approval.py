@@ -1,6 +1,7 @@
 """Approval command handlers."""
 
 from pyrogram import Client, filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import Message
 
 from utils.storage import Storage
@@ -48,5 +49,5 @@ async def list_approved(client: Client, message: Message) -> None:
         mentions.append(user.mention)
     await message.reply_text(
         "*Approved users:*\n" + "\n".join(mentions),
-        parse_mode="Markdown",
+        parse_mode=ParseMode.MARKDOWN,
     )
