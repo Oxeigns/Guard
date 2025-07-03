@@ -9,7 +9,7 @@ Oxeign Telegram Guard is a modular security bot built with **Pyrogram**. It keep
 - Long message control: `/setlongmode`, `/setlonglimit`
 - Bio link filtering: `/biolink on|off`
 - Approval system: `/approve` and `/disapprove`
-- Moderation tools: `/mute`, `/unmute`, `/ban`, `/unban`, `/kick`, `/warn`
+- Moderation tools: `/mute`, `/unmute`, `/ban`, `/unban`, `/kick`, `/warn`, `/removewarn`
 - Sudo management: `/addsudo`, `/rmsudo`
 - Broadcast messages with preview: `/broadcast <text>`
 - Auto delete timer: `/setautodelete <seconds>`

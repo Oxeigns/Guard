@@ -37,17 +37,9 @@ async def new_member(client: Client, message: Message):
     buttons = InlineKeyboardMarkup(rows)
     for user in message.new_chat_members:
         text = welcome.format(mention=user.mention)
-        await message.reply(text, reply_markup=buttons if user.is_self else None)
-        ts = datetime.utcnow().isoformat()
+        await message.reply(text, reply_markup=buttons if user.is_self else None, parse_mode=ParseMode.HTML)
         if user.is_self:
             await log_to_channel(client, f"Bot added to {message.chat.id}")
-        else:
-            log_text = (
-                f"#JOIN\nName: {user.first_name} {user.last_name or ''}\nID: {user.id}\n"
-                f"Username: @{user.username or 'N/A'}\nLink: {user.mention('link')}\n"
-                f"Chat: {message.chat.id}\nTimestamp: {ts}"
-            )
-            await log_to_channel(client, log_text)
 
 async def left_member(client: Client, message: Message):
     if not message.left_chat_member:
@@ -56,12 +48,13 @@ async def left_member(client: Client, message: Message):
     user = message.left_chat_member
     text = goodbye.format(mention=user.mention)
     await message.reply(text, parse_mode=ParseMode.HTML)
-    ts = datetime.utcnow().isoformat()
-    log_text = (
-        f"#LEAVE\nName: {user.first_name} {user.last_name or ''}\nID: {user.id}\n"
-        f"Chat: {message.chat.id}\nTimestamp: {ts}"
-    )
-    await log_to_channel(client, log_text)
+    if user.is_self:
+        ts = datetime.utcnow().isoformat()
+        log_text = (
+            f"#LEAVE\nName: {user.first_name} {user.last_name or ''}\nID: {user.id}\n"
+            f"Chat: {message.chat.id}\nTimestamp: {ts}"
+        )
+        await log_to_channel(client, log_text)
 
 
 def register(app: Client):
