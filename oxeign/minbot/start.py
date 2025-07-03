@@ -8,8 +8,8 @@ from .panel import send_panel
 
 
 async def start_cmd(client: Client, message):
-    await send_panel(client, message)
     if message.chat.type == "private":
+        await send_panel(client, message)
         await log_to_channel(
             client,
             f"#START\nUser: {message.from_user.mention} ({message.from_user.id})",
