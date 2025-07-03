@@ -15,7 +15,8 @@ A lightweight Telegram bot built with **Pyrogram 2.x** for basic group moderatio
    ```bash
    pip install -r requirements.txt
    ```
-3. Copy `.env.example` to `.env` and fill in `API_ID`, `API_HASH`, `BOT_TOKEN` and `MONGO_URI`
+3. Copy `.env.example` to `.env` and fill in `API_ID`, `API_HASH`, `BOT_TOKEN` and `MONGO_URI`.
+   Optional: `SUPPORT_LINK` and `DEV_LINK` to change panel links.
 4. Run the bot:
    ```bash
    python -m oxeign.main
