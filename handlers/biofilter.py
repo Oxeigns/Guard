@@ -1,6 +1,5 @@
 """Bio link detection and progressive moderation."""
 
-from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.types import Message, ChatPermissions
 
@@ -12,7 +11,6 @@ from utils.storage import (
     get_bio_filter,
 )
 from handlers.logs import log_event
-from config import LOG_CHANNEL_ID
 
 LINK_KEYWORDS = ["http", "https", "t.me", ".me", ".com", ".link"]
 
