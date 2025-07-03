@@ -1,15 +1,24 @@
 """Basic bot commands."""
 
+import logging
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import (
+    Message,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    CallbackQuery,
+)
 
 from config import UPDATE_CHANNEL_ID, SUPPORT_CHAT_URL, DEVELOPER_URL
 from utils.perms import is_member_of
 
+logger = logging.getLogger(__name__)
+
 
 def register(app: Client):
-    @app.on_message(filters.command(["start", "help", "menu"]))
+    @app.on_message(filters.command("start"))
     async def start_cmd(client: Client, message: Message):
+        logger.info("/start from %s", message.chat.id)
         if message.chat.type != "private":
             await message.reply_text("ℹ️ Please DM me for details.")
             return
@@ -17,9 +26,19 @@ def register(app: Client):
         if UPDATE_CHANNEL_ID:
             if not await is_member_of(client, UPDATE_CHANNEL_ID, message.from_user.id):
                 button = InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("Join Updates", url=f"https://t.me/{UPDATE_CHANNEL_ID}")]]
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "Join Updates",
+                                url=f"https://t.me/{UPDATE_CHANNEL_ID}",
+                            )
+                        ]
+                    ]
                 )
-                await message.reply_text("Please join the update channel to use me.", reply_markup=button)
+                await message.reply_text(
+                    "Please join the update channel to use me.",
+                    reply_markup=button,
+                )
                 return
 
         user = message.from_user
@@ -35,7 +54,12 @@ def register(app: Client):
         me = await client.get_me()
         buttons = InlineKeyboardMarkup(
             [
-                [InlineKeyboardButton("➕ Add to Group", url=f"https://t.me/{me.username}?startgroup=true")],
+                [
+                    InlineKeyboardButton(
+                        "➕ Add to Group",
+                        url=f"https://t.me/{me.username}?startgroup=true",
+                    )
+                ],
                 [InlineKeyboardButton("ℹ️ Help", callback_data="help_tab")],
                 [
                     InlineKeyboardButton("👤 Developer", url=DEVELOPER_URL),
@@ -45,8 +69,26 @@ def register(app: Client):
         )
         await message.reply_text(text, reply_markup=buttons, parse_mode="Markdown")
 
+    @app.on_message(filters.command("help"))
+    async def help_cmd(client: Client, message: Message):
+        logger.info("/help from %s", message.chat.id)
+        if message.chat.type != "private":
+            await message.reply_text("ℹ️ Please DM me for help.")
+            return
+
+        help_text = (
+            "**Commands:**\n"
+            "/approve - approve user\n"
+            "/unapprove - unapprove user\n"
+            "/viewapproved - list approved\n"
+            "/setautodelete <sec> - auto delete messages\n"
+            "/panel - open control panel"
+        )
+        await message.reply_text(help_text, parse_mode="Markdown")
+
     @app.on_callback_query(filters.regex("^help_tab$"))
     async def help_cb(client: Client, query: CallbackQuery):
+        logger.info("help callback from %s", query.from_user.id)
         help_text = (
             "**Commands:**\n"
             "/approve - approve user\n"

@@ -1,15 +1,19 @@
 """User approval management."""
 
+import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message
 
 from utils.storage import approve_user, unapprove_user, get_approved
 from utils.perms import is_admin
 
+logger = logging.getLogger(__name__)
+
 
 def register(app: Client):
     @app.on_message(filters.command("approve") & filters.group)
     async def approve_cmd(client: Client, message: Message):
+        logger.info("approve command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
         if not await is_admin(client, message):
             return
         if not message.reply_to_message or not message.reply_to_message.from_user:
@@ -23,6 +27,7 @@ def register(app: Client):
 
     @app.on_message(filters.command("unapprove") & filters.group)
     async def unapprove_cmd(client: Client, message: Message):
+        logger.info("unapprove command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
         if not await is_admin(client, message):
             return
         if not message.reply_to_message or not message.reply_to_message.from_user:
@@ -36,6 +41,7 @@ def register(app: Client):
 
     @app.on_message(filters.command("viewapproved") & filters.group)
     async def view_approved(client: Client, message: Message):
+        logger.info("viewapproved command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
         if not await is_admin(client, message):
             return
         users = await get_approved(message.chat.id)
