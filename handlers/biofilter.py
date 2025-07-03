@@ -5,6 +5,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, ChatPermissions
 
 from utils.perms import is_admin
+from utils.errors import catch_errors
 from utils.storage import (
     is_approved,
     increment_warning,
@@ -25,6 +26,7 @@ def contains_link(text: str) -> bool:
 
 def init(app: Client) -> None:
     @app.on_message(filters.group & filters.text)
+    @catch_errors
     async def bio_filter(client: Client, message: Message):
         logger.debug("bio_filter check in %s from %s", message.chat.id, message.from_user.id if message.from_user else None)
         user = message.from_user
@@ -66,6 +68,7 @@ def init(app: Client) -> None:
         await message.reply_text(warning, quote=True)
 
     @app.on_message(filters.new_chat_members)
+    @catch_errors
     async def new_member_check(client: Client, message: Message):
         logger.debug("new_member_check in %s", message.chat.id)
         if not await get_bio_filter(message.chat.id):

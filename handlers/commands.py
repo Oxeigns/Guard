@@ -2,74 +2,18 @@
 
 import logging
 from pyrogram import Client, filters
-from pyrogram.types import (
-    Message,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-    CallbackQuery,
-)
+from pyrogram.types import Message, CallbackQuery
 
-from config import UPDATE_CHANNEL_ID, SUPPORT_CHAT_URL, DEVELOPER_URL
-from utils.perms import is_member_of
+
+from utils.errors import catch_errors
 
 logger = logging.getLogger(__name__)
 
 
 def init(app: Client) -> None:
-    @app.on_message(filters.command("menu"))
-    async def start_cmd(client: Client, message: Message):
-        logger.info("/menu from %s", message.chat.id)
-        if message.chat.type != "private":
-            await message.reply_text("ℹ️ Please DM me for details.")
-            return
-
-        if UPDATE_CHANNEL_ID:
-            if not await is_member_of(client, UPDATE_CHANNEL_ID, message.from_user.id):
-                button = InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton(
-                                "Join Updates",
-                                url=f"https://t.me/{UPDATE_CHANNEL_ID}",
-                            )
-                        ]
-                    ]
-                )
-                await message.reply_text(
-                    "Please join the update channel to use me.",
-                    reply_markup=button,
-                )
-                return
-
-        user = message.from_user
-        profile = [
-            "**👤 Profile**",
-            f"**Name:** {user.mention}",
-            f"**ID:** `{user.id}`",
-        ]
-        if user.username:
-            profile.append(f"**Username:** @{user.username}")
-        text = "\n".join(profile)
-
-        me = await client.get_me()
-        buttons = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "➕ Add to Group",
-                        url=f"https://t.me/{me.username}?startgroup=true",
-                    )
-                ],
-                [InlineKeyboardButton("ℹ️ Help", callback_data="help_tab")],
-                [
-                    InlineKeyboardButton("👤 Developer", url=DEVELOPER_URL),
-                    InlineKeyboardButton("📣 Support", url=SUPPORT_CHAT_URL),
-                ],
-            ]
-        )
-        await message.reply_text(text, reply_markup=buttons, parse_mode="markdown")
 
     @app.on_message(filters.command("help"))
+    @catch_errors
     async def help_cmd(client: Client, message: Message):
         logger.info("/help from %s", message.chat.id)
         if message.chat.type != "private":
@@ -87,6 +31,7 @@ def init(app: Client) -> None:
         await message.reply_text(help_text, parse_mode="markdown")
 
     @app.on_message(filters.command("auth"))
+    @catch_errors
     async def auth_cmd(client: Client, message: Message):
         logger.info("/auth from %s", message.chat.id)
         if message.chat.type == "private":
@@ -100,6 +45,7 @@ def init(app: Client) -> None:
             await message.reply_text("Couldn't check your status.")
 
     @app.on_callback_query(filters.regex("^help_tab$"))
+    @catch_errors
     async def help_cb(client: Client, query: CallbackQuery):
         logger.info("help callback from %s", query.from_user.id)
         help_text = (

@@ -5,6 +5,7 @@ from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.types import Chat, User, Message, ChatMemberUpdated
 from config import LOG_CHANNEL_ID
+from utils.errors import catch_errors
 
 logger = logging.getLogger(__name__)
 
@@ -62,11 +63,13 @@ async def log_event(client: Client, action: str, source: Chat | User):
 
 def init(app: Client) -> None:
     @app.on_message(filters.command("start") & filters.private)
+    @catch_errors
     async def private_start(client: Client, message: Message):
         logger.debug("log private_start from %s", message.from_user.id)
         await log_event(client, "Bot started in private", message.from_user)
 
     @app.on_chat_member_updated()
+    @catch_errors
     async def member_updates(client: Client, update: ChatMemberUpdated):
         logger.debug("chat member update in %s", update.chat.id)
         if not update.new_chat_member.user.is_self:

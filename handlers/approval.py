@@ -6,12 +6,14 @@ from pyrogram.types import Message
 
 from utils.storage import approve_user, unapprove_user, get_approved
 from utils.perms import is_admin
+from utils.errors import catch_errors
 
 logger = logging.getLogger(__name__)
 
 
 def init(app: Client) -> None:
     @app.on_message(filters.command("approve") & filters.group)
+    @catch_errors
     async def approve_cmd(client: Client, message: Message):
         logger.info("approve command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
         if not await is_admin(client, message):
@@ -26,6 +28,7 @@ def init(app: Client) -> None:
         )
 
     @app.on_message(filters.command("unapprove") & filters.group)
+    @catch_errors
     async def unapprove_cmd(client: Client, message: Message):
         logger.info("unapprove command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
         if not await is_admin(client, message):
@@ -40,6 +43,7 @@ def init(app: Client) -> None:
         )
 
     @app.on_message(filters.command("viewapproved") & filters.group)
+    @catch_errors
     async def view_approved(client: Client, message: Message):
         logger.info("viewapproved command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
         if not await is_admin(client, message):

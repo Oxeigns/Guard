@@ -1,3 +1,3 @@
 #!/bin/sh
 set -e
-python -u main.py
+exec python -u main.py
