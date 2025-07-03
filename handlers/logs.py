@@ -42,7 +42,7 @@ async def log_action_tracker(client: Client, chat: Chat, actor: User | None, act
         ])
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━")
-    await client.send_message(LOG_CHANNEL_ID, "\n".join(lines), parse_mode="Markdown")
+    await client.send_message(LOG_CHANNEL_ID, "\n".join(lines), parse_mode="markdown")
 
 async def log_event(client: Client, action: str, source: Chat | User):
     if isinstance(source, Chat):
@@ -57,10 +57,10 @@ async def log_event(client: Client, action: str, source: Chat | User):
         f"{ident}\n"
         f"🕒 `{datetime.utcnow().isoformat()}`"
     )
-    await client.send_message(LOG_CHANNEL_ID, text, parse_mode="Markdown")
+    await client.send_message(LOG_CHANNEL_ID, text, parse_mode="markdown")
 
 
-def register(app: Client):
+def init(app: Client) -> None:
     @app.on_message(filters.command("start") & filters.private)
     async def private_start(client: Client, message: Message):
         logger.debug("log private_start from %s", message.from_user.id)

@@ -52,10 +52,10 @@ SETTINGS_PANEL = InlineKeyboardMarkup([
 ])
 
 
-def register(app: Client):
-    @app.on_message(filters.command("panel"))
+def init(app: Client) -> None:
+    @app.on_message(filters.command("start"))
     async def open_panel(client: Client, message: Message):
-        logger.info("/panel from %s", message.chat.id)
+        logger.info("/start from %s", message.chat.id)
         if message.chat.type == "private" or await is_admin(client, message):
             await message.reply_photo(
                 photo=BANNER_URL,
@@ -65,7 +65,7 @@ def register(app: Client):
                     "Group: `BOTS ✺ YARD DISCUSSION`"
                 ),
                 reply_markup=SETTINGS_PANEL,
-                parse_mode="Markdown",
+                parse_mode="markdown",
             )
 
     @app.on_callback_query()
@@ -78,5 +78,5 @@ def register(app: Client):
         await query.answer()
         await query.message.edit_text(
             f"🛠 *You selected:* `{query.data}`\nThat setting's options will be shown soon.",
-            parse_mode="Markdown",
+            parse_mode="markdown",
         )

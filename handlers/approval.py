@@ -10,7 +10,7 @@ from utils.perms import is_admin
 logger = logging.getLogger(__name__)
 
 
-def register(app: Client):
+def init(app: Client) -> None:
     @app.on_message(filters.command("approve") & filters.group)
     async def approve_cmd(client: Client, message: Message):
         logger.info("approve command in %s by %s", message.chat.id, message.from_user.id if message.from_user else None)
@@ -22,7 +22,7 @@ def register(app: Client):
         user_id = message.reply_to_message.from_user.id
         await approve_user(message.chat.id, user_id)
         await message.reply_text(
-            f"✅ Approved `{user_id}`", parse_mode="Markdown"
+            f"✅ Approved `{user_id}`", parse_mode="markdown"
         )
 
     @app.on_message(filters.command("unapprove") & filters.group)
@@ -36,7 +36,7 @@ def register(app: Client):
         user_id = message.reply_to_message.from_user.id
         await unapprove_user(message.chat.id, user_id)
         await message.reply_text(
-            f"❌ Unapproved `{user_id}`", parse_mode="Markdown"
+            f"❌ Unapproved `{user_id}`", parse_mode="markdown"
         )
 
     @app.on_message(filters.command("viewapproved") & filters.group)
@@ -49,4 +49,4 @@ def register(app: Client):
             await message.reply_text("📭 No approved users.")
             return
         text = "**📋 Approved Users:**\n" + "\n".join(f"`{u}`" for u in users)
-        await message.reply_text(text, parse_mode="Markdown")
+        await message.reply_text(text, parse_mode="markdown")
