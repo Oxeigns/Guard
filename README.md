@@ -1,33 +1,9 @@
-# Minimal Telegram Guard
+# Telegram Guard Bot
 
-A lightweight Telegram bot built with **Pyrogram 2.x** for basic group moderation. The bot focuses on two features only and stores all data in MongoDB.
-
-## Features
-
-- **Bio Filter** – warns and eventually mutes users that have any biography set when bio mode is enabled
-- **Approved Users** – admins can approve or unapprove users to bypass the bio filter
-- **Auto Delete Timer** – automatically deletes all messages after a configured delay
-- Admins manage everything via the `/panel` button menu
+A modern Telegram moderation bot built with Pyrogram and MongoDB. The bot scans user bios for links, issues warnings, and permanently mutes repeat offenders. It also offers message auto-deletion and approval controls via an inline panel.
 
 ## Setup
-
-1. Install Python 3.10+ and clone the repo
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Copy `.env.example` to `.env` and fill in `API_ID`, `API_HASH`, `BOT_TOKEN` and `MONGO_URI`.
-   Optional: `SUPPORT_LINK`, `DEV_LINK` and `PANEL_HEADER_URL` to change panel links and header image.
-4. Run the bot:
-   ```bash
-   python -m oxeign.main
-   ```
-
-## Usage
-
-- Use `/panel`, `/start`, `/help` or `/menu` in a group to open the control panel.
-- Admins can `/approve` or `/unapprove` a user by replying to one of their messages.
-
-## Credits
-
-Based on the original project by [@Oxeign](https://t.me/Oxeign).
+1. Install Python 3.10+
+2. `pip install -r requirements.txt`
+3. Copy `.env.example` to `.env` and fill in values.
+4. Run `python main.py`
