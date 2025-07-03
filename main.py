@@ -23,11 +23,17 @@ async def main() -> None:
 
     @app.on_message(filters.private & filters.command("start"))
     async def start_handler(_, msg):
-        await msg.reply_photo(
-            config.start_image,
-            caption="Welcome!",
-            parse_mode=ParseMode.MARKDOWN,
-        )
+        if config.start_image:
+            await msg.reply_photo(
+                config.start_image,
+                caption="Welcome!",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        else:
+            await msg.reply_text(
+                "Welcome!",
+                parse_mode=ParseMode.MARKDOWN,
+            )
         await handlers.logs.start_log(app, msg)
 
     @app.on_message(filters.new_chat_members)

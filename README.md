@@ -7,3 +7,16 @@ A modern Telegram moderation bot built with Pyrogram and MongoDB. The bot scans 
 2. `pip install -r requirements.txt`
 3. Copy `.env.example` to `.env` and fill in values.
 4. Run `python main.py`
+
+When filling out `.env`, ensure there are **no spaces** around the `=` sign,
+otherwise credentials may be read incorrectly.
+
+`START_IMAGE` is optional; if left blank the bot will reply with text only on
+`/start`.
+
+### Required Environment Variables
+
+- `API_ID` and `API_HASH` from [my.telegram.org](https://my.telegram.org)
+- `BOT_TOKEN` from [@BotFather](https://t.me/BotFather)
+- `MONGO_URI` connection string to your MongoDB instance
+- `OWNER_ID` your Telegram user ID (numeric)
