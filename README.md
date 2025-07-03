@@ -1,26 +1,13 @@
-# Oxeign Telegram Guard
+# Minimal Telegram Guard
 
-Oxeign Telegram Guard is a modular security bot built with **Pyrogram**. It keeps groups clean using a mix of admin tools, approval flows and optional toxicity filters powered by the Detoxify model (if installed). All persistent data is stored in MongoDB.
+A lightweight Telegram bot built with **Pyrogram 2.x** for basic group moderation. The bot focuses on two features only and stores all data in MongoDB.
 
 ## Features
 
-- MongoDB backed storage
-- Owner and sudo system
-- Long message control: `/setlongmode`, `/setlonglimit`
-- Bio link filtering: `/biolink on|off`
-- Approval system: `/approve` and `/disapprove`
-- Moderation tools: `/mute`, `/unmute`, `/ban`, `/unban`, `/kick`, `/warn`, `/removewarn`
-- Sudo management: `/addsudo`, `/rmsudo`
-- Broadcast messages with preview: `/broadcast <text>`
-- Auto delete timer: `/setautodelete <seconds>`
-- Blacklist management: `/blacklist add|remove|list`
-- Custom welcome messages: `/setwelcome <text>`
-- Custom goodbye messages: `/setgoodbye <text>`
-- View chat configuration: `/getconfig`
-- Bulk purge messages: `/purge` (reply to a message)
-- View and manage settings: `/settings`
-- Tag everyone: `/tagall`
-- Toggle Anti-Spam, Flood, Captcha and more via buttons
+- **Bio Link Filter** – blocks users with Telegram links in their bio unless approved
+- **Auto Delete Timer** – automatically deletes all messages after a configured delay
+- Admins manage everything via the `/panel` menu in groups
+  (use `/start` in private chat to view the same panel)
 
 ## Setup
 
@@ -29,21 +16,12 @@ Oxeign Telegram Guard is a modular security bot built with **Pyrogram**. It keep
    ```bash
    pip install -r requirements.txt
    ```
-3. Copy `.env.example` to `.env` and fill in your API keys and database URI. If
-   your MongoDB URI does not contain a database name, set `MONGO_DB_NAME` as
-   well.
+3. Copy `.env.example` to `.env` and fill in `API_ID`, `API_HASH`, `BOT_TOKEN` and `MONGO_URI`
 4. Run the bot:
    ```bash
    python -m oxeign.main
    ```
 
-### Optional toxicity filtering
-
-To enable Detoxify based toxicity filtering, install the extra packages:
-```bash
-pip install detoxify torch
-```
-
 ## Credits
 
-Developed by [@Oxeign](https://t.me/Oxeign). Need help? Visit [@Botsyard](https://t.me/Botsyard).
+Based on the original project by [@Oxeign](https://t.me/Oxeign).
