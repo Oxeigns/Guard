@@ -64,10 +64,10 @@ async def toggle_biolink_cb(client: Client, callback_query):
 
 autodel_menu = InlineKeyboardMarkup([
     [
-        InlineKeyboardButton("10s", callback_data="set_autodel:10"),
-        InlineKeyboardButton("30s", callback_data="set_autodel:30"),
-        InlineKeyboardButton("1m", callback_data="set_autodel:60"),
-        InlineKeyboardButton("5m", callback_data="set_autodel:300"),
+        InlineKeyboardButton("15m", callback_data="set_autodel:900"),
+        InlineKeyboardButton("45m", callback_data="set_autodel:2700"),
+        InlineKeyboardButton("360m", callback_data="set_autodel:21600"),
+        InlineKeyboardButton("720m", callback_data="set_autodel:43200"),
     ],
     [InlineKeyboardButton("Off", callback_data="set_autodel:0")],
     [InlineKeyboardButton("⬅️ Back", callback_data="back")],
