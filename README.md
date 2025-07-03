@@ -4,7 +4,8 @@ A lightweight Telegram bot built with **Pyrogram 2.x** for basic group moderatio
 
 ## Features
 
-- **Bio Link Filter** – blocks users with Telegram links in their bio unless approved
+- **Bio Link Filter** – blocks users with Telegram or other invite links in their bio and deletes the join message
+- **Spam Link Filter** – deletes messages that contain spam links and warns the sender
 - **Auto Delete Timer** – automatically deletes all messages after a configured delay
 - Admins manage everything via the `/panel` button menu
 
