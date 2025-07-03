@@ -46,13 +46,14 @@ async def ping_cmd(_, message):
 
 @bot.on_message(
     filters.private
-    & ~filters.command(["start", "help", "ping", "menu"])
     & ~filters.me,
     group=1,
 )
 @catch_errors
 async def fallback_cmd(_, message):
     """Reply in private chats when no command matches."""
+    if message.text and message.text.startswith("/"):
+        return
     logger.info("Fallback handler triggered with text: %s", message.text)
     await message.reply_text("Received: " + (message.text or ""))
 
