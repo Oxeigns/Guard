@@ -7,6 +7,8 @@ from oxeign.utils.logger import log_to_channel
 
 
 async def track_updates(client: Client, update: ChatMemberUpdated):
+    if not update.new_chat_member or not update.new_chat_member.user:
+        return
     if not update.new_chat_member.user.is_self:
         return
     status = update.new_chat_member.status
