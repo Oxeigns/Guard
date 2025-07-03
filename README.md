@@ -10,6 +10,7 @@ Guard is a simple moderation bot built with Pyrogram. It stores data in MongoDB 
 - `MONGO_URI` – MongoDB connection string. If the URI does not include a database name, also set `MONGO_DB_NAME`.
 - `MONGO_DB_NAME` – *(optional)* name of the MongoDB database when it is not part of `MONGO_URI`. Defaults to `guard`.
 - `LOG_CHANNEL_ID` – Telegram channel ID where the bot sends log messages.
+- `BANNER_URL` – *(optional)* image URL displayed on the settings panel.
 
 ## Setup
 
@@ -25,6 +26,8 @@ MONGO_URI=mongodb://localhost:27017/guard
 # Optional when the URI does not contain a DB name; defaults to "guard"
 MONGO_DB_NAME=guard
 LOG_CHANNEL_ID=-1001234567890
+# Optional image to display on the settings panel
+BANNER_URL=
 EOF
 ```
 
@@ -43,7 +46,7 @@ The bot offers a few moderation tools:
 - `/approve` and `/unapprove` – manage approved users in a group.
 - `/viewapproved` – list approved users.
 - `/setautodelete <seconds>` – automatically delete messages from non‑admins.
-- `/panel` – open an inline control panel with quick toggles.
+- `/start` – open the settings panel in private chat or for group admins.
 
 Only group admins can use these commands.
 
