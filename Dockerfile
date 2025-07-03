@@ -1,4 +1,5 @@
 FROM python:3.12-slim
+ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY requirements.txt .
 # Install build tools required for packages like tgcrypto then remove them

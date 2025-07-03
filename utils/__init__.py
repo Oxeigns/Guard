@@ -1,3 +1,3 @@
-from . import perms, storage
+from . import perms, storage, errors
 
-__all__ = ["perms", "storage"]
+__all__ = ["perms", "storage", "errors"]

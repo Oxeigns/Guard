@@ -11,6 +11,7 @@ from pyrogram.types import (
 
 from config import BANNER_URL
 from utils.perms import is_admin
+from utils.errors import catch_errors
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +54,10 @@ SETTINGS_PANEL = InlineKeyboardMarkup([
 
 
 def init(app: Client) -> None:
-    @app.on_message(filters.command("start"))
+    @app.on_message(filters.command("panel"))
+    @catch_errors
     async def open_panel(client: Client, message: Message):
-        logger.info("/start from %s", message.chat.id)
+        logger.info("/panel from %s", message.chat.id)
         if message.chat.type == "private" or await is_admin(client, message):
             await message.reply_photo(
                 photo=BANNER_URL,
@@ -69,6 +71,7 @@ def init(app: Client) -> None:
             )
 
     @app.on_callback_query()
+    @catch_errors
     async def handle_clicks(client: Client, query: CallbackQuery):
         logger.info("panel callback %s from %s", query.data, query.from_user.id)
         if query.data == "close":

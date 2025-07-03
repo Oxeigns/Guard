@@ -8,6 +8,7 @@ from pyrogram import Client, filters, idle
 from config import API_HASH, API_ID, BOT_TOKEN, MONGO_URI
 from handlers import init_all
 from utils.storage import close_db, init_db
+from utils.errors import catch_errors
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -37,13 +38,19 @@ def index() -> str:
     return "Bot is running"
 
 
+@flask_app.route("/health")
+def health() -> str:
+    return "OK"
+
+
 def run_flask() -> None:
     port = int(os.environ.get("PORT", 10000))
     logger.info("Starting Flask server on port %s", port)
-    flask_app.run(host="0.0.0.0", port=port, use_reloader=False)
+    flask_app.run(host="0.0.0.0", port=port, use_reloader=False, threaded=True)
 
 
 @bot.on_message(filters.command("ping"))
+@catch_errors
 async def ping_cmd(_, message):
     logger.info("/ping command received")
     await message.reply_text("pong")
@@ -55,6 +62,7 @@ async def ping_cmd(_, message):
     & ~filters.me,
     group=1,
 )
+@catch_errors
 async def fallback_cmd(_, message):
     """Reply in private chats when no command matches."""
     logger.info("Fallback handler triggered with text: %s", message.text)
@@ -72,7 +80,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread = threading.Thread(target=run_flask, name="flask", daemon=True)
     flask_thread.start()
     logger.info("Flask thread started")
     bot.run(main())
