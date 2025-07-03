@@ -8,37 +8,56 @@ from oxeign.swagger.biomode import is_biomode, set_biomode
 from oxeign.swagger.autodelete import get_autodelete, set_autodelete
 from oxeign.swagger.approvals import add_approval, remove_approval, approvals_col
 from oxeign.utils.perms import is_admin
-from oxeign.config import SUPPORT_LINK, DEV_LINK
+from oxeign.config import SUPPORT_LINK, DEV_LINK, PANEL_HEADER_URL
 
 pending_actions: Dict[Tuple[int, int], str] = {}
 
 
-async def build_panel(client: Client, chat_id: int) -> InlineKeyboardMarkup:
+async def build_panel(
+    client: Client, chat_id: int, private: bool = False
+) -> InlineKeyboardMarkup:
+    if private:
+        rows = [
+            [
+                InlineKeyboardButton(
+                    "➕ Add to Group",
+                    url=f"https://t.me/{client.me.username}?startgroup=true",
+                )
+            ],
+            [
+                InlineKeyboardButton("📣 Support", url=SUPPORT_LINK),
+                InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
+            ],
+        ]
+        return InlineKeyboardMarkup(rows)
+
     biomode = await is_biomode(chat_id)
     autodel = await get_autodelete(chat_id)
     rows = [
-        [InlineKeyboardButton(
-            f"🛡 Bio Link Filter {'On' if biomode else 'Off'}",
-            callback_data="toggle_biolink",
-        )],
-        [InlineKeyboardButton(
-            f"⏱ Set AutoDelete ({autodel if autodel else 'Off'})",
-            callback_data="autodelete",
-        )],
         [
-            InlineKeyboardButton("✅ Approve User", callback_data="approve_user"),
-            InlineKeyboardButton("❌ Unapprove User", callback_data="unapprove_user"),
+            InlineKeyboardButton(
+                f"🛡 Bio Link Filter {'On' if biomode else 'Off'}",
+                callback_data="toggle_biolink",
+            )
         ],
-        [InlineKeyboardButton("📋 View Approved", callback_data="view_approved")],
-        [InlineKeyboardButton(
-            "🔗 Add Bot to Group",
-            url=f"https://t.me/{client.me.username}?startgroup=true",
-        )],
         [
-            InlineKeyboardButton("📣 Support Channel", url=SUPPORT_LINK),
+            InlineKeyboardButton(
+                f"⏱ AutoDelete ({autodel if autodel else 'Off'})",
+                callback_data="autodelete",
+            )
+        ],
+        [
+            InlineKeyboardButton("✅ Approve", callback_data="approve_user"),
+            InlineKeyboardButton("❌ Unapprove", callback_data="unapprove_user"),
+        ],
+        [
+            InlineKeyboardButton("📋 Approved", callback_data="view_approved"),
+            InlineKeyboardButton("Close", callback_data="close"),
+        ],
+        [
+            InlineKeyboardButton("📣 Support", url=SUPPORT_LINK),
             InlineKeyboardButton("👨‍💻 Developer", url=DEV_LINK),
         ],
-        [InlineKeyboardButton("Close", callback_data="close")],
     ]
     return InlineKeyboardMarkup(rows)
 
@@ -48,8 +67,14 @@ async def panel_cmd(client: Client, message: Message):
 
 
 async def send_panel(client: Client, message: Message):
-    markup = await build_panel(client, message.chat.id)
-    await message.reply("**Control Panel**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
+    private = message.chat.type == "private"
+    markup = await build_panel(client, message.chat.id, private=private)
+    await message.reply_photo(
+        PANEL_HEADER_URL,
+        caption="**Control Panel**",
+        reply_markup=markup,
+        parse_mode=ParseMode.MARKDOWN,
+    )
 
 
 async def toggle_biolink_cb(client: Client, callback_query):
@@ -58,20 +83,34 @@ async def toggle_biolink_cb(client: Client, callback_query):
     enabled = not await is_biomode(callback_query.message.chat.id)
     await set_biomode(callback_query.message.chat.id, enabled)
     await callback_query.answer("Updated", show_alert=False)
-    markup = await build_panel(client, callback_query.message.chat.id)
+    markup = await build_panel(client, callback_query.message.chat.id, private=callback_query.message.chat.type == "private")
     await callback_query.message.edit("**Control Panel**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
 
 
-autodel_menu = InlineKeyboardMarkup([
+autodel_menu = InlineKeyboardMarkup(
     [
-        InlineKeyboardButton("15m", callback_data="set_autodel:900"),
-        InlineKeyboardButton("45m", callback_data="set_autodel:2700"),
-        InlineKeyboardButton("360m", callback_data="set_autodel:21600"),
-        InlineKeyboardButton("720m", callback_data="set_autodel:43200"),
-    ],
-    [InlineKeyboardButton("Off", callback_data="set_autodel:0")],
-    [InlineKeyboardButton("⬅️ Back", callback_data="back")],
-])
+        [
+            InlineKeyboardButton("10s", callback_data="set_autodel:10"),
+            InlineKeyboardButton("30s", callback_data="set_autodel:30"),
+            InlineKeyboardButton("1m", callback_data="set_autodel:60"),
+        ],
+        [
+            InlineKeyboardButton("2m", callback_data="set_autodel:120"),
+            InlineKeyboardButton("5m", callback_data="set_autodel:300"),
+            InlineKeyboardButton("10m", callback_data="set_autodel:600"),
+        ],
+        [
+            InlineKeyboardButton("3h", callback_data="set_autodel:10800"),
+            InlineKeyboardButton("6h", callback_data="set_autodel:21600"),
+            InlineKeyboardButton("12h", callback_data="set_autodel:43200"),
+        ],
+        [
+            InlineKeyboardButton("24h", callback_data="set_autodel:86400"),
+            InlineKeyboardButton("Off", callback_data="set_autodel:0"),
+        ],
+        [InlineKeyboardButton("⬅️ Back", callback_data="back")],
+    ]
+)
 
 
 async def autodelete_cb(client: Client, callback_query):
@@ -90,7 +129,7 @@ async def set_autodel_cb(client: Client, callback_query):
     seconds = int(callback_query.data.split(":")[1])
     await set_autodelete(callback_query.message.chat.id, seconds)
     await callback_query.answer("Updated", show_alert=False)
-    markup = await build_panel(client, callback_query.message.chat.id)
+    markup = await build_panel(client, callback_query.message.chat.id, private=callback_query.message.chat.type == "private")
     await callback_query.message.edit("**Control Panel**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
 
 
@@ -125,7 +164,7 @@ async def view_approved_cb(client: Client, callback_query):
 
 
 async def back_cb(client: Client, callback_query):
-    markup = await build_panel(client, callback_query.message.chat.id)
+    markup = await build_panel(client, callback_query.message.chat.id, private=callback_query.message.chat.type == "private")
     await callback_query.message.edit("**Control Panel**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
 
 
