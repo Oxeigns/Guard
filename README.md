@@ -11,8 +11,6 @@ Guard is a simple moderation bot built with Pyrogram. It stores data in MongoDB 
 - `MONGO_DB_NAME` – *(optional)* name of the MongoDB database when it is not part of `MONGO_URI`. Defaults to `guard`.
 - `LOG_CHANNEL_ID` – Telegram channel ID where the bot sends log messages.
 - `BANNER_URL` – *(optional)* image URL displayed on the settings panel.
-- `WEBHOOK_URL` – *(optional)* public URL where Telegram will send updates when
-  deployed using webhooks. Defaults to `https://guard-4nfv.onrender.com`.
 
 ## Setup
 
@@ -45,6 +43,17 @@ python main.py
 For hosting platforms such as Heroku or Railway, this repository includes a
 `Procfile`, `runtime.txt`, and `start.sh` so the bot can be launched directly
 after deployment.
+
+### Render.com
+
+This repository also provides a `render.yaml` describing two services:
+
+- **`guard-web`** – a small Flask app exposing `/health` on port `10000`.
+- **`guard-bot`** – the background worker running the Pyrogram bot in polling
+  mode.
+
+Deploy the repo on Render using this file so the worker and web service share
+the same environment variables.
 
 ## Docker
 
