@@ -4,6 +4,7 @@ from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from pyrogram.enums import ParseMode
+from pyrogram.errors import MessageNotModified
 
 from oxeign.swagger.biomode import is_biomode, set_biomode
 from oxeign.swagger.autodelete import get_autodelete, set_autodelete
@@ -164,9 +165,12 @@ async def menu_router(client: Client, callback_query):
         text = "**Developer**"
     else:
         return
-    await callback_query.message.edit(
-        text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN
-    )
+    try:
+        await callback_query.message.edit(
+            text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN
+        )
+    except MessageNotModified:
+        pass
     await callback_query.answer()
 
 
@@ -179,9 +183,12 @@ async def toggle_bio(client: Client, callback_query):
     await set_biomode(callback_query.message.chat.id, enable)
     await callback_query.answer("Updated", show_alert=False)
     text, markup = await bio_panel(callback_query.message.chat.id)
-    await callback_query.message.edit(
-        text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN
-    )
+    try:
+        await callback_query.message.edit(
+            text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN
+        )
+    except MessageNotModified:
+        pass
 
 
 async def set_autodel_cb(client: Client, callback_query):
@@ -193,9 +200,12 @@ async def set_autodel_cb(client: Client, callback_query):
     await set_autodelete(callback_query.message.chat.id, seconds)
     await callback_query.answer("Updated", show_alert=False)
     markup = autodelete_panel()
-    await callback_query.message.edit(
-        "**Auto Delete**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN
-    )
+    try:
+        await callback_query.message.edit(
+            "**Auto Delete**", reply_markup=markup, parse_mode=ParseMode.MARKDOWN
+        )
+    except MessageNotModified:
+        pass
 
 
 async def approve_user_cb(client: Client, callback_query):
@@ -241,9 +251,12 @@ async def view_approved_cb(client: Client, callback_query):
     markup = InlineKeyboardMarkup(
         [[InlineKeyboardButton("🔙 Back", callback_data="menu:approve")]]
     )
-    await callback_query.message.edit(
-        text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN
-    )
+    try:
+        await callback_query.message.edit(
+            text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN
+        )
+    except MessageNotModified:
+        pass
 
 
 async def handle_pending(client: Client, message: Message):
