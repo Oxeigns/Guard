@@ -6,6 +6,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from oxeign.swagger.biomode import is_biomode
 from oxeign.swagger.approvals import is_approved, add_approval
 from oxeign.utils.perms import is_admin
+from oxeign.config import BOT_NAME
 
 # detect telegram usernames/links and general web links
 LINK_RE = re.compile(r"(?:https?://|www\.|t\.me|telegram\.me|@)", re.I)
@@ -23,8 +24,8 @@ async def check_bio(client: Client, message: Message):
     if await is_approved(message.chat.id, message.from_user.id):
         return
     try:
-        member = await client.get_chat_member(message.chat.id, message.from_user.id)
-        bio = member.bio or ""
+        user = await client.get_chat(message.from_user.id)
+        bio = user.bio or ""
     except Exception:
         bio = ""
     if bio and LINK_RE.search(bio.lower()):
@@ -32,7 +33,12 @@ async def check_bio(client: Client, message: Message):
             await message.delete()
         except Exception:
             pass
-        warn_text = f"{message.from_user.mention}, remove Telegram links from your bio."
+        warn_text = (
+            f"{BOT_NAME}: Deleted message due to bio link from {message.from_user.mention}"
+        )
+        info_text = (
+            f"{message.from_user.mention}, remove Telegram links from your bio."
+        )
         buttons = InlineKeyboardMarkup(
             [
                 [
@@ -42,7 +48,8 @@ async def check_bio(client: Client, message: Message):
                 ]
             ]
         )
-        await client.send_message(message.chat.id, warn_text, reply_markup=buttons)
+        await client.send_message(message.chat.id, warn_text)
+        await client.send_message(message.chat.id, info_text, reply_markup=buttons)
         try:
             await client.send_message(
                 message.from_user.id,
