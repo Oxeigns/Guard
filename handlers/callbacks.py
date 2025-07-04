@@ -1,4 +1,5 @@
 import logging
+from contextlib import suppress
 from time import perf_counter
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
@@ -51,6 +52,11 @@ def register(app: Client) -> None:
                 reply_markup=markup,
                 parse_mode=ParseMode.HTML,
             )
+
+        elif data == "cb_close":
+            await query.answer()
+            with suppress(Exception):
+                await query.message.delete()
 
         elif data == "cb_start":
             await query.answer()

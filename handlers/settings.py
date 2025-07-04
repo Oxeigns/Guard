@@ -22,19 +22,23 @@ def mention_html(user_id: int, name: str) -> str:
     return f'<a href="tg://user?id={user_id}">{escape(name)}</a>'
 
 
-async def build_start_panel(is_admin: bool = False) -> InlineKeyboardMarkup:
+async def build_start_panel(
+    is_admin: bool = False, *, include_back: bool = False
+) -> InlineKeyboardMarkup:
     """Return keyboard markup for the start panel."""
 
     buttons = [[InlineKeyboardButton("📘 Commands", callback_data="cb_help_start")]]
     if is_admin:
         buttons.insert(0, [InlineKeyboardButton("⚙️ Settings", callback_data="cb_open_panel")])
+    if include_back:
+        buttons.append([InlineKeyboardButton("🔙 Back", callback_data="cb_close")])
     return InlineKeyboardMarkup(buttons)
 
 
-async def send_start(client: Client, message: Message) -> None:
+async def send_start(client: Client, message: Message, *, include_back: bool = False) -> None:
     bot_user = await client.get_me()
     user = message.from_user
-    markup = await build_start_panel()
+    markup = await build_start_panel(await is_admin(client, message), include_back=include_back)
 
     await message.reply_photo(
         photo=PANEL_IMAGE_URL,
@@ -67,7 +71,11 @@ def register(app: Client):
     # One panel for all command triggers
     @app.on_message(filters.command(["start", "help", "menu"]))
     async def show_start_panel(client: Client, message: Message):
-        await send_start(client, message)
+        cmd = message.command[0].lower()
+        if cmd == "start":
+            await send_start(client, message)
+        else:
+            await send_control_panel(client, message)
 
     # Show welcome panel automatically when added to a group
     @app.on_chat_member_updated()
@@ -201,8 +209,7 @@ async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKe
 
 
 async def send_control_panel(client: Client, message: Message) -> None:
-    """Send the simple control panel used for /help and /menu commands."""
+    """Send the /start-style panel for /help or /menu commands."""
 
-    caption, markup = await build_group_panel(message.chat.id, client)
-    await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
+    await send_start(client, message, include_back=True)
 

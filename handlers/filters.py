@@ -13,7 +13,6 @@ from utils.errors import catch_errors
 from utils.perms import is_admin
 from utils.db import (
     get_setting,
-    set_setting,
     get_bio_filter,
     increment_warning,
     reset_warning,
@@ -23,7 +22,7 @@ from utils.db import (
 logger = logging.getLogger(__name__)
 
 LINK_RE = re.compile(
-    r"(https?://\S+|t\.me/\S+|tg://\S+|(?:www\.)?\S+\.\S+|@[\w\d_]+)",
+    r"(https?://\S+|t\.me/\S+|tg://\S+|(?:www\.)?\S+\.\S{2,})",
     re.IGNORECASE,
 )
 MAX_BIO_LENGTH = 800
@@ -91,6 +90,11 @@ def register(app: Client) -> None:
         await asyncio.sleep(max(delay, 0))
         with suppress(Exception):
             await app.delete_messages(chat_id, message_id)
+
+    async def schedule_auto_delete(chat_id: int, message_id: int) -> None:
+        delay = int(await get_setting(chat_id, "autodelete_interval", "0"))
+        if delay > 0:
+            asyncio.create_task(delete_later(chat_id, message_id, delay))
 
     @app.on_message(filters.group & (filters.text | filters.caption))
     @catch_errors
@@ -208,19 +212,15 @@ def register(app: Client) -> None:
                 pass
 
         bot_id = (await client.get_me()).id
-        delay = int(await get_setting(chat_id, "autodelete_interval", "0"))
-        if delay > 0 and message.from_user and message.from_user.id != bot_id:
-            asyncio.create_task(delete_later(chat_id, message.id, delay))
+        if message.from_user and message.from_user.id != bot_id:
+            await schedule_auto_delete(chat_id, message.id)
 
     @app.on_edited_message(filters.group & ~filters.service)
     @catch_errors
     async def on_edit(client: Client, message: Message):
         bot_id = (await client.get_me()).id
         if message.from_user and message.from_user.id != bot_id:
-            delay = int(await get_setting(message.chat.id, "autodelete_interval", "0"))
-            if delay <= 0:
-                delay = 900
-            asyncio.create_task(delete_later(message.chat.id, message.id, delay))
+            await schedule_auto_delete(message.chat.id, message.id)
 
 
 async def suppress_delete(message: Message):
