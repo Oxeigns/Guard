@@ -1,14 +1,23 @@
 """Register all bot handlers."""
 
-from . import approval, autodelete, biofilter, commands, menu, panel, message_logger
+from pyrogram import Client
+
+from . import (
+    admin,
+    callbacks,
+    filters as msg_filters,
+    general,
+    logging as msg_logging,
+    ping,
+    settings,
+)
 
 
-def init_all(app):
-    """Register all handlers to the given Pyrogram client."""
-    approval.register(app)
-    autodelete.register(app)
-    biofilter.register(app)
-    commands.register(app)
-    menu.register(app)
-    panel.register(app)
-    message_logger.register(app)
+def register_all(app: Client) -> None:
+    general.register(app)
+    admin.register(app)
+    settings.register(app)
+    msg_filters.register(app)
+    callbacks.register(app)
+    ping.register(app)
+    msg_logging.register(app)
