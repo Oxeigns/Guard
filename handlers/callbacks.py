@@ -3,7 +3,7 @@ from contextlib import suppress
 from time import perf_counter
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
-from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
 
 from utils.errors import catch_errors
 from utils.perms import is_admin
@@ -24,7 +24,6 @@ COMMANDS = [
     ("🌐 /biolink on | off", "Filter bio links"),
     ("🔗 /linkfilter on | off", "Filter any link"),
 ]
-
 
 def register(app: Client) -> None:
     @app.on_callback_query()
@@ -104,6 +103,35 @@ def register(app: Client) -> None:
                 "🚫 Reply to a user with <code>/unapprove</code> to unapprove them.",
                 parse_mode=ParseMode.HTML,
             )
+
+        # ✅ Fixed: Unmute button handler for bio/link filters
+        elif data.startswith("biofilter_unmute_") or data.startswith("linkfilter_unmute_"):
+            target_id = int(data.split("_")[-1])
+            if not await is_admin(client, query.message, query.from_user.id):
+                await query.answer("🔒 Only admins can unmute users.", show_alert=True)
+                return
+
+            try:
+                await client.restrict_chat_member(
+                    query.message.chat.id,
+                    target_id,
+                    ChatPermissions(
+                        can_send_messages=True,
+                        can_send_media_messages=True,
+                        can_send_polls=True,
+                        can_send_other_messages=True,
+                        can_add_web_page_previews=True,
+                        can_invite_users=True,
+                    )
+                )
+                await query.answer("✅ User unmuted.")
+                await query.message.reply_text(
+                    f"🔓 User <a href='tg://user?id={target_id}'>unmuted</a>.",
+                    parse_mode=ParseMode.HTML,
+                )
+            except Exception as e:
+                logger.error("Failed to unmute user %s: %s", target_id, e)
+                await query.answer("❌ Failed to unmute user.", show_alert=True)
 
         else:
             await query.answer("⚠️ Unknown callback", show_alert=True)
