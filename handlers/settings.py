@@ -8,6 +8,7 @@ from pyrogram.types import (
     ChatMemberUpdated,
 )
 import os
+from html import escape
 
 from utils.perms import is_admin
 from utils.errors import catch_errors
@@ -16,6 +17,69 @@ from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
 DEFAULT_AUTODELETE_SECONDS = 60
+
+def mention_html(user_id: int, name: str) -> str:
+    """Return an HTML user mention string."""
+    return f'<a href="tg://user?id={user_id}">{escape(name)}</a>'
+
+
+async def build_start_panel(is_admin: bool) -> InlineKeyboardMarkup:
+    buttons = [[InlineKeyboardButton("📚 Commands", callback_data="cb_help_start")]]
+    if is_admin:
+        buttons.append([InlineKeyboardButton("⚙️ Settings", callback_data="cb_open_panel")])
+    return InlineKeyboardMarkup(buttons)
+
+
+async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKeyboardMarkup]:
+    biolink = await get_setting(chat_id, "biolink", "0")
+    autodel = await get_setting(chat_id, "autodelete", "0")
+    interval = await get_setting(chat_id, "autodelete_interval", "60")
+    linkfilter = await get_setting(chat_id, "linkfilter", "0")
+    editmode = await get_setting(chat_id, "editmode", "0")
+
+    caption = (
+        "<b>Current Settings</b>\n"
+        f"Bio Filter: {'ON ✅' if biolink == '1' else 'OFF ❌'}\n"
+        f"Auto-Delete: {'ON ✅ (' + interval + 's)' if autodel == '1' else 'OFF ❌'}\n"
+        f"Link Filter: {'ON ✅' if linkfilter == '1' else 'OFF ❌'}\n"
+        f"Edit Mode: {'ON ✅' if editmode == '1' else 'OFF ❌'}"
+    )
+
+    keyboard = [
+        [InlineKeyboardButton(f"Bio Filter {'✅' if biolink == '1' else '❌'}", callback_data="cb_toggle_biolink")],
+        [InlineKeyboardButton(f"AutoDelete {'✅' if autodel == '1' else '❌'}", callback_data="cb_toggle_autodel")],
+        [InlineKeyboardButton(f"Link Filter {'✅' if linkfilter == '1' else '❌'}", callback_data="cb_toggle_linkfilter")],
+        [InlineKeyboardButton(f"Edit Mode {'✅' if editmode == '1' else '❌'}", callback_data="cb_toggle_editmode")],
+        [InlineKeyboardButton("✅ Approve", callback_data="cb_approve"), InlineKeyboardButton("❌ Unapprove", callback_data="cb_unapprove")],
+        [InlineKeyboardButton("◀️ Back", callback_data="cb_back_panel")]
+    ]
+    return caption, InlineKeyboardMarkup(keyboard)
+
+
+async def send_start(client: Client, message: Message) -> None:
+    """Send the welcome screen with the start panel."""
+    bot_user = await client.get_me()
+    user = message.from_user
+    markup = await build_start_panel(await is_admin(client, message))
+
+    await message.reply_photo(
+        photo=PANEL_IMAGE_URL,
+        caption=(
+            f"🎉 <b>Welcome to {bot_user.first_name}</b>\n\n"
+            f"Hello {mention_html(user.id, user.first_name)}!\n\n"
+            "I'm here to help manage your group efficiently.\n"
+            "You can tap the buttons below to explore available features.\n\n"
+            "✅ Works in groups\n🛠 Admin-only settings\n🧠 Smart automation tools"
+        ),
+        reply_markup=markup,
+        parse_mode=ParseMode.HTML,
+    )
+
+
+async def send_control_panel(client: Client, message: Message) -> None:
+    """Send the control panel for the given chat."""
+    caption, markup = await build_group_panel(message.chat.id, client)
+    await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
 def get_help_keyboard():
     return InlineKeyboardMarkup([
