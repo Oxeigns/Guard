@@ -67,6 +67,32 @@ async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKe
     return caption, InlineKeyboardMarkup(keyboard)
 
 
+async def send_start(client: Client, message: Message) -> None:
+    """Send the welcome screen with the start panel."""
+    bot_user = await client.get_me()
+    user = message.from_user
+    markup = await build_start_panel(await is_admin(client, message))
+
+    await message.reply_photo(
+        photo=PANEL_IMAGE_URL,
+        caption=(
+            f"🎉 <b>Welcome to {bot_user.first_name}</b>\n\n"
+            f"Hello {mention_html(user.id, user.first_name)}!\n\n"
+            "I'm here to help manage your group efficiently.\n"
+            "You can tap the buttons below to explore available features.\n\n"
+            "✅ Works in groups\n🛠 Admin-only settings\n🧠 Smart automation tools"
+        ),
+        reply_markup=markup,
+        parse_mode=ParseMode.HTML,
+    )
+
+
+async def send_control_panel(client: Client, message: Message) -> None:
+    """Send the control panel for the given chat."""
+    caption, markup = await build_group_panel(message.chat.id, client)
+    await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+
 def register(app: Client) -> None:
 
     @app.on_message(filters.command("start"))
