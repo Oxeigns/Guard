@@ -1,6 +1,5 @@
 import os
 import logging
-from contextlib import suppress
 from pyrogram import Client
 from pyrogram.enums import ParseMode, ChatType
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
@@ -18,19 +17,19 @@ BOT_USERNAME = os.getenv("BOT_USERNAME", "OxeignBot")
 
 
 async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKeyboardMarkup]:
-    """Build control panel for group chats."""
+    """Build the inline control panel and caption for group chats."""
     bio_status = await get_setting(chat_id, "biolink", "0") == "1"
     link_status = await get_setting(chat_id, "linkfilter", "0") == "1"
     delete_enabled = await get_setting(chat_id, "autodelete", "0") == "1"
     edit_status = await get_setting(chat_id, "editmode", "0") == "1"
-    delete_interval = await get_setting(chat_id, "autodelete_interval", "0")
+    delete_interval = await get_setting(chat_id, "autodelete_interval", "0") or "0"
 
     caption = (
         "<b>🛡️ Group Guard Panel</b>\n\n"
-        f"🔗 Bio Filter: {'<b>✅ ON</b>' if bio_status else '<b>❌ OFF</b>'}\n"
-        f"🌐 Link Filter: {'<b>✅ ON</b>' if link_status else '<b>❌ OFF</b>'}\n"
-        f"🗑️ Auto Delete: {'<b>✅ ' + delete_interval + 's</b>' if delete_enabled and delete_interval else '<b>❌ OFF</b>'}\n"
-        f"📝 Edit Delete: {'<b>✅ 15m</b>' if edit_status else '<b>❌ OFF</b>'}"
+        f"🔗 Bio Filter: {'✅ ON' if bio_status else '❌ OFF'}\n"
+        f"🌐 Link Filter: {'✅ ON' if link_status else '❌ OFF'}\n"
+        f"🗑️ Auto Delete: {'✅ ' + delete_interval + 's' if delete_enabled and delete_interval != '0' else '❌ OFF'}\n"
+        f"📝 Edit Delete: {'✅ 15m' if edit_status else '❌ OFF'}"
     )
 
     buttons = [
@@ -59,7 +58,7 @@ async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKe
 
 
 async def build_private_panel() -> tuple[str, InlineKeyboardMarkup]:
-    """Build panel for private chats."""
+    """Build the control panel and caption for private chats."""
     caption = (
         "<b>🤖 Bot Control Panel</b>\n\n"
         "Use the buttons below to manage settings or get help."
@@ -78,7 +77,7 @@ async def build_private_panel() -> tuple[str, InlineKeyboardMarkup]:
 
 
 async def send_panel(client: Client, message: Message) -> None:
-    """Send control panel to user based on chat type."""
+    """Send appropriate panel based on chat context."""
     try:
         if message.chat.type == ChatType.PRIVATE:
             caption, markup = await build_private_panel()
@@ -98,4 +97,4 @@ async def send_panel(client: Client, message: Message) -> None:
 
     except Exception as e:
         logger.warning("Panel display failed: %s", e)
-        await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
+        await message.reply_text("⚠️ Could not load panel.", parse_mode=ParseMode.HTML)
