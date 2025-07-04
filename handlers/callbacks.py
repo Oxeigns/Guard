@@ -38,9 +38,7 @@ def register(app: Client) -> None:
             start = perf_counter()
             await query.answer("📡 Pinging...")
             latency = round((perf_counter() - start) * 1000, 2)
-            await query.message.reply_text(
-                f"🎉 Pong! <code>{latency}ms</code>", parse_mode=ParseMode.HTML
-            )
+            await query.message.reply_text(f"🎉 Pong! <code>{latency}ms</code>", parse_mode=ParseMode.HTML)
 
         elif data in {"cb_help_start", "cb_help_panel"}:
             await query.answer()
@@ -55,54 +53,41 @@ def register(app: Client) -> None:
             markup = await build_start_panel(await is_admin(client, query.message))
             await query.message.edit_text("Choose an option:", reply_markup=markup)
 
-        elif data == "cb_open_panel":
+        elif data in {"cb_open_panel", "cb_back_panel"}:
             await query.answer()
             caption, markup = await build_group_panel(chat_id, client)
             await query.message.edit_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
-        elif data == "cb_back_panel":
-            await query.answer()
-            caption, markup = await build_group_panel(chat_id, client)
-            await query.message.edit_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
+        elif data.startswith("cb_toggle_"):
+            feature_map = {
+                "cb_toggle_biolink": "biolink",
+                "cb_toggle_autodel": "autodelete",
+                "cb_toggle_linkfilter": "linkfilter",
+                "cb_toggle_editmode": "editmode",
+            }
 
-        elif data == "cb_toggle_biolink":
-            if not await is_admin(client, query.message, user_id):
-                await query.answer("Admins only!", show_alert=True)
+            feature = feature_map.get(data)
+            if not feature:
+                await query.answer("⚠️ Unknown toggle.", show_alert=True)
                 return
-            state = await toggle_setting(chat_id, "biolink")
-            await query.answer(f"Bio Filter is now {'ON ✅' if state == '1' else 'OFF ❌'}")
-            caption, markup = await build_group_panel(chat_id, client)
-            await query.message.edit_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
-        elif data == "cb_toggle_autodel":
             if not await is_admin(client, query.message, user_id):
-                await query.answer("Admins only!", show_alert=True)
+                await query.answer("🔒 Admins only!", show_alert=True)
                 return
-            current = await get_setting(chat_id, "autodelete", "0")
-            new_value = "0" if current == "1" else "1"
-            await set_setting(chat_id, "autodelete", new_value)
-            await set_setting(chat_id, "autodelete_interval", "60" if new_value == "1" else "0")
-            await query.answer(
-                f"Auto-Delete is now {'ENABLED ✅' if new_value == '1' else 'DISABLED ❌'}"
-            )
-            caption, markup = await build_group_panel(chat_id, client)
-            await query.message.edit_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
-        elif data == "cb_toggle_linkfilter":
-            if not await is_admin(client, query.message, user_id):
-                await query.answer("Admins only!", show_alert=True)
-                return
-            state = await toggle_setting(chat_id, "linkfilter")
-            await query.answer(f"Link Filter is now {'ON ✅' if state == '1' else 'OFF ❌'}")
-            caption, markup = await build_group_panel(chat_id, client)
-            await query.message.edit_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
+            # Handle auto-delete interval logic separately
+            if feature == "autodelete":
+                current = await get_setting(chat_id, "autodelete", "0")
+                new_value = "0" if current == "1" else "1"
+                await set_setting(chat_id, "autodelete", new_value)
+                await set_setting(chat_id, "autodelete_interval", "60" if new_value == "1" else "0")
+                status = "ENABLED ✅" if new_value == "1" else "DISABLED ❌"
+                await query.answer(f"Auto-Delete is now {status}")
+            else:
+                state = await toggle_setting(chat_id, feature)
+                label = feature.replace("filter", " Filter").title()
+                await query.answer(f"{label} is now {'ON ✅' if state == '1' else 'OFF ❌'}")
 
-        elif data == "cb_toggle_editmode":
-            if not await is_admin(client, query.message, user_id):
-                await query.answer("Admins only!", show_alert=True)
-                return
-            state = await toggle_setting(chat_id, "editmode")
-            await query.answer(f"Edit Delete is now {'ON ✅' if state == '1' else 'OFF ❌'}")
             caption, markup = await build_group_panel(chat_id, client)
             await query.message.edit_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
@@ -121,4 +106,4 @@ def register(app: Client) -> None:
             )
 
         else:
-            await query.answer("Unknown command", show_alert=True)
+            await query.answer("⚠️ Unknown callback", show_alert=True)
