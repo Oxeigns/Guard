@@ -41,6 +41,7 @@ logger.info(
 )
 
 # Initialize Pyrogram Client
+
 bot = Client(
     "moderation-bot",
     api_id=API_ID,
@@ -82,13 +83,15 @@ async def main() -> None:
 
     logger.info("🤖 Fetching bot details from Telegram...")
     try:
-        async with bot:
-            me = await bot.get_me()
-            logger.info("Logged in as %s (@%s)", me.id, me.username)
-            logger.info("✅ Bot is up and running. Waiting for events...")
-            await idle()
+        await bot.start()
+        me = await bot.get_me()
+        logger.info("Logged in as %s (@%s)", me.id, me.username)
+        logger.info("✅ Bot is up and running. Waiting for events...")
+        await idle()
     except Exception as exc:  # noqa: BLE001
         logger.exception("Bot runtime error: %s", exc)
+    finally:
+        await bot.stop()
 
     logger.info("🔒 Closing DB connection...")
     await close_db()

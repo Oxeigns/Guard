@@ -19,7 +19,7 @@ logger = py_logging.getLogger(__name__)
 
 def register_all(app: Client) -> None:
     """Register each handler module with the provided ``Client``."""
-    print("✅ Registering all handlers...")
+    logger.info("Registering handlers")
 
     ping.register(app)
     admin.register(app)
