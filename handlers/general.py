@@ -1,6 +1,8 @@
 import logging
 from pyrogram import Client, filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import Message
+from .callbacks import COMMANDS
 from utils.errors import catch_errors
 from panel import send_start, send_control_panel
 
@@ -28,3 +30,12 @@ def register(app: Client) -> None:
         source = "private" if message.chat.type == "private" else f"group {message.chat.id}"
         logger.info(f"[HELP/MENU] triggered from {source}")
         await send_control_panel(client, message)
+
+    @app.on_message(filters.command("commands") & (filters.private | filters.group))
+    @catch_errors
+    async def commands_cmd(client: Client, message: Message) -> None:
+        """Display the full commands list without using buttons."""
+        rows = [f"{cmd} - {desc}" for cmd, desc in COMMANDS]
+        help_text = "<b>\ud83d\udcda Commands</b>\n\n" + "\n".join(rows)
+        logger.info("[COMMANDS] sent to %s", message.chat.id)
+        await message.reply_text(help_text, parse_mode=ParseMode.HTML)
