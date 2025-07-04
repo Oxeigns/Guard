@@ -3,7 +3,7 @@ import os
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from pyrogram.utils import mention_html
+from html import escape
 
 from utils.perms import is_admin
 from utils.errors import catch_errors
@@ -13,6 +13,11 @@ from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 logger = logging.getLogger(__name__)
 DEFAULT_AUTODELETE_SECONDS = 60
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
+
+
+def mention_html(user_id: int, name: str) -> str:
+    """Return an HTML user mention string."""
+    return f'<a href="tg://user?id={user_id}">{escape(name)}</a>'
 
 
 # UI Components
