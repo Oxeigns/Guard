@@ -11,6 +11,7 @@ API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH", "")
 DB_PATH = os.getenv("DB_PATH", "guard.db")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+BOT_USERNAME = os.getenv("BOT_USERNAME", "")
 
 _missing = [
     name

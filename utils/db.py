@@ -32,9 +32,28 @@ async def init_db(path: str) -> None:
             chat_id INTEGER PRIMARY KEY,
             bio_filter INTEGER DEFAULT 1,
             approval_mode INTEGER DEFAULT 0,
-            autodelete INTEGER DEFAULT 0
+            autodelete INTEGER DEFAULT 0,
+            link_filter INTEGER DEFAULT 0,
+            edit_mode INTEGER DEFAULT 0
         )"""
     )
+    await _connection.execute(
+        """CREATE TABLE IF NOT EXISTS group_meta(
+            chat_id INTEGER PRIMARY KEY,
+            title TEXT,
+            owner_id INTEGER,
+            photo_id TEXT
+        )"""
+    )
+    # Attempt to add new columns for existing databases
+    try:
+        await _connection.execute("ALTER TABLE settings ADD COLUMN link_filter INTEGER DEFAULT 0")
+    except Exception:
+        pass
+    try:
+        await _connection.execute("ALTER TABLE settings ADD COLUMN edit_mode INTEGER DEFAULT 0")
+    except Exception:
+        pass
     await _connection.commit()
 
 
@@ -177,3 +196,65 @@ async def toggle_approval_mode(chat_id: int) -> bool:
     current = await get_approval_mode(chat_id)
     await set_approval_mode(chat_id, not current)
     return not current
+
+
+async def get_link_filter(chat_id: int) -> bool:
+    cur = await _connection.execute(
+        "SELECT link_filter FROM settings WHERE chat_id=?",
+        (chat_id,),
+    )
+    row = await cur.fetchone()
+    await cur.close()
+    return bool(row[0]) if row else False
+
+
+async def set_link_filter(chat_id: int, enabled: bool) -> None:
+    await _connection.execute(
+        "INSERT INTO settings(chat_id, link_filter) VALUES(?, ?) "
+        "ON CONFLICT(chat_id) DO UPDATE SET link_filter=excluded.link_filter",
+        (chat_id, int(enabled)),
+    )
+    await _connection.commit()
+
+
+async def toggle_link_filter(chat_id: int) -> bool:
+    current = await get_link_filter(chat_id)
+    await set_link_filter(chat_id, not current)
+    return not current
+
+
+async def get_edit_mode(chat_id: int) -> bool:
+    cur = await _connection.execute(
+        "SELECT edit_mode FROM settings WHERE chat_id=?",
+        (chat_id,),
+    )
+    row = await cur.fetchone()
+    await cur.close()
+    return bool(row[0]) if row else False
+
+
+async def set_edit_mode(chat_id: int, enabled: bool) -> None:
+    await _connection.execute(
+        "INSERT INTO settings(chat_id, edit_mode) VALUES(?, ?) "
+        "ON CONFLICT(chat_id) DO UPDATE SET edit_mode=excluded.edit_mode",
+        (chat_id, int(enabled)),
+    )
+    await _connection.commit()
+
+
+async def toggle_edit_mode(chat_id: int) -> bool:
+    current = await get_edit_mode(chat_id)
+    await set_edit_mode(chat_id, not current)
+    return not current
+
+
+async def save_group_meta(
+    chat_id: int, title: str, owner_id: int, photo_id: str | None
+) -> None:
+    await _connection.execute(
+        "INSERT INTO group_meta(chat_id, title, owner_id, photo_id) "
+        "VALUES(?,?,?,?) ON CONFLICT(chat_id) DO UPDATE "
+        "SET title=excluded.title, owner_id=excluded.owner_id, photo_id=excluded.photo_id",
+        (chat_id, title, owner_id, photo_id),
+    )
+    await _connection.commit()

@@ -1,85 +1,62 @@
-# Guard
+# OxeignBot
 
-Guard is a modular Telegram bot built with Pyrogram. It stores data in a local SQLite database and automatically initialises the tables on startup. The bot reads its configuration from the environment (or a `.env` file) and runs in polling mode which makes it suitable for platforms such as Render or Railway without any open ports.
+OxeignBot is a modular Telegram moderation bot built with [Pyrogram](https://docs.pyrogram.org/). It provides several moderation utilities with a simple inline control panel and stores its configuration in a local SQLite database.
 
-## Required environment variables
+## Features
 
-- `BOT_TOKEN` – Telegram bot token for your bot.
-- `API_ID` – integer API ID from https://my.telegram.org.
-- `API_HASH` – API hash from https://my.telegram.org.
-- `DB_PATH` – *(optional)* path to the SQLite database file. Defaults to `guard.db`.
-- `BANNER_URL` – *(optional)* image URL displayed on the settings panel.
-- `LOG_LEVEL` – *(optional)* logging level, e.g. `INFO` or `DEBUG`.
+- Toggleable edit deletion, auto delete, link filter and bio link filter
+- Admin commands: `/ban`, `/kick`, `/mute`, `/approve`
+- Inline control panel available via `/start`, `/menu`, `/help`, or `/settings`
+- Group metadata logging (title, owner ID, photo URL)
+- SQLite persistence using `aiosqlite`
+- Commands to manage features: `/editmode`, `/linkfilter`, `/setautodelete`
 
 ## Setup
 
-Install dependencies and create a `.env` file with the required values. An
-example is provided in `.env.example`:
+The source code is organised into `handlers/` for bot commands and message
+handlers, and `utils/` for helper utilities and database access.
 
-```bash
-pip install -r requirements.txt
-cat <<EOF > .env
-BOT_TOKEN=your_bot_token
+### Environment variables
+
+Create a `.env` file with the following keys (see `.env.example`):
+
+```
 API_ID=123456
-API_HASH=0123456789abcdef0123456789abcdef
-# Path to the SQLite database file
-DB_PATH=guard.db
-# Optional image to display on the settings panel
-BANNER_URL=
+API_HASH=your_api_hash
+BOT_TOKEN=123456:ABCDEF
+BOT_USERNAME=OxeignBot
+DB_PATH=oxeignbot.db
 LOG_LEVEL=INFO
-EOF
+UPDATE_CHANNEL_ID=0
+SUPPORT_CHAT_URL=https://t.me/botsyard
+DEVELOPER_URL=https://t.me/oxeign
+BANNER_URL=
 ```
 
-## Running
+1. Install dependencies
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Create a `.env` file based on `.env.example` and fill in your API credentials.
+3. Run the bot
+   ```bash
+   python main.py
+   ```
 
-Start the bot locally with:
+### Commands
 
-```bash
-python main.py
+Toggle features with:
+```
+/editmode on|off
+/linkfilter on|off
+/setautodelete <seconds>
+```
+Moderation commands:
+```
+/approve, /unapprove, /viewapproved
+/ban, /kick, /mute
 ```
 
-For hosting platforms such as Heroku or Railway, this repository includes a
-`Procfile`, `runtime.txt`, and `start.sh` so the bot can be launched directly
-after deployment.
+## License
 
-### Render.com
-
-This repository also provides a `render.yaml` describing two services:
-
-- **`guard-web`** – a small Flask app exposing `/health` on port `10000`.
-- **`guard-bot`** – the background worker running the Pyrogram bot in polling
-  mode.
-
-Deploy the repo on Render using this file so the worker and web service share
-the same environment variables.
-
-## Docker
-
-A `Dockerfile` is included for containerized deployments. Build the image and
-run the bot with:
-
-```bash
-docker build -t guard .
-docker run --env-file .env guard
-```
-
-## Usage
-
-The bot offers a set of moderation tools:
-
-- `/start` or `/menu` – open the inline control panel.
-- `/help` – display available commands.
-- `/ping` – simple health check.
-- `/approve` and `/unapprove` – manage approved users.
-- `/autodelete <seconds>` – automatically delete messages from non‑admins (use `/autodelete` alone to view the current delay). `/setautodelete` remains as an alias.
-- `/biolink [on|off]` – toggle the bio link filter.
-- `/viewapproved` – list approved users.
-
-Only group admins can use these commands in group chats.
-
-Most commands present inline buttons for quick access to approval actions and
-setting toggles.
-
-
-The bot stores all data in a local SQLite database by default. Set the
-`DB_PATH` environment variable to choose a different location.
+MIT
