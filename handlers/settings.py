@@ -2,7 +2,11 @@ import logging
 import os
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import (
+    Message,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 
 from utils.perms import is_admin
 from utils.errors import catch_errors
@@ -12,6 +16,51 @@ from config import SUPPORT_CHAT_URL, DEVELOPER_URL  # Make sure these exist
 logger = logging.getLogger(__name__)
 DEFAULT_AUTODELETE_SECONDS = 60
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
+
+
+async def build_start_panel(is_admin: bool) -> InlineKeyboardMarkup:
+    """Return the inline keyboard for the /start screen."""
+    buttons = [[InlineKeyboardButton("📚 Commands", callback_data="cb_help_start")]]
+    if is_admin:
+        buttons.append([InlineKeyboardButton("⚙️ Settings", callback_data="cb_open_panel")])
+    return InlineKeyboardMarkup(buttons)
+
+
+async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKeyboardMarkup]:
+    """Return caption and keyboard showing current group settings."""
+    biolink = await get_setting(chat_id, "biolink", "0")
+    autodel = await get_setting(chat_id, "autodelete", "0")
+    interval = await get_setting(chat_id, "autodelete_interval", "60")
+    linkfilter = await get_setting(chat_id, "linkfilter", "0")
+    editmode = await get_setting(chat_id, "editmode", "0")
+
+    caption = (
+        "<b>Current Settings</b>\n"
+        f"Bio Filter: {'ON ✅' if biolink == '1' else 'OFF ❌'}\n"
+        f"Auto-Delete: {'ON ✅ (' + interval + 's)' if autodel == '1' else 'OFF ❌'}\n"
+        f"Link Filter: {'ON ✅' if linkfilter == '1' else 'OFF ❌'}\n"
+        f"Edit Mode: {'ON ✅' if editmode == '1' else 'OFF ❌'}"
+    )
+
+    keyboard = [
+        [InlineKeyboardButton(f"Bio Filter {'✅' if biolink == '1' else '❌'}", callback_data="cb_toggle_biolink")],
+        [InlineKeyboardButton(f"AutoDelete {'✅' if autodel == '1' else '❌'}", callback_data="cb_toggle_autodel")],
+        [InlineKeyboardButton(f"Link Filter {'✅' if linkfilter == '1' else '❌'}", callback_data="cb_toggle_linkfilter")],
+        [InlineKeyboardButton(f"Edit Mode {'✅' if editmode == '1' else '❌'}", callback_data="cb_toggle_editmode")],
+        [InlineKeyboardButton("✅ Approve", callback_data="cb_approve"), InlineKeyboardButton("❌ Unapprove", callback_data="cb_unapprove")],
+        [InlineKeyboardButton("◀️ Back", callback_data="cb_back_panel")],
+    ]
+    return caption, InlineKeyboardMarkup(keyboard)
+
+
+async def send_start(client: Client, message: Message) -> None:
+    markup = await build_start_panel(await is_admin(client, message))
+    await message.reply_text("Choose an option:", reply_markup=markup)
+
+
+async def send_control_panel(client: Client, message: Message) -> None:
+    caption, markup = await build_group_panel(message.chat.id, client)
+    await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
 def get_panel_keyboard():
     return InlineKeyboardMarkup([

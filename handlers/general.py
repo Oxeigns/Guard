@@ -4,7 +4,7 @@ from pyrogram.enums import ParseMode
 from pyrogram.types import Message
 from .callbacks import COMMANDS
 from utils.errors import catch_errors
-from panel import send_start, send_control_panel
+from .settings import send_start, send_control_panel
 
 logger = logging.getLogger(__name__)
 
