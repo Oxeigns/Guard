@@ -72,6 +72,9 @@ def register(app: Client):
     @app.on_message(filters.command(["start", "help", "menu"]))
     async def show_start_panel(client: Client, message: Message):
         cmd = message.command[0].lower()
+        if message.chat.type == "private":
+            await send_start(client, message)
+            return
         if cmd == "start":
             await send_start(client, message)
         else:
@@ -194,13 +197,40 @@ def register(app: Client):
 
 
 async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKeyboardMarkup]:
-    """Return caption and keyboard for the basic group control panel."""
+    """Return caption and keyboard for the group control panel with toggles."""
 
     interval = int(await get_setting(chat_id, "autodelete_interval", "0"))
     ad_status = f"{interval}s" if interval > 0 else "OFF"
-    caption = f"<b>Group Control Panel</b>\n🧹 Auto-Delete: <b>{ad_status}</b>"
+    biolink = await get_setting(chat_id, "biolink", "0") == "1"
+    linkfilter = await get_setting(chat_id, "linkfilter", "0") == "1"
+    editmode = await get_setting(chat_id, "editmode", "0") == "1"
+
+    caption = (
+        "<b>Group Control Panel</b>\n"
+        f"🧹 Auto-Delete: <b>{ad_status}</b>\n"
+        f"🛡 BioFilter: <b>{'ON ✅' if biolink else 'OFF ❌'}</b>\n"
+        f"🔗 LinkFilter: <b>{'ON ✅' if linkfilter else 'OFF ❌'}</b>\n"
+        f"✏️ EditMode: <b>{'ON ✅' if editmode else 'OFF ❌'}</b>"
+    )
+
     markup = InlineKeyboardMarkup(
         [
+            [
+                InlineKeyboardButton(
+                    f"BioFilter {'✅' if biolink else '❌'}",
+                    callback_data="cb_toggle_biolink",
+                ),
+                InlineKeyboardButton(
+                    f"LinkFilter {'✅' if linkfilter else '❌'}",
+                    callback_data="cb_toggle_linkfilter",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    f"EditMode {'✅' if editmode else '❌'}",
+                    callback_data="cb_toggle_editmode",
+                )
+            ],
             [InlineKeyboardButton("🔙 Back", callback_data="cb_start")],
             [InlineKeyboardButton("📘 Commands", callback_data="cb_help_panel")],
         ]
@@ -209,7 +239,8 @@ async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKe
 
 
 async def send_control_panel(client: Client, message: Message) -> None:
-    """Send the /start-style panel for /help or /menu commands."""
+    """Send the main settings panel for group chats."""
 
-    await send_start(client, message, include_back=True)
+    caption, markup = await build_group_panel(message.chat.id, client)
+    await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 

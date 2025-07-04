@@ -29,7 +29,10 @@ def register(app: Client) -> None:
         """
         source = "private" if message.chat.type == "private" else f"group {message.chat.id}"
         logger.info(f"[HELP/MENU] triggered from {source}")
-        await send_control_panel(client, message)
+        if message.chat.type == "private":
+            await send_start(client, message)
+        else:
+            await send_control_panel(client, message)
 
     @app.on_message(filters.command("commands") & (filters.private | filters.group))
     @catch_errors
