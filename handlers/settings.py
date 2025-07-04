@@ -14,28 +14,34 @@ PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.
 
 
 def register(app: Client) -> None:
-    # Panel command handler
-    @app.on_message(filters.command("panel") & filters.group)
-    async def control_panel(client: Client, message: Message):
-        if not await is_admin(client, message):
-            await message.reply_text("🔒 <b>Admins only.</b>", parse_mode=ParseMode.HTML)
-            return
-
+    # Get shared control panel markup and caption
+    def get_control_panel():
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("🛡️ BioMode", callback_data="panel_biomode")],
             [InlineKeyboardButton("🧹 AutoDelete", callback_data="panel_autodelete")],
             [InlineKeyboardButton("🔗 LinkFilter", callback_data="panel_linkfilter")],
             [InlineKeyboardButton("✏️ EditMode", callback_data="panel_editmode")]
         ])
+        caption = (
+            "📚 <b>Bot Command Help</b>\n\n"
+            "Here you'll find details for all available plugins and features.\n\n"
+            "👇 Tap the buttons below to view help for each module:"
+        )
+        return keyboard, caption
+
+    # Show control panel on /start or /menu
+    @app.on_message(filters.command(["start", "menu"]) & filters.group)
+    async def show_control_panel(client: Client, message: Message):
+        if not await is_admin(client, message):
+            await message.reply_text("🔒 <b>Admins only.</b>", parse_mode=ParseMode.HTML)
+            return
+
+        keyboard, caption = get_control_panel()
 
         await client.send_photo(
             chat_id=message.chat.id,
             photo=PANEL_IMAGE_URL,
-            caption=(
-                "📚 <b>Bot Command Help</b>\n\n"
-                "Here you'll find details for all available plugins and features.\n\n"
-                "👇 Tap the buttons below to view help for each module:"
-            ),
+            caption=caption,
             reply_markup=keyboard,
             parse_mode=ParseMode.HTML
         )
@@ -94,24 +100,15 @@ def register(app: Client) -> None:
             )
             await cb.answer()
         elif cb.data == "panel_back":
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("🛡️ BioMode", callback_data="panel_biomode")],
-                [InlineKeyboardButton("🧹 AutoDelete", callback_data="panel_autodelete")],
-                [InlineKeyboardButton("🔗 LinkFilter", callback_data="panel_linkfilter")],
-                [InlineKeyboardButton("✏️ EditMode", callback_data="panel_editmode")]
-            ])
+            keyboard, caption = get_control_panel()
             await cb.message.edit_caption(
-                caption=(
-                    "📚 <b>Bot Command Help</b>\n\n"
-                    "Here you'll find details for all available plugins and features.\n\n"
-                    "👇 Tap the buttons below to view help for each module:"
-                ),
+                caption=caption,
                 parse_mode=ParseMode.HTML,
                 reply_markup=keyboard
             )
             await cb.answer()
 
-    # Command Handlers
+    # Admin command: /biolink
     @app.on_message(filters.command("biolink") & filters.group)
     @catch_errors
     async def cmd_biolink(client: Client, message: Message):
@@ -124,6 +121,7 @@ def register(app: Client) -> None:
             parse_mode=ParseMode.HTML,
         )
 
+    # Admin command: /editmode
     @app.on_message(filters.command("editmode") & filters.group)
     @catch_errors
     async def cmd_editmode(client: Client, message: Message):
@@ -136,6 +134,7 @@ def register(app: Client) -> None:
             parse_mode=ParseMode.HTML,
         )
 
+    # Admin command: /autodelete or /setautodelete
     @app.on_message(filters.command(["autodelete", "setautodelete"]) & filters.group)
     @catch_errors
     async def cmd_autodelete(client: Client, message: Message):
@@ -164,6 +163,7 @@ def register(app: Client) -> None:
             parse_mode=ParseMode.HTML,
         )
 
+    # Admin command: /autodeleteon
     @app.on_message(filters.command("autodeleteon") & filters.group)
     @catch_errors
     async def enable_autodel(client: Client, message: Message):
@@ -177,6 +177,7 @@ def register(app: Client) -> None:
             parse_mode=ParseMode.HTML,
         )
 
+    # Admin command: /autodeleteoff
     @app.on_message(filters.command("autodeleteoff") & filters.group)
     @catch_errors
     async def disable_autodel(client: Client, message: Message):
@@ -187,6 +188,7 @@ def register(app: Client) -> None:
         await set_setting(message.chat.id, "autodelete_interval", "0")
         await message.reply_text("🧹 Auto-delete disabled.", parse_mode=ParseMode.HTML)
 
+    # Admin command: /linkfilter
     @app.on_message(filters.command("linkfilter") & filters.group)
     @catch_errors
     async def cmd_linkfilter(client: Client, message: Message):
