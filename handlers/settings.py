@@ -14,6 +14,7 @@ from utils.perms import is_admin
 from utils.db import get_setting
 from utils.messages import safe_edit_message
 from config import SUPPORT_CHAT_URL, DEVELOPER_URL
+from .commands import COMMANDS
 
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
 
@@ -54,7 +55,7 @@ async def send_start(client: Client, message: Message, *, include_back: bool = F
     )
 
 
-def get_help_keyboard() -> InlineKeyboardMarkup:
+def get_help_keyboard(back_cb: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🛡️ BioMode", callback_data="help_biomode")],
         [InlineKeyboardButton("🧹 AutoDelete", callback_data="help_autodelete")],
@@ -63,7 +64,8 @@ def get_help_keyboard() -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton("👨‍💻 Developer", callback_data="help_developer"),
             InlineKeyboardButton("🆘 Support", callback_data="help_support")
-        ]
+        ],
+        [InlineKeyboardButton("🔙 Back", callback_data=back_cb)]
     ])
 
 
@@ -106,13 +108,14 @@ def register(app: Client):
     async def help_panel_handler(client: Client, cb: CallbackQuery):
         data = cb.data
 
-        if data == "cb_help_start":
+        if data in {"cb_help_start", "cb_help_panel"}:
+            rows = [f"{cmd} - {desc}" for cmd, desc in COMMANDS]
             text = (
-                "📚 <b>Bot Command Help</b>\n\n"
-                "Here you'll find details for all available plugins and features.\n\n"
-                "👇 Tap the buttons below to view help for each module:"
+                "<b>📚 Commands</b>\n\n" + "\n".join(rows) +
+                "\n\n👇 Tap the buttons below to view module help:"
             )
-            markup = get_help_keyboard()
+            back_cb = "cb_start" if data == "cb_help_start" else "cb_back_panel"
+            markup = get_help_keyboard(back_cb)
             await safe_edit_message(
                 cb.message,
                 caption=text,
