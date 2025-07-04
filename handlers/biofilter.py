@@ -43,7 +43,7 @@ def build_warning_message(
                 [
                     InlineKeyboardButton(
                         "🖘 Appeal Restriction",
-                        url="https://t.me/your_support_bot",
+                        url="https://t.me/Botsyard",
                     )
                 ]
             ]
@@ -59,7 +59,7 @@ def build_warning_message(
     elif count == 1:
         msg = (
             "\u26a0\ufe0f *Warning 1:* Bio with links or excessive length is not"
-            " allowed."
+            " allowed.❌"
         )
         buttons = InlineKeyboardMarkup(
             [[InlineKeyboardButton("\u2139\ufe0f Learn More", callback_data="why_bio_block")]]
