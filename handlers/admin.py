@@ -1,5 +1,4 @@
 import logging
-from contextlib import suppress
 from pyrogram import Client, filters
 from pyrogram.types import Message, ChatPermissions
 from pyrogram.enums import ParseMode
@@ -10,8 +9,10 @@ from utils.db import (
     approve_user,
     unapprove_user,
     get_approved,
+    is_approved,
     toggle_approval_mode,
     set_approval_mode,
+    get_approval_mode,
 )
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def register(app: Client) -> None:
     async def admin_action(message: Message, action: str) -> None:
-        """Perform ban/kick/mute if valid reply and admin."""
+        """Perform ban/kick/mute actions if admin and valid reply."""
         if message.chat.type not in {"group", "supergroup"}:
             await message.reply_text("❗ Group-only command.", parse_mode=ParseMode.HTML)
             return
@@ -44,6 +45,17 @@ def register(app: Client) -> None:
             logger.error(f"{action} failed: {e}")
             await message.reply_text(f"❌ Failed: {e}")
 
+    async def require_admin_reply(message: Message, action: str):
+        """Ensure command is by admin and used as a reply."""
+        if not await is_admin(app, message):
+            await message.reply_text("🚫 <b>Only admins can do this.</b>", parse_mode=ParseMode.HTML)
+            return None
+        if not message.reply_to_message or not message.reply_to_message.from_user:
+            await message.reply_text(f"📌 <b>Reply to a user's message to {action}.</b>", parse_mode=ParseMode.HTML)
+            return None
+        user = message.reply_to_message.from_user
+        return user.id, f"<a href='tg://user?id={user.id}'>{user.first_name}</a>"
+
     @app.on_message(filters.command("ban") & filters.group)
     @catch_errors
     async def cmd_ban(client: Client, message: Message):
@@ -58,17 +70,6 @@ def register(app: Client) -> None:
     @catch_errors
     async def cmd_mute(client: Client, message: Message):
         await admin_action(message, "mute")
-
-    async def require_admin_reply(message: Message, action: str):
-        """Ensure command is used by admin and as reply to a user."""
-        if not await is_admin(app, message):
-            await message.reply_text("🚫 <b>Only admins can do this.</b>", parse_mode=ParseMode.HTML)
-            return None
-        if not message.reply_to_message or not message.reply_to_message.from_user:
-            await message.reply_text(f"📌 <b>Reply to a user's message to {action}.</b>", parse_mode=ParseMode.HTML)
-            return None
-        user = message.reply_to_message.from_user
-        return user.id, f"<a href='tg://user?id={user.id}'>{user.first_name}</a>"
 
     @app.on_message(filters.command("approve") & filters.group)
     @catch_errors
