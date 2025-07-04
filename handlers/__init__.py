@@ -3,32 +3,28 @@
 from pyrogram import Client
 import logging as py_logging
 
-logger = py_logging.getLogger(__name__)
-
-# Explicit imports to avoid shadowing
+# Import all submodules so their decorators (if any) execute.
 from . import (
+    ping,
     admin,
     callbacks,
-    filters as custom_filters,
+    filters,
     general,
     logging as msg_logging,
-    ping,
     settings,
 )
 
+logger = py_logging.getLogger(__name__)
+
 
 def register_all(app: Client) -> None:
-    logger.info("Registering general handlers")
-    general.register(app)
-    logger.info("Registering admin handlers")
-    admin.register(app)
-    logger.info("Registering settings handlers")
-    settings.register(app)
-    logger.info("Registering custom filters")
-    custom_filters.register(app)
-    logger.info("Registering callback handlers")
-    callbacks.register(app)
-    logger.info("Registering ping handlers")
+    """Register each handler module with the provided ``Client``."""
+    print("✅ Registering all handlers...")
+
     ping.register(app)
-    logger.info("Registering message logging handlers")
+    admin.register(app)
+    callbacks.register(app)
+    filters.register(app)
+    general.register(app)
     msg_logging.register(app)
+    settings.register(app)
