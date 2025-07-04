@@ -13,6 +13,7 @@ from utils.db import (
     toggle_approval_mode,
     set_approval_mode,
     get_approval_mode,
+    set_setting,
 )
 
 logger = logging.getLogger(__name__)
@@ -125,5 +126,108 @@ def register(app: Client) -> None:
 
         await message.reply_text(
             f"🔄 <b>Approval mode is now {'ENABLED ✅' if enabled else 'DISABLED ❌'}</b>",
+            parse_mode=ParseMode.HTML,
+        )
+
+    def _parse_toggle_arg(arg: str | None) -> str | None:
+        """Return '1' or '0' for on/off args, or None if invalid."""
+        if not arg:
+            return None
+        arg = arg.lower()
+        if arg in {"on", "enable", "yes", "true"}:
+            return "1"
+        if arg in {"off", "disable", "no", "false"}:
+            return "0"
+        return None
+
+    async def _require_admin(message: Message) -> bool:
+        if not await is_admin(app, message):
+            await message.reply_text("🔒 <b>Admins only.</b>", parse_mode=ParseMode.HTML)
+            return False
+        return True
+
+    @app.on_message(filters.command("biolink") & filters.group)
+    @catch_errors
+    async def biolink_cmd(client: Client, message: Message):
+        if not await _require_admin(message):
+            return
+        state = _parse_toggle_arg(message.command[1] if len(message.command) > 1 else None)
+        if state is None:
+            await message.reply_text("❗ <b>Usage:</b> <code>/biolink on|off</code>", parse_mode=ParseMode.HTML)
+            return
+        await set_setting(message.chat.id, "biolink", state)
+        await message.reply_text(
+            f"🌐 <b>Bio link filter {'ENABLED ✅' if state == '1' else 'DISABLED ❌'}</b>",
+            parse_mode=ParseMode.HTML,
+        )
+
+    @app.on_message(filters.command("linkfilter") & filters.group)
+    @catch_errors
+    async def linkfilter_cmd(client: Client, message: Message):
+        if not await _require_admin(message):
+            return
+        state = _parse_toggle_arg(message.command[1] if len(message.command) > 1 else None)
+        if state is None:
+            await message.reply_text(
+                "❗ <b>Usage:</b> <code>/linkfilter on|off</code>",
+                parse_mode=ParseMode.HTML,
+            )
+            return
+        await set_setting(message.chat.id, "linkfilter", state)
+        await message.reply_text(
+            f"🔗 <b>Link filter {'ENABLED ✅' if state == '1' else 'DISABLED ❌'}</b>",
+            parse_mode=ParseMode.HTML,
+        )
+
+    @app.on_message(filters.command("editmode") & filters.group)
+    @catch_errors
+    async def editmode_cmd(client: Client, message: Message):
+        if not await _require_admin(message):
+            return
+        state = _parse_toggle_arg(message.command[1] if len(message.command) > 1 else None)
+        if state is None:
+            await message.reply_text(
+                "❗ <b>Usage:</b> <code>/editmode on|off</code>",
+                parse_mode=ParseMode.HTML,
+            )
+            return
+        await set_setting(message.chat.id, "editmode", state)
+        await message.reply_text(
+            f"✏️ <b>Edit mode {'ENABLED ✅' if state == '1' else 'DISABLED ❌'}</b>",
+            parse_mode=ParseMode.HTML,
+        )
+
+    @app.on_message(filters.command("autodeleteoff") & filters.group)
+    @catch_errors
+    async def autodelete_off_cmd(client: Client, message: Message):
+        if not await _require_admin(message):
+            return
+        await set_setting(message.chat.id, "autodelete", "0")
+        await set_setting(message.chat.id, "autodelete_interval", "0")
+        await message.reply_text("🧹 <b>Auto delete disabled.</b>", parse_mode=ParseMode.HTML)
+
+    @app.on_message(filters.command("autodelete") & filters.group)
+    @catch_errors
+    async def autodelete_cmd(client: Client, message: Message):
+        if not await _require_admin(message):
+            return
+        if len(message.command) < 2:
+            await message.reply_text(
+                "❗ <b>Usage:</b> <code>/autodelete &lt;seconds&gt;</code>",
+                parse_mode=ParseMode.HTML,
+            )
+            return
+        try:
+            seconds = int(message.command[1])
+            if seconds <= 0:
+                raise ValueError
+        except ValueError:
+            await message.reply_text("❗ Provide a valid number of seconds.", parse_mode=ParseMode.HTML)
+            return
+
+        await set_setting(message.chat.id, "autodelete", "1")
+        await set_setting(message.chat.id, "autodelete_interval", str(seconds))
+        await message.reply_text(
+            f"🧹 <b>Auto delete enabled for {seconds}s.</b>",
             parse_mode=ParseMode.HTML,
         )
