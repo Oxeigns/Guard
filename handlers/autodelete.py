@@ -12,6 +12,8 @@ from utils.errors import catch_errors
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_AUTODELETE_SECONDS = 60  # Default delay for /autodeleteon
+
 def register(app: Client) -> None:
 
     def generate_markup():
@@ -59,6 +61,29 @@ def register(app: Client) -> None:
 
         await set_autodelete(message.chat.id, seconds)
         await message.reply_text(format_response(seconds), parse_mode=ParseMode.HTML)
+
+    @app.on_message(filters.command(["autodeleteon"]) & filters.group)
+    @catch_errors
+    async def autodelete_on(client: Client, message: Message):
+        if not await is_admin(client, message):
+            await message.reply_text("🔒 Only admins can enable auto-delete.", parse_mode=ParseMode.HTML)
+            return
+
+        await set_autodelete(message.chat.id, DEFAULT_AUTODELETE_SECONDS)
+        await message.reply_text(
+            f"✅ Auto-delete enabled: <b>{DEFAULT_AUTODELETE_SECONDS} seconds</b>",
+            parse_mode=ParseMode.HTML
+        )
+
+    @app.on_message(filters.command(["autodeleteoff"]) & filters.group)
+    @catch_errors
+    async def autodelete_off(client: Client, message: Message):
+        if not await is_admin(client, message):
+            await message.reply_text("🔒 Only admins can disable auto-delete.", parse_mode=ParseMode.HTML)
+            return
+
+        await set_autodelete(message.chat.id, 0)
+        await message.reply_text("🧹 Auto-delete has been disabled.", parse_mode=ParseMode.HTML)
 
     @app.on_callback_query(filters.regex(r"^autodel_(\d+)$"))
     @catch_errors
