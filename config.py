@@ -25,8 +25,12 @@ _missing = [
     if not value
 ]
 if _missing:
-    logger.error("Missing required env vars: %s", ", ".join(_missing))
-    raise RuntimeError("Required environment variables are missing")
+    missing_str = ", ".join(_missing)
+    logger.error("Missing required env vars: %s", missing_str)
+    raise RuntimeError(
+        "Missing required environment variables: "
+        f"{missing_str}. Create a .env file from .env.example and set them."
+    )
 
 # Optional configuration
 UPDATE_CHANNEL_ID = int(os.getenv("UPDATE_CHANNEL_ID", "0"))
