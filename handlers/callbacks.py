@@ -7,7 +7,7 @@ from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBu
 from utils.errors import catch_errors
 from utils.perms import is_admin
 from utils.db import get_setting, set_setting, toggle_setting
-from panel import build_group_panel, build_start_panel
+from .settings import build_group_panel, build_start_panel
 
 logger = logging.getLogger(__name__)
 
