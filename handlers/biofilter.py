@@ -46,7 +46,7 @@ def build_warning(count: int, user, is_final=False) -> tuple[str, InlineKeyboard
         )
         buttons = [
             [support_btn],
-            [InlineKeyboardButton("🔓 Unmute", callback_data="unmute_user")]
+            [InlineKeyboardButton("🔓 Unmute", callback_data=f"unmute_user_{user.id}")]
         ]
     else:
         msg = (
@@ -74,6 +74,7 @@ def register(app: Client) -> None:
         logger.info("User %s warning %d in chat %s", user_id, count, chat_id)
 
         if count >= 3:
+            # Mute: Remove all permissions
             await client.restrict_chat_member(chat_id, user_id, ChatPermissions())
             await reset_warning(chat_id, user_id)
             msg, kb = build_warning(count, user, is_final=True)
@@ -137,22 +138,14 @@ def register(app: Client) -> None:
                     pass
                 await handle_bio_violation(client, message, user)
 
-    @app.on_callback_query(filters.regex("unmute_user"))
+    @app.on_callback_query(filters.regex(r"^unmute_user_(\d+)$"))
     @catch_errors
     async def unmute_user_cb(client: Client, query: CallbackQuery):
-        user_id = (
-            query.message.reply_to_message.from_user.id
-            if query.message.reply_to_message
-            else None
-        )
+        user_id = int(query.matches[0].group(1))
         chat_id = query.message.chat.id
 
         if not await is_admin(client, query.message, query.from_user.id):
             await query.answer("Only admins can unmute.", show_alert=True)
-            return
-
-        if not user_id:
-            await query.answer("User info missing.")
             return
 
         try:
@@ -166,8 +159,8 @@ def register(app: Client) -> None:
                 can_invite_users=True,
                 can_pin_messages=False
             ))
-            await query.answer("User unmuted.")
+            await query.answer("✅ User unmuted.")
             await query.message.reply_text("🔓 User has been unmuted by admin.", quote=True)
         except Exception as e:
-            logger.warning("Unmute failed: %s", e)
-            await query.answer("Failed to unmute.")
+            logger.error("Unmute failed: %s", e)
+            await query.answer("❌ Failed to unmute.")
