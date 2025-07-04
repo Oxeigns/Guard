@@ -42,17 +42,13 @@ async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKe
     delete_enabled = await get_setting(chat_id, "autodelete", "0") == "1"
     edit_status = await get_setting(chat_id, "editmode", "0") == "1"
     delete_interval = await get_setting(chat_id, "autodelete_interval", "0")
-    bio_punish = await get_setting(chat_id, "punish_biolink", "delete")
-    link_punish = await get_setting(chat_id, "punish_linkfilter", "delete")
-    warn_limit = await get_setting(chat_id, "warn_limit", "3")
 
     caption = (
         "<b>🛡️ Group Guard Panel</b>\n\n"
-        f"🗑️ Auto Delete: {'<b>' + delete_interval + 's</b>' if delete_enabled and delete_interval else '<b>❌ OFF</b>'}\n"
-        f"📝 Edit Delete: {'<b>ON</b>' if edit_status else '<b>❌ OFF</b>'}\n"
-        f"🔗 Bio Filter: {'<b>ON</b>' if bio_status else '<b>OFF</b>'} ({bio_punish})\n"
-        f"🌐 Link Filter: {'<b>ON</b>' if link_status else '<b>OFF</b>'} ({link_punish})\n"
-        f"⚠️ Warn Limit: <b>{warn_limit}</b>"
+        f"🔗 Bio Filter: {'<b>✅ ON</b>' if bio_status else '<b>❌ OFF</b>'}\n"
+        f"🌐 Link Filter: {'<b>✅ ON</b>' if link_status else '<b>❌ OFF</b>'}\n"
+        f"🗑️ Auto Delete: {'<b>✅ ' + delete_interval + 's</b>' if delete_enabled and delete_interval else '<b>❌ OFF</b>'}\n"
+        f"📝 Edit Delete: {'<b>✅ 15m</b>' if edit_status else '<b>❌ OFF</b>'}"
     )
 
     buttons = [
