@@ -15,32 +15,32 @@ def register(app: Client) -> None:
         user = message.from_user
         chat = message.chat
 
-        # Handle user
-        user_str = "❓ Unknown User"
+        # Format user info
         if user:
             name = user.first_name or "NoName"
             user_str = f"{name} [{user.id}]"
+        else:
+            user_str = "❓ Unknown User"
 
-        # Handle chat
-        if chat.title:
-            chat_str = f"{chat.title} [{chat.id}]"
-        elif chat.type == "private":
+        # Format chat info
+        if chat.type == "private":
             chat_str = f"🕵️ Private Chat [{chat.id}]"
+        elif chat.title:
+            chat_str = f"{chat.title} [{chat.id}]"
         else:
             chat_str = f"Chat [{chat.id}]"
 
-        # Extract content
+        # Extract and trim message content
         content = message.text or message.caption or ""
         preview = (content[:80] + "...") if len(content) > 80 else content
-        preview = preview if preview.strip() else "<empty>"
+        preview = preview.strip() or "<empty>"
 
-        # Determine message type
+        # Detect message type
+        kind = "Unknown"
         if message.media:
-            kind = message.media.name  # 'PHOTO', 'VIDEO', etc.
+            kind = message.media.value  # safer than .name
         elif content:
             kind = "Text"
-        else:
-            kind = "Unknown"
 
         logger.info(
             f"[📨 MESSAGE] [{kind}] in {chat_str} | From: {user_str} | Content: {preview}"
