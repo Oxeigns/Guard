@@ -14,6 +14,7 @@ from utils.db import (
     set_approval_mode,
     get_approval_mode,
     set_setting,
+    set_bio_filter,
 )
 
 logger = logging.getLogger(__name__)
@@ -155,7 +156,7 @@ def register(app: Client) -> None:
         if state is None:
             await message.reply_text("❗ <b>Usage:</b> <code>/biolink on|off</code>", parse_mode=ParseMode.HTML)
             return
-        await set_setting(message.chat.id, "biolink", state)
+        await set_bio_filter(message.chat.id, state == "1")
         await message.reply_text(
             f"🌐 <b>Bio link filter {'ENABLED ✅' if state == '1' else 'DISABLED ❌'}</b>",
             parse_mode=ParseMode.HTML,

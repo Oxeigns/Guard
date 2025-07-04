@@ -11,7 +11,7 @@ import os
 from html import escape
 
 from utils.perms import is_admin
-from utils.db import get_setting
+from utils.db import get_setting, get_bio_filter
 from utils.messages import safe_edit_message
 from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 from .bots_commands import COMMANDS
@@ -204,7 +204,7 @@ async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKe
 
     interval = int(await get_setting(chat_id, "autodelete_interval", "0"))
     ad_status = f"{interval}s" if interval > 0 else "OFF"
-    biolink = await get_setting(chat_id, "biolink", "0") == "1"
+    biolink = await get_bio_filter(chat_id)
     linkfilter = await get_setting(chat_id, "linkfilter", "0") == "1"
     editmode = await get_setting(chat_id, "editmode", "0") == "1"
 
