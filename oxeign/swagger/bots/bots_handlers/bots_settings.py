@@ -73,11 +73,8 @@ def register(app: Client):
     # One panel for all command triggers
     @app.on_message(filters.command(["start", "help", "menu"]))
     async def show_start_panel(client: Client, message: Message):
-        cmd = message.command[0].lower()
+        """Display the control panel or welcome panel based on chat type."""
         if message.chat.type == "private":
-            await send_start(client, message)
-            return
-        if cmd == "start":
             await send_start(client, message)
         else:
             await send_control_panel(client, message)
@@ -200,7 +197,7 @@ def register(app: Client):
 
 
 async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKeyboardMarkup]:
-    """Return caption and keyboard for the group control panel with toggles."""
+    """Return caption and keyboard for the group control panel."""
 
     interval = int(await get_setting(chat_id, "autodelete_interval", "0"))
     ad_status = f"{interval}s" if interval > 0 else "OFF"
@@ -216,24 +213,9 @@ async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKe
         f"✏️ EditMode: <b>{'ON ✅' if editmode else 'OFF ❌'}</b>"
     )
 
+    # Toggle buttons removed; only navigation buttons remain
     markup = InlineKeyboardMarkup(
         [
-            [
-                InlineKeyboardButton(
-                    f"BioFilter {'✅' if biolink else '❌'}",
-                    callback_data="cb_toggle_biolink",
-                ),
-                InlineKeyboardButton(
-                    f"LinkFilter {'✅' if linkfilter else '❌'}",
-                    callback_data="cb_toggle_linkfilter",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    f"EditMode {'✅' if editmode else '❌'}",
-                    callback_data="cb_toggle_editmode",
-                )
-            ],
             [InlineKeyboardButton("🔙 Back", callback_data="cb_start")],
             [InlineKeyboardButton("📘 Commands", callback_data="cb_help_panel")],
         ]
