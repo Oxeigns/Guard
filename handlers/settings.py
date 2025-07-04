@@ -1,7 +1,10 @@
 import logging
+import os
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
-from pyrogram.types import Message
+from pyrogram.types import (
+    Message, InlineKeyboardMarkup, InlineKeyboardButton
+)
 
 from utils.perms import is_admin
 from utils.errors import catch_errors
@@ -9,9 +12,11 @@ from utils.db import toggle_setting, get_setting, set_setting
 
 logger = logging.getLogger(__name__)
 DEFAULT_AUTODELETE_SECONDS = 60
+PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
 
 
 def register(app: Client) -> None:
+
     @app.on_message(filters.command("biolink") & filters.group)
     @catch_errors
     async def cmd_biolink(client: Client, message: Message):
@@ -120,3 +125,111 @@ def register(app: Client) -> None:
             f"📝 Edited delete {'enabled ✅' if state == '1' else 'disabled ❌'}",
             parse_mode=ParseMode.HTML,
         )
+
+    @app.on_message(filters.command("panel") & filters.group)
+    async def control_panel(client: Client, message: Message):
+        if not await is_admin(client, message):
+            await message.reply_text("🔒 <b>Admins only.</b>", parse_mode=ParseMode.HTML)
+            return
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🛡️ BioMode", callback_data="panel_biomode")],
+            [InlineKeyboardButton("🧹 AutoDelete", callback_data="panel_autodelete")],
+            [InlineKeyboardButton("🔗 LinkFilter", callback_data="panel_linkfilter")],
+            [InlineKeyboardButton("✏️ EditMode", callback_data="panel_editmode")]
+        ])
+
+        await client.send_photo(
+            chat_id=message.chat.id,
+            photo=PANEL_IMAGE_URL,
+            caption=(
+                "🤖 <b>Bot Control Panel</b>\n\n"
+                "Use the buttons below to view and manage your bot settings:"
+            ),
+            reply_markup=keyboard,
+            parse_mode=ParseMode.HTML
+        )
+
+    @app.on_message(filters.new_chat_members)
+    async def bot_added_to_group(client: Client, message: Message):
+        for member in message.new_chat_members:
+            if member.id == client.me.id:
+                keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🛡️ BioMode", callback_data="panel_biomode")],
+                    [InlineKeyboardButton("🧹 AutoDelete", callback_data="panel_autodelete")],
+                    [InlineKeyboardButton("🔗 LinkFilter", callback_data="panel_linkfilter")],
+                    [InlineKeyboardButton("✏️ EditMode", callback_data="panel_editmode")]
+                ])
+                await client.send_photo(
+                    chat_id=message.chat.id,
+                    photo=PANEL_IMAGE_URL,
+                    caption=(
+                        "👋 <b>Hello! I'm ready to protect this group.</b>\n\n"
+                        "Here’s your control panel to configure moderation features 👇"
+                    ),
+                    reply_markup=keyboard,
+                    parse_mode=ParseMode.HTML
+                )
+                break
+
+    @app.on_callback_query()
+    async def panel_navigation(client, cb):
+        descriptions = {
+            "panel_biomode": (
+                "🛡️ <b>BioMode</b>\n\n"
+                "Monitors bios & blocks users with links from messaging.\n\n"
+                "<b>Commands:</b>\n"
+                "• <code>/biolink on</code> – Enable\n"
+                "• <code>/biolink off</code> – Disable\n\n"
+                "👮 Admins only."
+            ),
+            "panel_autodelete": (
+                "🧹 <b>AutoDelete</b>\n\n"
+                "Deletes messages automatically after a set interval.\n\n"
+                "<b>Commands:</b>\n"
+                "• <code>/autodelete 60</code>\n"
+                "• <code>/autodeleteon</code>\n"
+                "• <code>/autodeleteoff</code>\n\n"
+                "🕒 Default: 60s"
+            ),
+            "panel_linkfilter": (
+                "🔗 <b>LinkFilter</b>\n\n"
+                "Blocks messages containing links from non-admins.\n\n"
+                "<b>Commands:</b>\n"
+                "• <code>/linkfilter on</code>\n"
+                "• <code>/linkfilter off</code>\n\n"
+                "👮 Admins only."
+            ),
+            "panel_editmode": (
+                "✏️ <b>EditMode</b>\n\n"
+                "Deletes messages after they're edited, if enabled.\n\n"
+                "<b>Commands:</b>\n"
+                "• <code>/editmode on</code>\n"
+                "• <code>/editmode off</code>\n\n"
+                "👮 Admins only."
+            ),
+        }
+
+        if cb.data in descriptions:
+            await cb.message.edit_caption(
+                caption=descriptions[cb.data],
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 Back", callback_data="panel_back")]
+                ]),
+                parse_mode=ParseMode.HTML
+            )
+        elif cb.data == "panel_back":
+            await cb.message.edit_caption(
+                caption=(
+                    "🤖 <b>Bot Control Panel</b>\n\n"
+                    "Use the buttons below to view and manage your bot settings:"
+                ),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🛡️ BioMode", callback_data="panel_biomode")],
+                    [InlineKeyboardButton("🧹 AutoDelete", callback_data="panel_autodelete")],
+                    [InlineKeyboardButton("🔗 LinkFilter", callback_data="panel_linkfilter")],
+                    [InlineKeyboardButton("✏️ EditMode", callback_data="panel_editmode")]
+                ]),
+                parse_mode=ParseMode.HTML
+            )
+        await cb.answer()
