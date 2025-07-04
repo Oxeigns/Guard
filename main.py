@@ -1,19 +1,27 @@
 import logging
-from pyrogram import Client, idle
+
+from pyrogram import Client, filters, idle
 from pyrogram.enums import ParseMode
 
-from config.settings import API_ID, API_HASH, BOT_TOKEN, MONGO_URI
+from config import API_HASH, API_ID, BOT_TOKEN, DB_PATH, LOG_LEVEL
 from handlers import init_all
-from utils.db import init_db, close_db
+from utils.db import close_db, init_db
+from utils.errors import catch_errors
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
 )
 logger = logging.getLogger(__name__)
 
-app = Client(
-    "bot",
+logger.info(
+    "Loaded config: API_ID=%s BOT_TOKEN=%s",
+    API_ID,
+    BOT_TOKEN[:6] + "***" if BOT_TOKEN else None,
+)
+
+bot = Client(
+    "moderation-bot",
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN,
@@ -21,14 +29,37 @@ app = Client(
 )
 
 
+@bot.on_message(filters.command("ping"))
+@catch_errors
+async def ping_cmd(_, message):
+    logger.info("/ping command received")
+    await message.reply_text("pong")
+
+
+@bot.on_message(
+    filters.private
+    & ~filters.me,
+    group=1,
+)
+@catch_errors
+async def fallback_cmd(_, message):
+    """Reply in private chats when no command matches."""
+    if message.text and message.text.startswith("/"):
+        return
+    logger.info("Fallback handler triggered with text: %s", message.text)
+    await message.reply_text("Received: " + (message.text or ""))
+
+
 async def main() -> None:
-    init_db(MONGO_URI)
-    init_all(app)
-    async with app:
-        logger.info("Bot started")
+    logger.info("Initializing database connection")
+    await init_db(DB_PATH)
+    init_all(bot)
+    async with bot:
+        logger.info("Bot started and waiting for events")
         await idle()
     await close_db()
+    logger.info("Bot stopped")
 
 
 if __name__ == "__main__":
-    app.run(main())
+    bot.run(main())
