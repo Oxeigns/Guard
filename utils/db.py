@@ -1,23 +1,38 @@
-"""Async MongoDB storage utilities for Guard."""
+"""MongoDB storage helpers for Guard."""
 
 from typing import Optional
 
+import logging
+
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-from pymongo import ReturnDocument
+from pymongo import ReturnDocument, errors
+
+logger = logging.getLogger(__name__)
 
 _client: Optional[AsyncIOMotorClient] = None
 _db: Optional[AsyncIOMotorDatabase] = None
 
 
 async def init_db(uri: str, name: str) -> None:
-    """Initialise the MongoDB database and ensure indexes."""
+    """Initialise the MongoDB database and ensure indexes.
+
+    The connection timeout is reduced so a missing database doesn't block
+    startup forever. Any connection errors are logged and re-raised so the
+    caller can handle them appropriately.
+    """
+
     global _client, _db
-    _client = AsyncIOMotorClient(uri)
+    _client = AsyncIOMotorClient(uri, serverSelectionTimeoutMS=5000)
     _db = _client[name]
-    await _db.warnings.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
-    await _db.approved.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
-    await _db.settings.create_index("chat_id", unique=True)
-    await _db.kv_settings.create_index([("chat_id", 1), ("key", 1)], unique=True)
+    try:
+        await _client.server_info()  # Force connection
+        await _db.warnings.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
+        await _db.approved.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
+        await _db.settings.create_index("chat_id", unique=True)
+        await _db.kv_settings.create_index([("chat_id", 1), ("key", 1)], unique=True)
+    except errors.PyMongoError as exc:
+        logger.error("Database initialisation failed: %s", exc)
+        raise
 
 
 def get_db() -> AsyncIOMotorDatabase:
