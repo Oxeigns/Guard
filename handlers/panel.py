@@ -2,7 +2,7 @@
 
 import logging
 from pyrogram import Client, filters
-from pyrogram.enums import ChatType
+from pyrogram.enums import ChatType, ParseMode
 from pyrogram.types import (
     Message,
     InlineKeyboardMarkup,
