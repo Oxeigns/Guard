@@ -86,3 +86,37 @@ def register(app: Client) -> None:
         await set_setting(message.chat.id, "autodelete", "0")
         await set_setting(message.chat.id, "autodelete_interval", "0")
         await message.reply_text("🧹 Auto-delete disabled.", parse_mode=ParseMode.HTML)
+
+    @app.on_message(filters.command("linkfilter") & filters.group)
+    @catch_errors
+    async def cmd_linkfilter(client: Client, message: Message):
+        if not await is_admin(client, message):
+            await message.reply_text("🔒 <b>Admins only.</b>", parse_mode=ParseMode.HTML)
+            return
+        arg = message.command[1].lower() if len(message.command) > 1 else None
+        if arg in {"on", "off"}:
+            state = "1" if arg == "on" else "0"
+            await set_setting(message.chat.id, "linkfilter", state)
+        else:
+            state = await toggle_setting(message.chat.id, "linkfilter")
+        await message.reply_text(
+            f"🔗 Link filter {'enabled ✅' if state == '1' else 'disabled ❌'}",
+            parse_mode=ParseMode.HTML,
+        )
+
+    @app.on_message(filters.command("autodeleteedited") & filters.group)
+    @catch_errors
+    async def cmd_autodeleteedited(client: Client, message: Message):
+        if not await is_admin(client, message):
+            await message.reply_text("🔒 <b>Admins only.</b>", parse_mode=ParseMode.HTML)
+            return
+        arg = message.command[1].lower() if len(message.command) > 1 else None
+        if arg in {"on", "off"}:
+            state = "1" if arg == "on" else "0"
+            await set_setting(message.chat.id, "editmode", state)
+        else:
+            state = await toggle_setting(message.chat.id, "editmode")
+        await message.reply_text(
+            f"📝 Edited delete {'enabled ✅' if state == '1' else 'disabled ❌'}",
+            parse_mode=ParseMode.HTML,
+        )
