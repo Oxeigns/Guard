@@ -6,7 +6,7 @@ from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import (
     Message, ChatPermissions, InlineKeyboardButton,
-    InlineKeyboardMarkup, CallbackQuery
+    InlineKeyboardMarkup
 )
 
 from utils.errors import catch_errors
@@ -147,29 +147,3 @@ def register(app: Client) -> None:
                 await reset_warning(chat_id, user.id)
             msg, kb = build_warning(count, user, is_final=(count >= 3))
             await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
-
-    @app.on_callback_query(filters.regex(r"^(?:biofilter|linkfilter)_unmute_(\d+)$"))
-    @catch_errors
-    async def unmute_user_cb(client: Client, query: CallbackQuery):
-        user_id = int(query.data.split("_")[-1])
-        chat_id = query.message.chat.id
-        if not await is_admin(client, query.message, query.from_user.id):
-            await query.answer("Only admins can unmute users.", show_alert=True)
-            return
-        try:
-            await client.restrict_chat_member(chat_id, user_id, ChatPermissions(
-                can_send_messages=True,
-                can_send_media_messages=True,
-                can_send_polls=True,
-                can_send_other_messages=True,
-                can_add_web_page_previews=True,
-                can_invite_users=True,
-            ))
-            await query.answer("✅ User unmuted.")
-            await query.message.reply_text(
-                f"🔓 User <a href='tg://user?id={user_id}'>unmuted</a>.",
-                parse_mode=ParseMode.HTML,
-            )
-        except Exception as e:
-            logger.error("Error while unmuting user %s: %s", user_id, e)
-            await query.answer("❌ Could not unmute user.")
