@@ -200,7 +200,7 @@ def register(app: Client):
 
 
 async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKeyboardMarkup]:
-    """Return caption and keyboard for the group control panel with toggles."""
+    """Return caption and keyboard for the group control panel."""
 
     interval = int(await get_setting(chat_id, "autodelete_interval", "0"))
     ad_status = f"{interval}s" if interval > 0 else "OFF"
@@ -216,24 +216,9 @@ async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKe
         f"✏️ EditMode: <b>{'ON ✅' if editmode else 'OFF ❌'}</b>"
     )
 
+    # Toggle buttons removed; only navigation buttons remain
     markup = InlineKeyboardMarkup(
         [
-            [
-                InlineKeyboardButton(
-                    f"BioFilter {'✅' if biolink else '❌'}",
-                    callback_data="cb_toggle_biolink",
-                ),
-                InlineKeyboardButton(
-                    f"LinkFilter {'✅' if linkfilter else '❌'}",
-                    callback_data="cb_toggle_linkfilter",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    f"EditMode {'✅' if editmode else '❌'}",
-                    callback_data="cb_toggle_editmode",
-                )
-            ],
             [InlineKeyboardButton("🔙 Back", callback_data="cb_start")],
             [InlineKeyboardButton("📘 Commands", callback_data="cb_help_panel")],
         ]

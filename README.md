@@ -56,4 +56,4 @@ Use `/start` in private chat to see the welcome panel with:
 - **📘 Commands** – view admin commands and access module help.
 - **⚙️ Settings** – open the group control panel if used in a group.
 
-Each toggle button updates instantly and only admins may change them. Support and developer buttons open the URLs you set in `.env`.
+Use the provided commands to enable or disable features. Support and developer buttons open the URLs you set in `.env`.
