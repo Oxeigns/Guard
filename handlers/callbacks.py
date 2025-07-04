@@ -15,7 +15,7 @@ COMMANDS = [
     ("✅ /approve", "Approve a user"),
     ("❌ /unapprove", "Revoke approval"),
     ("📋 /viewapproved", "List approved users"),
-    ("🕒 /setautodelete", "Set auto delete time"),
+    ("🕒 /autodelete <seconds>", "Set auto delete time"),
     ("🔄 /autodeleteon | /autodeleteoff", "Toggle auto delete"),
     ("📝 /autodeleteedited on | off", "Delete edited messages"),
     ("🤐 /mute", "Mute user"),
