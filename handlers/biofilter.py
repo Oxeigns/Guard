@@ -85,8 +85,8 @@ def register(app: Client) -> None:
             return
 
         try:
-            user_full = await client.get_users(user.id)
-            bio = user_full.bio
+            user_full = await client.get_chat(user.id)
+            bio = getattr(user_full, "bio", "")
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to fetch bio for user %s: %s", user.id, exc)
             return
@@ -127,8 +127,8 @@ def register(app: Client) -> None:
                 continue
 
             try:
-                user_full = await client.get_users(user.id)
-                bio = user_full.bio
+                user_full = await client.get_chat(user.id)
+                bio = getattr(user_full, "bio", "")
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed to get bio for user %s: %s", user.id, exc)
                 continue
