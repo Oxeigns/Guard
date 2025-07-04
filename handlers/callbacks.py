@@ -19,21 +19,9 @@ from .settings import (
     build_start_panel,
     get_help_keyboard,
 )
+from .commands import COMMANDS
 
 logger = logging.getLogger(__name__)
-
-COMMANDS = [
-    ("✅ /approve", "Approve a user"),
-    ("❌ /unapprove", "Revoke approval"),
-    ("📋 /viewapproved", "List approved users"),
-    ("🕒 /setautodelete <seconds>", "Enable auto delete"),
-    ("🤐 /mute", "Mute user"),
-    ("🚫 /kick", "Kick user"),
-    ("🔨 /ban", "Ban user"),
-    ("🌐 /biolink on | off", "Filter bio links"),
-    ("🔗 /linkfilter on | off", "Filter any link"),
-    ("✏️ /editmode on | off", "Enable/Disable edit filter"),
-]
 
 
 def register(app: Client) -> None:
@@ -54,17 +42,6 @@ def register(app: Client) -> None:
             await query.message.reply_text(
                 f"🎉 Pong! <code>{latency}ms</code>", parse_mode=ParseMode.HTML
             )
-
-        # Full Command List
-        elif data in {"cb_help_start", "cb_help_panel"}:
-            await query.answer()
-            rows = [f"{cmd} - {desc}" for cmd, desc in COMMANDS]
-            text = "<b>📚 Commands</b>\n\n" + "\n".join(rows)
-            back_cb = "cb_start" if data == "cb_help_start" else "cb_back_panel"
-            markup = InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Back", callback_data=back_cb)]
-            ])
-            await safe_edit_message(query.message, text=text, reply_markup=markup, parse_mode=ParseMode.HTML)
 
         # Close Panel
         elif data == "cb_close":

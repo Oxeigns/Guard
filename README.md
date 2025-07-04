@@ -1,31 +1,59 @@
-# OxeignBot
+# Oxygen Guard Bot
 
-OxeignBot is a modular Telegram moderation bot built with [Pyrogram](https://docs.pyrogram.org/). It provides several moderation utilities with a simple inline control panel and stores its configuration in a MongoDB database.
+Oxygen Guard is a Telegram moderation bot built with [Pyrogram](https://docs.pyrogram.org/). It provides a minimal but useful set of moderation utilities with inline controls and stores its state in MongoDB.
 
-## Features
+## ⚙️ Features
+- **BioFilter** – block users whose bio contains links.
+- **LinkFilter** – remove messages containing URLs from non‑admins.
+- **EditMode** – auto delete edited messages to prevent stealth spam.
+- **AutoDelete** – automatically delete messages after a configurable delay.
+- **Approval Mode** – restrict messaging to approved users only.
+- Full admin commands: `/ban`, `/kick`, `/mute`, `/approve`, `/unapprove`, `/viewapproved`, `/setautodelete`.
+- Inline control panel accessible via `/start`, `/menu`, `/help` or `/settings`.
 
-- Toggleable edit deletion, auto delete, link filter (with warnings) and bio link filter
-- Admin commands: `/ban`, `/kick`, `/mute`, `/approve`
-- Inline control panel available via `/start`, `/menu`, `/help`, or `/settings`
-- Full command list available via `/commands`
-- Group metadata logging (title, owner ID, photo URL)
-- MongoDB persistence using `motor`
+## 🧰 Requirements
+- Python 3.10+
+- A MongoDB instance
+- Telegram API credentials (`API_ID`, `API_HASH`, `BOT_TOKEN`)
 
-## Setup
-
-1. Install dependencies
+## 🖥️ VPS Deployment
+1. **Clone the repo and install deps**
    ```bash
+   git clone https://github.com/youruser/oxygen-guard.git
+   cd oxygen-guard
    pip install -r requirements.txt
    ```
-2. Copy `.env.example` to `.env` and fill in **all** required variables (`API_ID`,
-   `API_HASH`, `BOT_TOKEN`). If any of these are missing the bot will exit with a
-   clear error message. Ensure `MONGO_URI` points to a reachable MongoDB
-   instance.
-3. Run the bot
+2. **Configuration** – copy `.env.example` to `.env` and fill the variables:
+   - `API_ID`, `API_HASH`, `BOT_TOKEN`
+   - `MONGO_URI` and `MONGO_DB`
+   - optional: `OWNER_ID`, `SUPPORT_CHAT_URL`, `DEVELOPER_URL`
+3. **Run the bot**
    ```bash
-   python main.py
+   python3 main.py
    ```
+   Use `screen` or `tmux` to keep it running, or create a `systemd` service:
+   ```ini
+   [Unit]
+   Description=Oxygen Guard Bot
+   After=network.target
 
-## License
+   [Service]
+   WorkingDirectory=/path/to/oxygen-guard
+   ExecStart=/usr/bin/python3 main.py
+   Restart=always
+   Environment="PYTHONUNBUFFERED=1"
 
-MIT
+   [Install]
+   WantedBy=multi-user.target
+   ```
+   Enable with `sudo systemctl enable --now oxygen-guard.service`.
+4. Ensure your firewall allows outbound connections and Telegram ports (usually none need to be opened when running in polling mode).
+
+Optional: run `python3 -m py_compile $(git ls-files '*.py')` to verify the code.
+
+## 📌 Bot Overview
+Use `/start` in private chat to see the welcome panel with:
+- **📘 Commands** – view admin commands and access module help.
+- **⚙️ Settings** – open the group control panel if used in a group.
+
+Each toggle button updates instantly and only admins may change them. Support and developer buttons open the URLs you set in `.env`.

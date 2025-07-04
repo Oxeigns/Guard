@@ -2,7 +2,7 @@ import logging
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message
-from .callbacks import COMMANDS
+from .commands import COMMANDS
 from utils.errors import catch_errors
 from .settings import send_start, send_control_panel
 
@@ -20,12 +20,12 @@ def register(app: Client) -> None:
         logger.info(f"[START] from user {message.from_user.id}")
         await send_start(client, message)
 
-    @app.on_message(filters.command(["help", "menu", "menuu"]) & (filters.private | filters.group))
+    @app.on_message(filters.command(["help", "menu", "menuu", "settings"]) & (filters.private | filters.group))
     @catch_errors
     async def panel_cmd(client: Client, message: Message) -> None:
         """
-        Handle /help or /menu command in both private and group chats.
-        Opens control panel with current settings.
+        Handle /help, /menu or /settings commands in both private and group chats.
+        Opens the control panel with current settings.
         """
         source = "private" if message.chat.type == "private" else f"group {message.chat.id}"
         logger.info(f"[HELP/MENU] triggered from {source}")
