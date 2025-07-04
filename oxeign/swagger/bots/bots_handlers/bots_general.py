@@ -2,7 +2,7 @@ import logging
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message
-from .commands import COMMANDS
+from .bots_commands import COMMANDS
 from utils.errors import catch_errors
 from .bots_settings import send_start, send_control_panel
 
