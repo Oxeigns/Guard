@@ -16,6 +16,26 @@ DEVELOPER_URL = os.getenv("DEVELOPER_URL", "https://t.me/oxeign")
 BOT_USERNAME = os.getenv("BOT_USERNAME", "OxeignBot")
 
 
+async def build_start_panel(is_admin_user: bool) -> InlineKeyboardMarkup:
+    """Return inline keyboard for the /start panel."""
+    buttons = [
+        [
+            InlineKeyboardButton(
+                "➕ Add Me to Group",
+                url=f"https://t.me/{BOT_USERNAME}?startgroup=true",
+            ),
+            InlineKeyboardButton("📚 Help & Commands", callback_data="cb_help_start"),
+        ],
+        [
+            InlineKeyboardButton("🛟 Support", url=SUPPORT_CHAT_URL),
+            InlineKeyboardButton("👨\u200d💻 Developer", url=DEVELOPER_URL),
+        ],
+    ]
+    if is_admin_user:
+        buttons.append([InlineKeyboardButton("🧰 Control Panel", callback_data="cb_open_panel")])
+    return InlineKeyboardMarkup(buttons)
+
+
 async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKeyboardMarkup]:
     """Build the inline control panel and caption for group chats."""
     bio_status = await get_setting(chat_id, "biolink", "0") == "1"
@@ -76,6 +96,23 @@ async def build_private_panel() -> tuple[str, InlineKeyboardMarkup]:
     return caption, InlineKeyboardMarkup(buttons)
 
 
+async def send_start(client: Client, message: Message) -> None:
+    """Send the /start panel to a user."""
+    is_admin_user = False
+    if message.chat.type != ChatType.PRIVATE:
+        is_admin_user = await is_admin(client, message)
+
+    markup = await build_start_panel(is_admin_user)
+
+    try:
+        if BANNER_URL:
+            await client.send_photo(message.chat.id, BANNER_URL)
+        await message.reply_text("Choose an option:", reply_markup=markup)
+    except Exception as exc:
+        logger.warning("Start panel failed: %s", exc)
+        await message.reply_text("Choose an option:", reply_markup=markup)
+
+
 async def send_panel(client: Client, message: Message) -> None:
     """Send appropriate panel based on chat context."""
     try:
@@ -98,3 +135,8 @@ async def send_panel(client: Client, message: Message) -> None:
     except Exception as e:
         logger.warning("Panel display failed: %s", e)
         await message.reply_text("⚠️ Could not load panel.", parse_mode=ParseMode.HTML)
+
+
+async def send_control_panel(client: Client, message: Message) -> None:
+    """Backward compatible wrapper for send_panel."""
+    await send_panel(client, message)
