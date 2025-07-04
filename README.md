@@ -16,11 +16,13 @@ OxeignBot is a modular Telegram moderation bot built with [Pyrogram](https://doc
    ```bash
    pip install -r requirements.txt
    ```
-2. Create a `.env` file based on `.env.example` and fill in your API credentials.
-   Make sure `MONGO_URI` points to a reachable MongoDB instance.
+2. Copy `.env.example` to `.env` and fill in **all** required variables (`API_ID`,
+   `API_HASH`, `BOT_TOKEN`). If any of these are missing the bot will exit with a
+   clear error message. Ensure `MONGO_URI` points to a reachable MongoDB
+   instance.
 3. Run the bot
    ```bash
-   python oxeignbot.py
+   python main.py
    ```
 
 ## License
