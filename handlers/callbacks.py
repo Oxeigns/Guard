@@ -1,9 +1,15 @@
 import logging
 from contextlib import suppress
 from time import perf_counter
+
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
-from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
+from pyrogram.types import (
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    ChatPermissions,
+)
 
 from utils.errors import catch_errors
 from utils.perms import is_admin
@@ -23,6 +29,7 @@ COMMANDS = [
     ("🔨 /ban", "Ban user"),
     ("🌐 /biolink on | off", "Filter bio links"),
     ("🔗 /linkfilter on | off", "Filter any link"),
+    ("✏️ /editmode on | off", "Enable/Disable edit filter"),
 ]
 
 
@@ -34,37 +41,32 @@ def register(app: Client) -> None:
         chat_id = query.message.chat.id
         user_id = query.from_user.id
 
-        logger.debug(f"Callback received: {data}")
+        logger.debug("Received callback: %s", data)
 
         if data == "cb_ping":
             start = perf_counter()
             await query.answer("📡 Pinging...")
             latency = round((perf_counter() - start) * 1000, 2)
-            await query.message.reply_text(f"🎉 Pong! <code>{latency}ms</code>", parse_mode=ParseMode.HTML)
+            await query.message.reply_text(
+                f"🎉 Pong! <code>{latency}ms</code>", parse_mode=ParseMode.HTML
+            )
 
         elif data in {"cb_help_start", "cb_help_panel"}:
             await query.answer()
             rows = [f"{cmd} - {desc}" for cmd, desc in COMMANDS]
-            help_text = "<b>📚 Commands</b>\n\n" + "\n".join(rows)
+            text = "<b>📚 Commands</b>\n\n" + "\n".join(rows)
             back_cb = "cb_start" if data == "cb_help_start" else "cb_back_panel"
-            markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data=back_cb)]])
-            await safe_edit_message(query.message, text=help_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+            markup = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back", callback_data=back_cb)]
+            ])
+            await safe_edit_message(query.message, text=text, reply_markup=markup, parse_mode=ParseMode.HTML)
 
         elif data == "cb_close":
             await query.answer()
             with suppress(Exception):
                 await query.message.delete()
 
-        elif data == "cb_start":
-            await query.answer()
-            if query.message.chat.type == "private":
-                markup = await build_start_panel(await is_admin(client, query.message))
-                await safe_edit_message(query.message, text="Choose an option:", reply_markup=markup)
-            else:
-                caption, markup = await build_group_panel(chat_id, client)
-                await safe_edit_message(query.message, text=caption, reply_markup=markup, parse_mode=ParseMode.HTML)
-
-        elif data in {"cb_open_panel", "cb_back_panel"}:
+        elif data in {"cb_start", "cb_open_panel", "cb_back_panel"}:
             await query.answer()
             if query.message.chat.type == "private":
                 markup = await build_start_panel(await is_admin(client, query.message))
@@ -72,7 +74,7 @@ def register(app: Client) -> None:
                     query.message,
                     text="⚙️ Settings are available only in groups.\n\nUse this bot in a group to access control panel.",
                     reply_markup=markup,
-                    parse_mode=ParseMode.HTML
+                    parse_mode=ParseMode.HTML,
                 )
             else:
                 caption, markup = await build_group_panel(chat_id, client)
@@ -84,10 +86,9 @@ def register(app: Client) -> None:
                 "cb_toggle_linkfilter": "linkfilter",
                 "cb_toggle_editmode": "editmode",
             }
-
             feature = feature_map.get(data)
             if not feature:
-                await query.answer("⚠️ Unknown toggle.", show_alert=True)
+                await query.answer("❌ Unknown feature.", show_alert=True)
                 return
 
             if not await is_admin(client, query.message, user_id):
@@ -111,37 +112,13 @@ def register(app: Client) -> None:
         elif data == "cb_unapprove":
             await query.answer()
             await query.message.reply_text(
-                "🚫 Reply to a user with <code>/unapprove</code> to unapprove them.",
+                "❌ Reply to a user with <code>/unapprove</code> to unapprove them.",
                 parse_mode=ParseMode.HTML,
             )
 
+        # Note: unmute callbacks are deprecated in filter.py, but retained here for backward compatibility
         elif data.startswith("biofilter_unmute_") or data.startswith("linkfilter_unmute_"):
-            target_id = int(data.split("_")[-1])
-            if not await is_admin(client, query.message, query.from_user.id):
-                await query.answer("🔒 Only admins can unmute users.", show_alert=True)
-                return
-
-            try:
-                await client.restrict_chat_member(
-                    query.message.chat.id,
-                    target_id,
-                    ChatPermissions(
-                        can_send_messages=True,
-                        can_send_media_messages=True,
-                        can_send_polls=True,
-                        can_send_other_messages=True,
-                        can_add_web_page_previews=True,
-                        can_invite_users=True,
-                    )
-                )
-                await query.answer("✅ User unmuted.")
-                await query.message.reply_text(
-                    f"🔓 User <a href='tg://user?id={target_id}'>unmuted</a>.",
-                    parse_mode=ParseMode.HTML,
-                )
-            except Exception as e:
-                logger.error("Failed to unmute user %s: %s", target_id, e)
-                await query.answer("❌ Failed to unmute user.", show_alert=True)
+            await query.answer("❌ Manual unmute via button is disabled.\nAsk an admin.", show_alert=True)
 
         else:
             await query.answer("⚠️ Unknown callback", show_alert=True)
