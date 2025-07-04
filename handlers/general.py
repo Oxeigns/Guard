@@ -20,7 +20,7 @@ def register(app: Client) -> None:
         logger.info(f"[START] from user {message.from_user.id}")
         await send_start(client, message)
 
-    @app.on_message(filters.command(["help", "menu"]) & (filters.private | filters.group))
+    @app.on_message(filters.command(["help", "menu", "menuu"]) & (filters.private | filters.group))
     @catch_errors
     async def panel_cmd(client: Client, message: Message) -> None:
         """
