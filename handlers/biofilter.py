@@ -3,6 +3,7 @@
 import logging
 import re
 from pyrogram import Client, filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import (
     Message,
     ChatPermissions,
@@ -85,8 +86,8 @@ def register(app: Client) -> None:
             return
 
         try:
-            user_full = await client.get_users(user.id)
-            bio = user_full.bio
+            user_full = await client.get_chat(user.id)
+            bio = getattr(user_full, "bio", "")
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to fetch bio for user %s: %s", user.id, exc)
             return
@@ -109,7 +110,10 @@ def register(app: Client) -> None:
 
         msg, buttons = build_warning_message(count, restricted)
         await message.reply_text(
-            msg, reply_markup=buttons, quote=True, parse_mode="Markdown"
+            msg,
+            reply_markup=buttons,
+            quote=True,
+            parse_mode=ParseMode.MARKDOWN,
         )
 
     @app.on_message(filters.new_chat_members)
@@ -127,8 +131,8 @@ def register(app: Client) -> None:
                 continue
 
             try:
-                user_full = await client.get_users(user.id)
-                bio = user_full.bio
+                user_full = await client.get_chat(user.id)
+                bio = getattr(user_full, "bio", "")
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed to get bio for user %s: %s", user.id, exc)
                 continue
@@ -143,7 +147,7 @@ def register(app: Client) -> None:
                 await message.reply_text(
                     "\u274c I can't delete system messages. Please ensure I have 'Delete Messages' rights.",
                     quote=True,
-                    parse_mode="Markdown",
+                    parse_mode=ParseMode.MARKDOWN,
                 )
 
             count = await increment_warning(chat_id, user.id)
@@ -156,7 +160,10 @@ def register(app: Client) -> None:
 
             msg, buttons = build_warning_message(count, restricted)
             await message.reply_text(
-                msg, reply_markup=buttons, quote=True, parse_mode="Markdown"
+                msg,
+                reply_markup=buttons,
+                quote=True,
+                parse_mode=ParseMode.MARKDOWN,
             )
 
     @app.on_callback_query(filters.regex("why_bio_block"))
@@ -165,6 +172,6 @@ def register(app: Client) -> None:
         await callback_query.message.reply_text(
             "Your profile bio may contain links or be too long. This is restricted to protect the group from spam/scams. "
             "Please edit your bio to avoid moderation.",
-            parse_mode="Markdown",
+            parse_mode=ParseMode.MARKDOWN,
         )
 
