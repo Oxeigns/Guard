@@ -57,6 +57,32 @@ def build_warning(count: int, user, is_final: bool = False):
     return msg, kb
 
 
+def build_link_warning(count: int, user, is_final: bool = False):
+    name = f"@{user.username}" if user.username else f"{user.first_name} ({user.id})"
+    support_btn = InlineKeyboardButton("📨 Support", url=SUPPORT_CHAT)
+
+    if is_final:
+        msg = (
+            f"🔇 <b>Final Warning for {name}</b>\n\n"
+            "Links are not allowed here.\n"
+            "You have been <b>muted</b>.\n"
+            "Remove the link and contact support or an admin."
+        )
+        kb = InlineKeyboardMarkup([
+            [support_btn],
+            [InlineKeyboardButton("🔓 Unmute", callback_data=f"linkfilter_unmute_{user.id}")]
+        ])
+    else:
+        msg = (
+            f"⚠️ <b>Warning {count}/3 for {name}</b>\n\n"
+            "Links are not allowed here.\n"
+            "Remove it before you're muted."
+        )
+        kb = InlineKeyboardMarkup([[support_btn]])
+
+    return msg, kb
+
+
 def register(app: Client) -> None:
 
     @app.on_message(filters.group & (filters.text | filters.caption))
@@ -103,6 +129,40 @@ def register(app: Client) -> None:
         msg, kb = build_warning(count, user, is_final)
         await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
 
+    @app.on_message(filters.group & (filters.text | filters.caption))
+    @catch_errors
+    async def check_message_links(client: Client, message: Message):
+        user = message.from_user
+        chat_id = message.chat.id
+
+        if not user or user.is_bot:
+            return
+
+        if await get_setting(chat_id, "linkfilter", "0") != "1":
+            return
+
+        if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
+            return
+
+        text = message.text or message.caption or ""
+        if not contains_link(text):
+            return
+
+        try:
+            await message.delete()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Failed to delete user message with link: %s", e)
+
+        count = await increment_warning(chat_id, user.id)
+        is_final = count >= 3
+
+        if is_final:
+            await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
+            await reset_warning(chat_id, user.id)
+
+        msg, kb = build_link_warning(count, user, is_final)
+        await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
+
     @app.on_message(filters.new_chat_members)
     @catch_errors
     async def check_new_member_bio(client: Client, message: Message):
@@ -140,7 +200,7 @@ def register(app: Client) -> None:
             msg, kb = build_warning(count, user, is_final)
             await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
 
-    @app.on_callback_query(filters.regex(r"^biofilter_unmute_(\d+)$"))
+    @app.on_callback_query(filters.regex(r"^(?:biofilter|linkfilter)_unmute_(\d+)$"))
     @catch_errors
     async def unmute_user_cb(client: Client, query: CallbackQuery):
         user_id = int(query.data.split("_")[-1])
@@ -182,11 +242,6 @@ def register(app: Client) -> None:
     async def enforce_filters(client: Client, message: Message):
         text = message.text or message.caption or ""
         chat_id = message.chat.id
-
-        if await get_setting(chat_id, "linkfilter", "0") == "1" and LINK_RE.search(text):
-            with suppress(Exception):
-                await message.delete()
-            return
 
         if await get_setting(chat_id, "biolink", "0") == "1" and message.from_user:
             try:
