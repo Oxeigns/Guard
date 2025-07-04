@@ -31,3 +31,4 @@ SUPPORT_CHAT_URL = os.getenv("SUPPORT_CHAT_URL", "https://t.me/botsyard")
 DEVELOPER_URL = os.getenv("DEVELOPER_URL", "https://t.me/oxeign")
 # Image shown at the top of the settings panel
 BANNER_URL = os.getenv("BANNER_URL", "")
+BOT_USERNAME = os.getenv("BOT_USERNAME", "OxeignBot")

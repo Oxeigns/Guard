@@ -35,6 +35,14 @@ async def init_db(path: str) -> None:
             autodelete INTEGER DEFAULT 0
         )"""
     )
+    await _connection.execute(
+        """CREATE TABLE IF NOT EXISTS kv_settings(
+            chat_id INTEGER NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT,
+            PRIMARY KEY(chat_id, key)
+        )"""
+    )
     await _connection.commit()
 
 
@@ -177,3 +185,29 @@ async def toggle_approval_mode(chat_id: int) -> bool:
     current = await get_approval_mode(chat_id)
     await set_approval_mode(chat_id, not current)
     return not current
+
+
+async def get_setting(chat_id: int, key: str, default: str | None = None) -> str | None:
+    cur = await _connection.execute(
+        "SELECT value FROM kv_settings WHERE chat_id=? AND key=?",
+        (chat_id, key),
+    )
+    row = await cur.fetchone()
+    await cur.close()
+    return row[0] if row else default
+
+
+async def set_setting(chat_id: int, key: str, value: str) -> None:
+    await _connection.execute(
+        "INSERT INTO kv_settings(chat_id, key, value) VALUES(?,?,?) "
+        "ON CONFLICT(chat_id, key) DO UPDATE SET value=excluded.value",
+        (chat_id, key, value),
+    )
+    await _connection.commit()
+
+
+async def toggle_setting(chat_id: int, key: str, default: str = "0") -> str:
+    current = await get_setting(chat_id, key, default)
+    new_value = "1" if current == "0" else "0"
+    await set_setting(chat_id, key, new_value)
+    return new_value

@@ -1,17 +1,24 @@
+import asyncio
 import logging
 import re
-import asyncio
+from contextlib import suppress
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import (
-    Message, ChatPermissions,
-    InlineKeyboardMarkup, InlineKeyboardButton,
-    CallbackQuery
+    Message, ChatPermissions, InlineKeyboardButton,
+    InlineKeyboardMarkup, CallbackQuery
 )
 
-from utils.perms import is_admin
 from utils.errors import catch_errors
-from utils.db import is_approved, increment_warning, reset_warning, get_bio_filter
+from utils.perms import is_admin
+from utils.db import (
+    get_setting,
+    set_setting,
+    get_bio_filter,
+    increment_warning,
+    reset_warning,
+    is_approved,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +57,7 @@ def build_warning(count: int, user, is_final: bool = False):
     return msg, kb
 
 
-def register(app: Client):
+def register(app: Client) -> None:
 
     @app.on_message(filters.group & (filters.text | filters.caption))
     @catch_errors
@@ -64,7 +71,7 @@ def register(app: Client):
         try:
             if not await get_bio_filter(chat_id):
                 return
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Error fetching bio filter for chat %s: %s", chat_id, e)
             return
 
@@ -74,7 +81,7 @@ def register(app: Client):
         try:
             user_info = await client.get_chat(user.id)
             bio = getattr(user_info, "bio", "")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to fetch bio for user %s: %s", user.id, e)
             return
 
@@ -83,7 +90,7 @@ def register(app: Client):
 
         try:
             await message.delete()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to delete user message with bad bio: %s", e)
 
         count = await increment_warning(chat_id, user.id)
@@ -111,7 +118,7 @@ def register(app: Client):
             try:
                 user_info = await client.get_chat(user.id)
                 bio = getattr(user_info, "bio", "")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning("Couldn't fetch bio for new member %s: %s", user.id, e)
                 continue
 
@@ -144,19 +151,59 @@ def register(app: Client):
             return
 
         try:
-            await client.restrict_chat_member(chat_id, user_id, ChatPermissions(
-                can_send_messages=True,
-                can_send_media_messages=True,
-                can_send_polls=True,
-                can_send_other_messages=True,
-                can_add_web_page_previews=True,
-                can_invite_users=True,
-            ))
+            await client.restrict_chat_member(
+                chat_id,
+                user_id,
+                ChatPermissions(
+                    can_send_messages=True,
+                    can_send_media_messages=True,
+                    can_send_polls=True,
+                    can_send_other_messages=True,
+                    can_add_web_page_previews=True,
+                    can_invite_users=True,
+                ),
+            )
             await query.answer("✅ User unmuted.")
             await query.message.reply_text(
                 f"🔓 User <a href='tg://user?id={user_id}'>unmuted</a>.",
-                parse_mode=ParseMode.HTML
+                parse_mode=ParseMode.HTML,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Error while unmuting user %s: %s", user_id, e)
             await query.answer("❌ Could not unmute user.")
+
+    async def delete_later(chat_id: int, message_id: int, delay: int) -> None:
+        await asyncio.sleep(delay)
+        with suppress(Exception):
+            await app.delete_messages(chat_id, message_id)
+
+    @app.on_message(filters.group & ~filters.service)
+    @catch_errors
+    async def enforce_filters(client: Client, message: Message):
+        text = message.text or message.caption or ""
+        chat_id = message.chat.id
+
+        if await get_setting(chat_id, "linkfilter", "0") == "1" and LINK_RE.search(text):
+            with suppress(Exception):
+                await message.delete()
+            return
+
+        if await get_setting(chat_id, "biolink", "0") == "1" and message.from_user:
+            try:
+                user = await client.get_users(message.from_user.id)
+                if user.bio and LINK_RE.search(user.bio):
+                    with suppress(Exception):
+                        await message.delete()
+                    return
+            except Exception:
+                pass
+
+        if await get_setting(chat_id, "autodelete", "0") == "1":
+            delay = int(await get_setting(chat_id, "autodelete_interval", "30"))
+            asyncio.create_task(delete_later(chat_id, message.id, delay))
+
+    @app.on_edited_message(filters.group & ~filters.service)
+    @catch_errors
+    async def on_edit(client: Client, message: Message):
+        if await get_setting(message.chat.id, "editmode", "0") == "1":
+            asyncio.create_task(delete_later(message.chat.id, message.id, 900))
