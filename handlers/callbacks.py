@@ -81,11 +81,7 @@ def register(app: Client) -> None:
             current = await get_setting(chat_id, "autodelete", "0")
             new_value = "0" if current == "1" else "1"
             await set_setting(chat_id, "autodelete", new_value)
-            if new_value == "1":
-                interval = await get_setting(chat_id, "autodelete_interval", "60")
-                await set_setting(chat_id, "autodelete_interval", interval)
-            else:
-                await set_setting(chat_id, "autodelete_interval", "0")
+            await set_setting(chat_id, "autodelete_interval", "60" if new_value == "1" else "0")
             await query.answer(
                 f"Auto-Delete is now {'ENABLED ✅' if new_value == '1' else 'DISABLED ❌'}"
             )
