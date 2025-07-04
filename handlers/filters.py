@@ -22,8 +22,6 @@ from utils.db import (
 
 logger = logging.getLogger(__name__)
 
-# Detect common link patterns including domains like example.com, t.me links
-# and any URLs starting with http(s) or tg:// schemes.
 LINK_RE = re.compile(
     r"(https?://\S+|t\.me/\S+|tg://\S+|(?:www\.)?\S+\.\S+|@[\w\d_]+)",
     re.IGNORECASE,
@@ -90,7 +88,6 @@ def build_link_warning(count: int, user, is_final: bool = False):
 
 def register(app: Client) -> None:
     async def delete_later(chat_id: int, message_id: int, delay: int) -> None:
-        """Delete a message after ``delay`` seconds, ignoring any failures."""
         await asyncio.sleep(max(delay, 0))
         with suppress(Exception):
             await app.delete_messages(chat_id, message_id)
@@ -217,9 +214,16 @@ def register(app: Client) -> None:
     @app.on_edited_message(filters.group & ~filters.service)
     @catch_errors
     async def on_edit(client: Client, message: Message):
-        """Delete edited messages instantly when edit mode is enabled."""
         if await get_setting(message.chat.id, "editmode", "0") == "1":
-            asyncio.create_task(delete_later(message.chat.id, message.id, 0))
+            try:
+                await message.delete()
+                notify = await message.chat.send_message(
+                    f"✂️ Edited message by <a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a> was deleted (Edit Mode Active).",
+                    parse_mode=ParseMode.HTML
+                )
+                asyncio.create_task(delete_later(notify.chat.id, notify.id, 10))
+            except Exception as e:
+                logger.warning(f"Failed to delete edited message: {e}")
 
 
 async def suppress_delete(message: Message):
