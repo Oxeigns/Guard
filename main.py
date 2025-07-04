@@ -3,8 +3,8 @@ import logging
 from pyrogram import Client, filters, idle
 from pyrogram.enums import ParseMode
 
-from config import API_HASH, API_ID, BOT_TOKEN, DB_PATH, LOG_LEVEL
-from handlers import init_all
+from config import API_HASH, API_ID, BOT_TOKEN, MONGO_URI, MONGO_DB, LOG_LEVEL
+from handlers import register_all
 from utils.db import close_db, init_db
 from utils.errors import catch_errors
 
@@ -52,8 +52,8 @@ async def fallback_cmd(_, message):
 
 async def main() -> None:
     logger.info("Initializing database connection")
-    await init_db(DB_PATH)
-    init_all(bot)
+    await init_db(MONGO_URI, MONGO_DB)
+    register_all(bot)
     async with bot:
         logger.info("Bot started and waiting for events")
         await idle()

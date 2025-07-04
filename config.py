@@ -9,7 +9,10 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH", "")
-DB_PATH = os.getenv("DB_PATH", "guard.db")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+MONGO_DB = os.getenv("MONGO_DB", "oxygen")
+OWNER_ID = int(os.getenv("OWNER_ID", "0"))
+BOT_USERNAME = os.getenv("BOT_USERNAME", "OxygenBot")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 _missing = [
@@ -31,4 +34,3 @@ SUPPORT_CHAT_URL = os.getenv("SUPPORT_CHAT_URL", "https://t.me/botsyard")
 DEVELOPER_URL = os.getenv("DEVELOPER_URL", "https://t.me/oxeign")
 # Image shown at the top of the settings panel
 BANNER_URL = os.getenv("BANNER_URL", "https://files.catbox.moe/uvqeln.jpg")
-BOT_USERNAME = os.getenv("BOT_USERNAME", "OxeignBot")

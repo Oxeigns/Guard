@@ -1,150 +1,92 @@
-"""Async SQLite storage utilities for Guard."""
+"""Async MongoDB storage utilities for Guard."""
 
 from typing import Optional
 
-import aiosqlite
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from pymongo import ReturnDocument
 
-_connection: Optional[aiosqlite.Connection] = None
+_client: Optional[AsyncIOMotorClient] = None
+_db: Optional[AsyncIOMotorDatabase] = None
 
 
-async def init_db(path: str) -> None:
-    """Initialise the SQLite database."""
-    global _connection
-    _connection = await aiosqlite.connect(path)
-    await _connection.execute("PRAGMA journal_mode=WAL")
-    await _connection.execute(
-        """CREATE TABLE IF NOT EXISTS warnings(
-            chat_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            count INTEGER NOT NULL,
-            PRIMARY KEY(chat_id, user_id)
-        )"""
-    )
-    await _connection.execute(
-        """CREATE TABLE IF NOT EXISTS approved(
-            chat_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            PRIMARY KEY(chat_id, user_id)
-        )"""
-    )
-    await _connection.execute(
-        """CREATE TABLE IF NOT EXISTS settings(
-            chat_id INTEGER PRIMARY KEY,
-            bio_filter INTEGER DEFAULT 1,
-            approval_mode INTEGER DEFAULT 0,
-            autodelete INTEGER DEFAULT 0
-        )"""
-    )
-    await _connection.execute(
-        """CREATE TABLE IF NOT EXISTS kv_settings(
-            chat_id INTEGER NOT NULL,
-            key TEXT NOT NULL,
-            value TEXT,
-            PRIMARY KEY(chat_id, key)
-        )"""
-    )
-    await _connection.commit()
+async def init_db(uri: str, name: str) -> None:
+    """Initialise the MongoDB database and ensure indexes."""
+    global _client, _db
+    _client = AsyncIOMotorClient(uri)
+    _db = _client[name]
+    await _db.warnings.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
+    await _db.approved.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
+    await _db.settings.create_index("chat_id", unique=True)
+    await _db.kv_settings.create_index([("chat_id", 1), ("key", 1)], unique=True)
+
+
+def get_db() -> AsyncIOMotorDatabase:
+    if _db is None:
+        raise RuntimeError("Database not initialised")
+    return _db
 
 
 async def close_db() -> None:
-    if _connection:
-        await _connection.close()
+    if _client:
+        _client.close()
 
 
 async def get_warnings(chat_id: int, user_id: int) -> int:
-    cur = await _connection.execute(
-        "SELECT count FROM warnings WHERE chat_id=? AND user_id=?",
-        (chat_id, user_id),
-    )
-    row = await cur.fetchone()
-    await cur.close()
-    return row[0] if row else 0
+    doc = await get_db().warnings.find_one({"chat_id": chat_id, "user_id": user_id})
+    return int(doc.get("count", 0)) if doc else 0
 
 
 async def increment_warning(chat_id: int, user_id: int) -> int:
-    count = await get_warnings(chat_id, user_id)
-    if count >= 3:
-        return count
-    await _connection.execute(
-        "INSERT INTO warnings(chat_id, user_id, count) VALUES(?,?,1) "
-        "ON CONFLICT(chat_id, user_id) DO UPDATE SET count=count+1",
-        (chat_id, user_id),
+    res = await get_db().warnings.find_one_and_update(
+        {"chat_id": chat_id, "user_id": user_id},
+        {"$inc": {"count": 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
     )
-    await _connection.commit()
-    return count + 1
+    count = int(res.get("count", 0))
+    return count
 
 
 async def reset_warning(chat_id: int, user_id: int) -> None:
-    await _connection.execute(
-        "DELETE FROM warnings WHERE chat_id=? AND user_id=?",
-        (chat_id, user_id),
-    )
-    await _connection.commit()
+    await get_db().warnings.delete_one({"chat_id": chat_id, "user_id": user_id})
 
 
 async def is_approved(chat_id: int, user_id: int) -> bool:
-    cur = await _connection.execute(
-        "SELECT 1 FROM approved WHERE chat_id=? AND user_id=?",
-        (chat_id, user_id),
-    )
-    row = await cur.fetchone()
-    await cur.close()
-    return row is not None
+    doc = await get_db().approved.find_one({"chat_id": chat_id, "user_id": user_id})
+    return doc is not None
 
 
 async def approve_user(chat_id: int, user_id: int) -> None:
-    await _connection.execute(
-        "INSERT OR IGNORE INTO approved(chat_id, user_id) VALUES(?, ?)",
-        (chat_id, user_id),
+    await get_db().approved.update_one(
+        {"chat_id": chat_id, "user_id": user_id}, {"$setOnInsert": {}}, upsert=True
     )
-    await _connection.commit()
 
 
 async def unapprove_user(chat_id: int, user_id: int) -> None:
-    await _connection.execute(
-        "DELETE FROM approved WHERE chat_id=? AND user_id=?",
-        (chat_id, user_id),
-    )
-    await _connection.commit()
+    await get_db().approved.delete_one({"chat_id": chat_id, "user_id": user_id})
 
 
 async def get_approved(chat_id: int) -> list[int]:
-    cur = await _connection.execute(
-        "SELECT user_id FROM approved WHERE chat_id=?",
-        (chat_id,),
-    )
-    rows = await cur.fetchall()
-    await cur.close()
-    return [r[0] for r in rows]
+    cursor = get_db().approved.find({"chat_id": chat_id})
+    return [doc["user_id"] async for doc in cursor]
 
 
 async def get_autodelete(chat_id: int) -> int:
-    cur = await _connection.execute(
-        "SELECT autodelete FROM settings WHERE chat_id=?",
-        (chat_id,),
-    )
-    row = await cur.fetchone()
-    await cur.close()
-    return row[0] if row else 0
+    doc = await get_db().settings.find_one({"chat_id": chat_id})
+    return int(doc.get("autodelete", 0)) if doc else 0
 
 
 async def set_autodelete(chat_id: int, seconds: int) -> None:
-    await _connection.execute(
-        "INSERT INTO settings(chat_id, autodelete) VALUES(?, ?) "
-        "ON CONFLICT(chat_id) DO UPDATE SET autodelete=excluded.autodelete",
-        (chat_id, seconds),
+    await get_db().settings.update_one(
+        {"chat_id": chat_id},
+        {"$set": {"autodelete": seconds}},
+        upsert=True,
     )
-    await _connection.commit()
 
 
 async def get_bio_filter(chat_id: int) -> bool:
-    cur = await _connection.execute(
-        "SELECT bio_filter FROM settings WHERE chat_id=?",
-        (chat_id,),
-    )
-    row = await cur.fetchone()
-    await cur.close()
-    return bool(row[0]) if row else True
+    doc = await get_db().settings.find_one({"chat_id": chat_id})
+    return bool(doc.get("bio_filter", True)) if doc else True
 
 
 async def toggle_bio_filter(chat_id: int) -> bool:
@@ -154,31 +96,24 @@ async def toggle_bio_filter(chat_id: int) -> bool:
 
 
 async def set_bio_filter(chat_id: int, enabled: bool) -> None:
-    await _connection.execute(
-        "INSERT INTO settings(chat_id, bio_filter) VALUES(?, ?) "
-        "ON CONFLICT(chat_id) DO UPDATE SET bio_filter=excluded.bio_filter",
-        (chat_id, int(enabled)),
+    await get_db().settings.update_one(
+        {"chat_id": chat_id},
+        {"$set": {"bio_filter": bool(enabled)}},
+        upsert=True,
     )
-    await _connection.commit()
 
 
 async def get_approval_mode(chat_id: int) -> bool:
-    cur = await _connection.execute(
-        "SELECT approval_mode FROM settings WHERE chat_id=?",
-        (chat_id,),
-    )
-    row = await cur.fetchone()
-    await cur.close()
-    return bool(row[0]) if row else False
+    doc = await get_db().settings.find_one({"chat_id": chat_id})
+    return bool(doc.get("approval_mode", False)) if doc else False
 
 
 async def set_approval_mode(chat_id: int, enabled: bool) -> None:
-    await _connection.execute(
-        "INSERT INTO settings(chat_id, approval_mode) VALUES(?, ?) "
-        "ON CONFLICT(chat_id) DO UPDATE SET approval_mode=excluded.approval_mode",
-        (chat_id, int(enabled)),
+    await get_db().settings.update_one(
+        {"chat_id": chat_id},
+        {"$set": {"approval_mode": bool(enabled)}},
+        upsert=True,
     )
-    await _connection.commit()
 
 
 async def toggle_approval_mode(chat_id: int) -> bool:
@@ -188,22 +123,16 @@ async def toggle_approval_mode(chat_id: int) -> bool:
 
 
 async def get_setting(chat_id: int, key: str, default: str | None = None) -> str | None:
-    cur = await _connection.execute(
-        "SELECT value FROM kv_settings WHERE chat_id=? AND key=?",
-        (chat_id, key),
-    )
-    row = await cur.fetchone()
-    await cur.close()
-    return row[0] if row else default
+    doc = await get_db().kv_settings.find_one({"chat_id": chat_id, "key": key})
+    return doc.get("value") if doc else default
 
 
 async def set_setting(chat_id: int, key: str, value: str) -> None:
-    await _connection.execute(
-        "INSERT INTO kv_settings(chat_id, key, value) VALUES(?,?,?) "
-        "ON CONFLICT(chat_id, key) DO UPDATE SET value=excluded.value",
-        (chat_id, key, value),
+    await get_db().kv_settings.update_one(
+        {"chat_id": chat_id, "key": key},
+        {"$set": {"value": value}},
+        upsert=True,
     )
-    await _connection.commit()
 
 
 async def toggle_setting(chat_id: int, key: str, default: str = "0") -> str:
