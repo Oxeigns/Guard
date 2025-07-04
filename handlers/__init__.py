@@ -1,9 +1,9 @@
 """Register all bot handlers."""
 
 from pyrogram import Client
-import logging
+import logging as py_logging
 
-logger = logging.getLogger(__name__)
+logger = py_logging.getLogger(__name__)
 
 # Explicit imports to avoid shadowing
 from . import (
