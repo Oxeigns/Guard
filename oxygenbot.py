@@ -9,7 +9,8 @@ from config import (
     API_HASH,
     API_ID,
     BOT_TOKEN,
-    DB_PATH,
+    MONGO_URI,
+    MONGO_DB,
     LOG_LEVEL,
 )
 from handlers import register_all
@@ -37,7 +38,7 @@ app = Client(
 
 async def main() -> None:
     logger.info("Initializing database connection")
-    await init_db(DB_PATH)
+    await init_db(MONGO_URI, MONGO_DB)
     register_all(app)
     async with app:
         logger.info("Bot started and waiting for events")
