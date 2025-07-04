@@ -11,56 +11,25 @@ import os
 from html import escape
 
 from utils.perms import is_admin
-from utils.errors import catch_errors
-from utils.db import set_setting, get_setting
 from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
-DEFAULT_AUTODELETE_SECONDS = 60
+
 
 def mention_html(user_id: int, name: str) -> str:
-    """Return an HTML user mention string."""
     return f'<a href="tg://user?id={user_id}">{escape(name)}</a>'
 
 
-async def build_start_panel(is_admin: bool) -> InlineKeyboardMarkup:
-    buttons = [[InlineKeyboardButton("📚 Commands", callback_data="cb_help_start")]]
-    if is_admin:
-        buttons.append([InlineKeyboardButton("⚙️ Settings", callback_data="cb_open_panel")])
-    return InlineKeyboardMarkup(buttons)
-
-
-async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKeyboardMarkup]:
-    biolink = await get_setting(chat_id, "biolink", "0")
-    autodel = await get_setting(chat_id, "autodelete", "0")
-    interval = await get_setting(chat_id, "autodelete_interval", "60")
-    linkfilter = await get_setting(chat_id, "linkfilter", "0")
-    editmode = await get_setting(chat_id, "editmode", "0")
-
-    caption = (
-        "<b>Current Settings</b>\n"
-        f"Bio Filter: {'ON ✅' if biolink == '1' else 'OFF ❌'}\n"
-        f"Auto-Delete: {'ON ✅ (' + interval + 's)' if autodel == '1' else 'OFF ❌'}\n"
-        f"Link Filter: {'ON ✅' if linkfilter == '1' else 'OFF ❌'}\n"
-        f"Edit Mode: {'ON ✅' if editmode == '1' else 'OFF ❌'}"
-    )
-
-    keyboard = [
-        [InlineKeyboardButton(f"Bio Filter {'✅' if biolink == '1' else '❌'}", callback_data="cb_toggle_biolink")],
-        [InlineKeyboardButton(f"AutoDelete {'✅' if autodel == '1' else '❌'}", callback_data="cb_toggle_autodel")],
-        [InlineKeyboardButton(f"Link Filter {'✅' if linkfilter == '1' else '❌'}", callback_data="cb_toggle_linkfilter")],
-        [InlineKeyboardButton(f"Edit Mode {'✅' if editmode == '1' else '❌'}", callback_data="cb_toggle_editmode")],
-        [InlineKeyboardButton("✅ Approve", callback_data="cb_approve"), InlineKeyboardButton("❌ Unapprove", callback_data="cb_unapprove")],
-        [InlineKeyboardButton("◀️ Back", callback_data="cb_back_panel")]
-    ]
-    return caption, InlineKeyboardMarkup(keyboard)
+async def build_start_panel() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📚 Commands", callback_data="cb_help_start")]
+    ])
 
 
 async def send_start(client: Client, message: Message) -> None:
-    """Send the welcome screen with the start panel."""
     bot_user = await client.get_me()
     user = message.from_user
-    markup = await build_start_panel(await is_admin(client, message))
+    markup = await build_start_panel()
 
     await message.reply_photo(
         photo=PANEL_IMAGE_URL,
@@ -76,12 +45,7 @@ async def send_start(client: Client, message: Message) -> None:
     )
 
 
-async def send_control_panel(client: Client, message: Message) -> None:
-    """Send the control panel for the given chat."""
-    caption, markup = await build_group_panel(message.chat.id, client)
-    await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
-
-def get_help_keyboard():
+def get_help_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🛡️ BioMode", callback_data="help_biomode")],
         [InlineKeyboardButton("🧹 AutoDelete", callback_data="help_autodelete")],
@@ -93,34 +57,14 @@ def get_help_keyboard():
         ]
     ])
 
+
 def register(app: Client):
-
-    # Send welcome panel for /start, /help, /menu
+    # One panel for all command triggers
     @app.on_message(filters.command(["start", "help", "menu"]))
-    async def show_panel(client: Client, message: Message):
-        bot_user = await client.get_me()
-        who = (
-            message.chat.title
-            if message.chat.type in ("group", "supergroup")
-            else message.from_user.first_name
-        )
-        await message.reply_photo(
-            photo=PANEL_IMAGE_URL,
-            caption=(
-                f"🎉 <b>Welcome to {who}</b>\n\n"
-                f"I'm <b>{bot_user.first_name}</b>, here to help manage your group efficiently.\n"
-                "You can tap the buttons below to explore available features.\n\n"
-                "✅ Works in groups\n"
-                "🛠 Admin-only settings\n"
-                "🧠 Smart automation tools"
-            ),
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("📚 Help", callback_data="open_help_panel")]
-            ]),
-            parse_mode=ParseMode.HTML
-        )
+    async def show_start_panel(client: Client, message: Message):
+        await send_start(client, message)
 
-    # Send welcome automatically when bot is added to a group
+    # Show welcome panel automatically when added to a group
     @app.on_chat_member_updated()
     async def send_panel_on_add(client: Client, update: ChatMemberUpdated):
         if update.new_chat_member.user.is_self:
@@ -133,189 +77,135 @@ def register(app: Client):
                         f"🎉 <b>Welcome to {update.chat.title}</b>\n\n"
                         f"I'm <b>{bot_user.first_name}</b>, here to help manage your group efficiently.\n"
                         "You can tap the buttons below to explore available features.\n\n"
-                        "✅ Works in groups\n"
-                        "🛠 Admin-only settings\n"
-                        "🧠 Smart automation tools"
+                        "✅ Works in groups\n🛠 Admin-only settings\n🧠 Smart automation tools"
                     ),
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("📚 Help", callback_data="open_help_panel")]
-                    ]),
+                    reply_markup=await build_start_panel(),
                     parse_mode=ParseMode.HTML
                 )
             except Exception as e:
                 print(f"Error sending welcome panel: {e}")
 
-    # Handle all help tab buttons
+    # Handle command help panel (with fallback)
     @app.on_callback_query()
     async def help_panel_handler(client: Client, cb: CallbackQuery):
         data = cb.data
 
-        if data == "open_help_panel":
-            await cb.message.edit_caption(
-                caption=(
-                    "📚 <b>Bot Command Help</b>\n\n"
-                    "Here you'll find details for all available plugins and features.\n\n"
-                    "👇 Tap the buttons below to view help for each module:"
-                ),
-                reply_markup=get_help_keyboard(),
-                parse_mode=ParseMode.HTML
+        if data == "cb_help_start":
+            text = (
+                "📚 <b>Bot Command Help</b>\n\n"
+                "Here you'll find details for all available plugins and features.\n\n"
+                "👇 Tap the buttons below to view help for each module:"
             )
+            markup = get_help_keyboard()
+            try:
+                await cb.message.edit_caption(
+                    caption=text,
+                    reply_markup=markup,
+                    parse_mode=ParseMode.HTML
+                )
+            except:
+                await cb.message.edit_text(
+                    text=text,
+                    reply_markup=markup,
+                    parse_mode=ParseMode.HTML
+                )
             return await cb.answer()
 
-        elif data == "help_biomode":
-            await cb.message.edit_caption(
-                caption=(
-                    "🛡 <b>BioMode</b>\n\n"
-                    "Monitors user bios and deletes messages if they contain URLs.\n\n"
-                    "<b>Usage:</b>\n"
-                    "➤ <code>/biolink on</code> – Enable\n"
-                    "➤ <code>/biolink off</code> – Disable\n\n"
-                    "🚫 Blocks users with links in bio from messaging.\n"
-                    "👮 Admins only."
-                ),
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔙 Back", callback_data="open_help_panel")]
-                ]),
-                parse_mode=ParseMode.HTML
-            )
+        # -- Individual Help Sections --
+        help_texts = {
+            "help_biomode": (
+                "🛡 <b>BioMode</b>\n\n"
+                "Monitors user bios and deletes messages if they contain URLs.\n\n"
+                "<b>Usage:</b>\n"
+                "➤ <code>/biolink on</code>\n"
+                "➤ <code>/biolink off</code>\n\n"
+                "🚫 Blocks users with links in bio from messaging.\n"
+                "👮 Admins only."
+            ),
+            "help_autodelete": (
+                "🧹 <b>AutoDelete</b>\n\n"
+                "Deletes messages after a delay.\n\n"
+                "<b>Usage:</b>\n"
+                "➤ <code>/autodelete 60</code>\n"
+                "➤ <code>/autodeleteon</code>\n"
+                "➤ <code>/autodeleteoff</code>\n\n"
+                "🧼 Helps keep the chat clean."
+            ),
+            "help_linkfilter": (
+                "🔗 <b>LinkFilter</b>\n\n"
+                "Blocks messages with links from non-admins.\n\n"
+                "<b>Usage:</b>\n"
+                "➤ <code>/linkfilter on</code>\n"
+                "➤ <code>/linkfilter off</code>\n\n"
+                "🔒 Stops spam & scam links."
+            ),
+            "help_editmode": (
+                "✏️ <b>EditMode</b>\n\n"
+                "Deletes edited messages instantly.\n\n"
+                "<b>Usage:</b>\n"
+                "➤ <code>/editmode on</code>\n"
+                "➤ <code>/editmode off</code>\n\n"
+                "🔍 Prevents stealth spam edits."
+            ),
+        }
+
+        if data in help_texts:
+            try:
+                await cb.message.edit_caption(
+                    caption=help_texts[data],
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                    ]),
+                    parse_mode=ParseMode.HTML
+                )
+            except:
+                await cb.message.edit_text(
+                    text=help_texts[data],
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                    ]),
+                    parse_mode=ParseMode.HTML
+                )
             return await cb.answer()
 
-        elif data == "help_autodelete":
-            await cb.message.edit_caption(
-                caption=(
-                    "🧹 <b>AutoDelete</b>\n\n"
-                    "Deletes messages after a delay.\n\n"
-                    "<b>Usage:</b>\n"
-                    "➤ <code>/autodelete 60</code>\n"
-                    "➤ <code>/autodeleteon</code>\n"
-                    "➤ <code>/autodeleteoff</code>\n\n"
-                    "🧼 Helps keep the chat clean."
-                ),
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔙 Back", callback_data="open_help_panel")]
-                ]),
-                parse_mode=ParseMode.HTML
-            )
+        if data == "help_support":
+            try:
+                await cb.message.edit_caption(
+                    caption="🆘 <b>Need help?</b>\n\nJoin our support group for assistance and community help.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔗 Join Support", url=SUPPORT_CHAT_URL)],
+                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                    ]),
+                    parse_mode=ParseMode.HTML
+                )
+            except:
+                await cb.message.edit_text(
+                    text="🆘 <b>Need help?</b>\n\nJoin our support group for assistance and community help.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔗 Join Support", url=SUPPORT_CHAT_URL)],
+                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                    ]),
+                    parse_mode=ParseMode.HTML
+                )
             return await cb.answer()
 
-        elif data == "help_linkfilter":
-            await cb.message.edit_caption(
-                caption=(
-                    "🔗 <b>LinkFilter</b>\n\n"
-                    "Blocks messages with links from non-admins.\n\n"
-                    "<b>Usage:</b>\n"
-                    "➤ <code>/linkfilter on</code>\n"
-                    "➤ <code>/linkfilter off</code>\n\n"
-                    "🔒 Stops spam & scam links."
-                ),
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔙 Back", callback_data="open_help_panel")]
-                ]),
-                parse_mode=ParseMode.HTML
-            )
+        if data == "help_developer":
+            try:
+                await cb.message.edit_caption(
+                    caption="👨‍💻 <b>Developer Info</b>\n\nGot feedback or questions? Contact the developer directly.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("✉️ Message Developer", url=DEVELOPER_URL)],
+                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                    ]),
+                    parse_mode=ParseMode.HTML
+                )
+            except:
+                await cb.message.edit_text(
+                    text="👨‍💻 <b>Developer Info</b>\n\nGot feedback or questions? Contact the developer directly.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("✉️ Message Developer", url=DEVELOPER_URL)],
+                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                    ]),
+                    parse_mode=ParseMode.HTML
+                )
             return await cb.answer()
-
-        elif data == "help_editmode":
-            await cb.message.edit_caption(
-                caption=(
-                    "✏️ <b>EditMode</b>\n\n"
-                    "Deletes edited messages instantly.\n\n"
-                    "<b>Usage:</b>\n"
-                    "➤ <code>/editmode on</code>\n"
-                    "➤ <code>/editmode off</code>\n\n"
-                    "🔍 Prevents stealth spam edits."
-                ),
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔙 Back", callback_data="open_help_panel")]
-                ]),
-                parse_mode=ParseMode.HTML
-            )
-            return await cb.answer()
-
-        elif data == "help_support":
-            await cb.message.edit_caption(
-                caption="🆘 <b>Need help?</b>\n\nJoin our support group for assistance and community help.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔗 Join Support", url=SUPPORT_CHAT_URL)],
-                    [InlineKeyboardButton("🔙 Back", callback_data="open_help_panel")]
-                ]),
-                parse_mode=ParseMode.HTML
-            )
-            return await cb.answer()
-
-        elif data == "help_developer":
-            await cb.message.edit_caption(
-                caption="👨‍💻 <b>Developer Info</b>\n\nGot feedback or questions? Contact the developer directly.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("✉️ Message Developer", url=DEVELOPER_URL)],
-                    [InlineKeyboardButton("🔙 Back", callback_data="open_help_panel")]
-                ]),
-                parse_mode=ParseMode.HTML
-            )
-            return await cb.answer()
-
-    # ================== ADMIN COMMANDS ===================
-
-    @app.on_message(filters.command("biolink") & filters.group)
-    @catch_errors
-    async def cmd_biolink(client: Client, message: Message):
-        if not await is_admin(client, message): return
-        args = message.text.split()
-        if len(args) < 2 or args[1] not in {"on", "off"}:
-            return await message.reply("Usage: /biolink on | off", parse_mode=ParseMode.HTML)
-        await set_setting(message.chat.id, "biolink", "1" if args[1] == "on" else "0")
-        await message.reply(f"BioMode {'enabled ✅' if args[1] == 'on' else 'disabled ❌'}", parse_mode=ParseMode.HTML)
-
-    @app.on_message(filters.command("editmode") & filters.group)
-    @catch_errors
-    async def cmd_editmode(client: Client, message: Message):
-        if not await is_admin(client, message): return
-        args = message.text.split()
-        if len(args) < 2 or args[1] not in {"on", "off"}:
-            return await message.reply("Usage: /editmode on | off", parse_mode=ParseMode.HTML)
-        await set_setting(message.chat.id, "editmode", "1" if args[1] == "on" else "0")
-        await message.reply(f"EditMode {'enabled ✅' if args[1] == 'on' else 'disabled ❌'}", parse_mode=ParseMode.HTML)
-
-    @app.on_message(filters.command("linkfilter") & filters.group)
-    @catch_errors
-    async def cmd_linkfilter(client: Client, message: Message):
-        if not await is_admin(client, message): return
-        args = message.text.split()
-        if len(args) < 2 or args[1] not in {"on", "off"}:
-            return await message.reply("Usage: /linkfilter on | off", parse_mode=ParseMode.HTML)
-        await set_setting(message.chat.id, "linkfilter", "1" if args[1] == "on" else "0")
-        await message.reply(f"LinkFilter {'enabled ✅' if args[1] == 'on' else 'disabled ❌'}", parse_mode=ParseMode.HTML)
-
-    @app.on_message(filters.command(["autodelete", "setautodelete"]) & filters.group)
-    @catch_errors
-    async def cmd_autodelete(client: Client, message: Message):
-        if not await is_admin(client, message): return
-        if len(message.command) == 1:
-            status = await get_setting(message.chat.id, "autodelete", "0")
-            interval = await get_setting(message.chat.id, "autodelete_interval", "60")
-            return await message.reply(f"🧹 AutoDelete: {interval}s ({'ON ✅' if status == '1' else 'OFF ❌'})", parse_mode=ParseMode.HTML)
-        try:
-            seconds = int(message.command[1])
-            if seconds <= 0:
-                raise ValueError
-        except:
-            return await message.reply("Usage: /autodelete <seconds>", parse_mode=ParseMode.HTML)
-        await set_setting(message.chat.id, "autodelete", "1")
-        await set_setting(message.chat.id, "autodelete_interval", str(seconds))
-        await message.reply(f"🧹 AutoDelete set to {seconds}s ✅", parse_mode=ParseMode.HTML)
-
-    @app.on_message(filters.command("autodeleteon") & filters.group)
-    @catch_errors
-    async def cmd_autodel_on(client: Client, message: Message):
-        if not await is_admin(client, message): return
-        await set_setting(message.chat.id, "autodelete", "1")
-        await set_setting(message.chat.id, "autodelete_interval", str(DEFAULT_AUTODELETE_SECONDS))
-        await message.reply(f"✅ AutoDelete enabled ({DEFAULT_AUTODELETE_SECONDS}s)", parse_mode=ParseMode.HTML)
-
-    @app.on_message(filters.command("autodeleteoff") & filters.group)
-    @catch_errors
-    async def cmd_autodel_off(client: Client, message: Message):
-        if not await is_admin(client, message): return
-        await set_setting(message.chat.id, "autodelete", "0")
-        await set_setting(message.chat.id, "autodelete_interval", "0")
-        await message.reply("❌ AutoDelete disabled.", parse_mode=ParseMode.HTML)
