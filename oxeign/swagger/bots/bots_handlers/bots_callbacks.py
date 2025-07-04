@@ -14,7 +14,7 @@ from utils.errors import catch_errors
 from utils.perms import is_admin
 from utils.db import toggle_setting
 from utils.messages import safe_edit_message
-from .settings import (
+from .bots_settings import (
     build_group_panel,
     build_start_panel,
     get_help_keyboard,
