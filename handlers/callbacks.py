@@ -59,13 +59,31 @@ def register(app: Client) -> None:
 
         elif data == "cb_start":
             await query.answer()
-            markup = await build_start_panel(await is_admin(client, query.message))
-            await safe_edit_message(query.message, text="Choose an option:", reply_markup=markup)
+            if query.message.chat.type == "private":
+                markup = await build_start_panel(await is_admin(client, query.message))
+                await safe_edit_message(
+                    query.message,
+                    text="Choose an option:",
+                    reply_markup=markup
+                )
+            else:
+                caption, markup = await build_group_panel(chat_id, client)
+                await safe_edit_message(query.message, text=caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
         elif data in {"cb_open_panel", "cb_back_panel"}:
             await query.answer()
-            caption, markup = await build_group_panel(chat_id, client)
-            await safe_edit_message(query.message, text=caption, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+            if query.message.chat.type == "private":
+                markup = await build_start_panel(await is_admin(client, query.message))
+                await safe_edit_message(
+                    query.message,
+                    text="⚙️ Settings are available only in groups.\n\nUse this bot in a group to access control panel.",
+                    reply_markup=markup,
+                    parse_mode=ParseMode.HTML
+                )
+            else:
+                caption, markup = await build_group_panel(chat_id, client)
+                await safe_edit_message(query.message, text=caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
         elif data.startswith("cb_toggle_"):
             feature_map = {
@@ -104,7 +122,6 @@ def register(app: Client) -> None:
                 parse_mode=ParseMode.HTML,
             )
 
-        # ✅ Fixed: Unmute button handler for bio/link filters
         elif data.startswith("biofilter_unmute_") or data.startswith("linkfilter_unmute_"):
             target_id = int(data.split("_")[-1])
             if not await is_admin(client, query.message, query.from_user.id):
