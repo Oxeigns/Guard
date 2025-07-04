@@ -1,5 +1,3 @@
-"""Modern auto-delete command with button presets and sleek UI."""
-
 import logging
 import asyncio
 from pyrogram import Client, filters
@@ -12,11 +10,11 @@ from utils.errors import catch_errors
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_AUTODELETE_SECONDS = 60  # Default delay for /autodeleteon
+DEFAULT_AUTODELETE_SECONDS = 60
+
 
 def register(app: Client) -> None:
-
-    def generate_markup():
+    def generate_markup() -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("🕐 5s", callback_data="autodel_5"),
@@ -34,16 +32,16 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.command(["setautodelete", "autodelete"]) & filters.group)
     @catch_errors
-    async def set_autodel(client: Client, message: Message):
+    async def set_autodel_command(client: Client, message: Message):
         if not await is_admin(client, message):
-            await message.reply_text("🔒 Only admins can configure auto-delete.", parse_mode=ParseMode.HTML)
+            await message.reply_text("🔒 <b>Only admins can configure auto-delete.</b>", parse_mode=ParseMode.HTML)
             return
 
         if len(message.command) == 1:
             current = await get_autodelete(message.chat.id)
             await message.reply_text(
                 f"<b>🕒 Current Auto-Delete Setting:</b> <code>{current}</code> seconds\n\n"
-                "To update, choose below or type:\n"
+                "Select an option below or use:\n"
                 "<code>/autodelete &lt;seconds&gt;</code>\n"
                 "Use <code>0</code> to disable.",
                 parse_mode=ParseMode.HTML,
@@ -56,50 +54,56 @@ def register(app: Client) -> None:
             if seconds < 0:
                 raise ValueError
         except ValueError:
-            await message.reply_text("⚠️ Usage: <code>/autodelete &lt;seconds&gt;</code>", parse_mode=ParseMode.HTML)
+            await message.reply_text(
+                "⚠️ <b>Usage:</b> <code>/autodelete &lt;seconds&gt;</code>",
+                parse_mode=ParseMode.HTML
+            )
             return
 
         await set_autodelete(message.chat.id, seconds)
         await message.reply_text(format_response(seconds), parse_mode=ParseMode.HTML)
 
-    @app.on_message(filters.command(["autodeleteon"]) & filters.group)
+    @app.on_message(filters.command("autodeleteon") & filters.group)
     @catch_errors
-    async def autodelete_on(client: Client, message: Message):
+    async def enable_autodelete(client: Client, message: Message):
         if not await is_admin(client, message):
-            await message.reply_text("🔒 Only admins can enable auto-delete.", parse_mode=ParseMode.HTML)
+            await message.reply_text("🔒 <b>Only admins can enable auto-delete.</b>", parse_mode=ParseMode.HTML)
             return
 
         await set_autodelete(message.chat.id, DEFAULT_AUTODELETE_SECONDS)
         await message.reply_text(
-            f"✅ Auto-delete enabled: <b>{DEFAULT_AUTODELETE_SECONDS} seconds</b>",
+            f"✅ <b>Auto-delete enabled</b>: <code>{DEFAULT_AUTODELETE_SECONDS}</code> seconds",
             parse_mode=ParseMode.HTML
         )
 
-    @app.on_message(filters.command(["autodeleteoff"]) & filters.group)
+    @app.on_message(filters.command("autodeleteoff") & filters.group)
     @catch_errors
-    async def autodelete_off(client: Client, message: Message):
+    async def disable_autodelete(client: Client, message: Message):
         if not await is_admin(client, message):
-            await message.reply_text("🔒 Only admins can disable auto-delete.", parse_mode=ParseMode.HTML)
+            await message.reply_text("🔒 <b>Only admins can disable auto-delete.</b>", parse_mode=ParseMode.HTML)
             return
 
         await set_autodelete(message.chat.id, 0)
-        await message.reply_text("🧹 Auto-delete has been disabled.", parse_mode=ParseMode.HTML)
+        await message.reply_text("🧹 <b>Auto-delete has been disabled.</b>", parse_mode=ParseMode.HTML)
 
     @app.on_callback_query(filters.regex(r"^autodel_(\d+)$"))
     @catch_errors
-    async def autodel_cb(client: Client, query: CallbackQuery):
+    async def handle_autodel_callback(client: Client, query: CallbackQuery):
         if not await is_admin(client, query.message, query.from_user.id):
-            await query.answer("Admins only.", show_alert=True)
+            await query.answer("🚫 Only admins can do that.", show_alert=True)
             return
 
         seconds = int(query.data.split("_")[1])
         await set_autodelete(query.message.chat.id, seconds)
-        await query.answer("Updated")
-        await query.message.edit_text(format_response(seconds), parse_mode=ParseMode.HTML)
+        await query.answer("✅ Updated")
+        await query.message.edit_text(
+            format_response(seconds),
+            parse_mode=ParseMode.HTML
+        )
 
     @app.on_message(filters.group & ~filters.service)
     @catch_errors
-    async def autodelete_handler(client: Client, message: Message):
+    async def enforce_autodelete(client: Client, message: Message):
         if not message.text and not message.caption:
             return
         if not message.from_user or message.from_user.is_bot:
@@ -114,4 +118,4 @@ def register(app: Client) -> None:
                 await message.delete()
                 logger.info("🧹 Auto-deleted message from %s in chat %s", message.from_user.id, message.chat.id)
             except Exception as e:
-                logger.warning("Failed to auto-delete message: %s", e)
+                logger.warning("Failed to auto-delete message from %s: %s", message.from_user.id, str(e))
