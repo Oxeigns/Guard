@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler
 import asyncio
 
 from pyrogram import Client, filters, idle
@@ -16,6 +17,21 @@ logging.basicConfig(
     level=getattr(logging, LOG_LEVEL.upper(), logging.INFO),
 )
 logger = logging.getLogger("ModerationBot")
+
+# Also log to a file for easier troubleshooting
+file_handler = RotatingFileHandler(
+    "bot.log",
+    maxBytes=1_000_000,
+    backupCount=3,
+)
+file_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+)
+logger.addHandler(file_handler)
+
+# If debug logging is enabled, also show detailed Pyrogram logs
+if logger.level == logging.DEBUG:
+    logging.getLogger("pyrogram").setLevel(logging.DEBUG)
 
 # Log token partially for verification without exposure
 logger.info(
@@ -57,13 +73,22 @@ async def main() -> None:
     except Exception as exc:  # noqa: BLE001
         logger.error("Database init failed: %s", exc)
         return
+    else:
+        logger.info("✅ Database connection established")
 
     logger.info("📦 Registering handlers...")
     register_all(bot)
+    logger.info("✅ Handlers registered")
 
-    async with bot:
-        logger.info("✅ Bot is up and running.")
-        await idle()
+    logger.info("🤖 Fetching bot details from Telegram...")
+    try:
+        async with bot:
+            me = await bot.get_me()
+            logger.info("Logged in as %s (@%s)", me.id, me.username)
+            logger.info("✅ Bot is up and running. Waiting for events...")
+            await idle()
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Bot runtime error: %s", exc)
 
     logger.info("🔒 Closing DB connection...")
     await close_db()
