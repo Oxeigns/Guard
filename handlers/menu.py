@@ -1,16 +1,21 @@
+"""Control panel with auto-delete toggle & modern UI."""
+
 import logging
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode, ChatType
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, CallbackQuery
 
-from config import SUPPORT_CHAT_URL, DEVELOPER_URL, BANNER_URL
+import config
 from utils.errors import catch_errors
-from utils.db import get_bio_filter, toggle_bio_filter
+from utils.db import get_bio_filter, toggle_bio_filter, get_autodelete, set_autodelete
 from utils.perms import is_admin
 
 logger = logging.getLogger(__name__)
 
-BOT_USERNAME = "YOUR_BOT_USERNAME"  # TODO: Load from config/env
+BOT_USERNAME = getattr(config, "BOT_USERNAME", "YourBot")  # From config or fallback
+SUPPORT_CHAT_URL = getattr(config, "SUPPORT_CHAT_URL", "https://t.me/botsyard")
+DEVELOPER_URL = getattr(config, "DEVELOPER_URL", "https://t.me/botsyard")
+BANNER_URL = getattr(config, "BANNER_URL", None)
 
 
 def elid(text: str, max_len: int = 25) -> str:
@@ -18,10 +23,13 @@ def elid(text: str, max_len: int = 25) -> str:
 
 
 async def build_group_panel(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
-    status = await get_bio_filter(chat_id)
+    bio_status = await get_bio_filter(chat_id)
+    delete_delay = await get_autodelete(chat_id)
+
     caption = (
         "<b>🛡️ Guard Control Panel</b>\n\n"
-        f"🔗 Bio Filter: {'<b>✅ ON</b>' if status else '<b>❌ OFF</b>'}"
+        f"🔗 Bio Filter: {'<b>✅ ON</b>' if bio_status else '<b>❌ OFF</b>'}\n"
+        f"🗑️ Auto Delete: {'<b>✅ Enabled</b>' if delete_delay > 0 else '<b>❌ Disabled</b>'}"
     )
 
     buttons = [
@@ -30,7 +38,7 @@ async def build_group_panel(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
             InlineKeyboardButton("🚫 Unapprove", callback_data="cb_unapprove"),
         ],
         [
-            InlineKeyboardButton("🗑️ AutoDelete", callback_data="cb_autodel"),
+            InlineKeyboardButton("🔁 Toggle Auto-Delete", callback_data="cb_toggle_autodel"),
             InlineKeyboardButton("🔗 Toggle Bio Filter", callback_data="cb_biolink_toggle"),
         ],
         [
@@ -112,7 +120,7 @@ def register(app: Client) -> None:
             "• <code>/unapprove</code> – Unapprove user\n"
             "• <code>/viewapproved</code> – List approved users\n"
             "• <code>/setautodelete &lt;sec&gt;</code> – Auto delete delay\n"
-            "• <code>/mute</code>, <code>/kick</code>, <code>/ban</code> – Admin tools\n"
+            "• <code>/autodeleteon</code> / <code>/autodeleteoff</code>\n"
             "• <code>/biolink [on|off]</code> – Toggle bio filter\n"
         )
         markup = InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Back", callback_data="back_to_panel")]])
@@ -135,6 +143,21 @@ def register(app: Client) -> None:
             return
         state = await toggle_bio_filter(query.message.chat.id)
         await query.answer(f"Bio Filter is now {'ON ✅' if state else 'OFF ❌'}")
+        await edit_panel(query)
+
+    @app.on_callback_query(filters.regex(r"^cb_toggle_autodel$"))
+    @catch_errors
+    async def toggle_autodel_cb(client: Client, query: CallbackQuery):
+        if not await is_admin(client, query.message, query.from_user.id):
+            await query.answer("Admins only!", show_alert=True)
+            return
+
+        current = await get_autodelete(query.message.chat.id)
+        new_value = 0 if current > 0 else 60  # Toggle
+        await set_autodelete(query.message.chat.id, new_value)
+
+        status = "enabled ✅" if new_value > 0 else "disabled ❌"
+        await query.answer(f"Auto-Delete is now {status}")
         await edit_panel(query)
 
     @app.on_callback_query(filters.regex(r"^cb_approve$"))
