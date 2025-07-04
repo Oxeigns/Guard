@@ -22,7 +22,7 @@ from utils.db import (
 logger = logging.getLogger(__name__)
 
 LINK_RE = re.compile(
-    r"(https?://\S+|t\.me/\S+|tg://\S+|(?:www\.)?\S+\.\S{2,})",
+    r"(?:https?://\S+|t\.me/\S+|tg://\S+|(?:\w+\.)+\w{2,})",
     re.IGNORECASE,
 )
 MAX_BIO_LENGTH = 800
@@ -86,13 +86,21 @@ def build_link_warning(count: int, user, is_final: bool = False):
 
 
 def register(app: Client) -> None:
+    edited_messages: set[tuple[int, int]] = set()
+
     async def delete_later(chat_id: int, message_id: int, delay: int) -> None:
         await asyncio.sleep(max(delay, 0))
-        with suppress(Exception):
+        try:
             await app.delete_messages(chat_id, message_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to delete %s/%s: %s", chat_id, message_id, exc)
+        finally:
+            edited_messages.discard((chat_id, message_id))
 
-    async def schedule_auto_delete(chat_id: int, message_id: int) -> None:
+    async def schedule_auto_delete(chat_id: int, message_id: int, *, fallback: int | None = None) -> None:
         delay = int(await get_setting(chat_id, "autodelete_interval", "0"))
+        if delay <= 0 and fallback:
+            delay = fallback
         if delay > 0:
             asyncio.create_task(delete_later(chat_id, message_id, delay))
 
@@ -220,7 +228,10 @@ def register(app: Client) -> None:
     async def on_edit(client: Client, message: Message):
         bot_id = (await client.get_me()).id
         if message.from_user and message.from_user.id != bot_id:
-            await schedule_auto_delete(message.chat.id, message.id)
+            key = (message.chat.id, message.id)
+            if key not in edited_messages:
+                edited_messages.add(key)
+                await schedule_auto_delete(message.chat.id, message.id, fallback=900)
 
 
 async def suppress_delete(message: Message):
