@@ -8,14 +8,17 @@ from pyrogram.types import (
     CallbackQuery,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
-    ChatPermissions,
 )
 
 from utils.errors import catch_errors
 from utils.perms import is_admin
 from utils.db import toggle_setting
 from utils.messages import safe_edit_message
-from .settings import build_group_panel, build_start_panel
+from .settings import (
+    build_group_panel,
+    build_start_panel,
+    get_help_keyboard,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +46,7 @@ def register(app: Client) -> None:
 
         logger.debug("Received callback: %s", data)
 
+        # Ping Test
         if data == "cb_ping":
             start = perf_counter()
             await query.answer("📡 Pinging...")
@@ -51,6 +55,7 @@ def register(app: Client) -> None:
                 f"🎉 Pong! <code>{latency}ms</code>", parse_mode=ParseMode.HTML
             )
 
+        # Full Command List
         elif data in {"cb_help_start", "cb_help_panel"}:
             await query.answer()
             rows = [f"{cmd} - {desc}" for cmd, desc in COMMANDS]
@@ -61,11 +66,13 @@ def register(app: Client) -> None:
             ])
             await safe_edit_message(query.message, text=text, reply_markup=markup, parse_mode=ParseMode.HTML)
 
+        # Close Panel
         elif data == "cb_close":
             await query.answer()
             with suppress(Exception):
                 await query.message.delete()
 
+        # Main Panel
         elif data in {"cb_start", "cb_open_panel", "cb_back_panel"}:
             await query.answer()
             if query.message.chat.type == "private":
@@ -80,6 +87,7 @@ def register(app: Client) -> None:
                 caption, markup = await build_group_panel(chat_id, client)
                 await safe_edit_message(query.message, text=caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
+        # Toggle Settings
         elif data.startswith("cb_toggle_"):
             feature_map = {
                 "cb_toggle_biolink": "biolink",
@@ -102,6 +110,7 @@ def register(app: Client) -> None:
             caption, markup = await build_group_panel(chat_id, client)
             await safe_edit_message(query.message, text=caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
+        # Quick Guide Commands
         elif data == "cb_approve":
             await query.answer()
             await query.message.reply_text(
@@ -116,9 +125,10 @@ def register(app: Client) -> None:
                 parse_mode=ParseMode.HTML,
             )
 
-        # Note: unmute callbacks are deprecated in filter.py, but retained here for backward compatibility
+        # Deprecated: No unmute buttons in filter.py
         elif data.startswith("biofilter_unmute_") or data.startswith("linkfilter_unmute_"):
-            await query.answer("❌ Manual unmute via button is disabled.\nAsk an admin.", show_alert=True)
+            await query.answer("❌ Manual unmute is disabled.\nAsk an admin.", show_alert=True)
 
+        # Unknown Callback
         else:
             await query.answer("⚠️ Unknown callback", show_alert=True)
