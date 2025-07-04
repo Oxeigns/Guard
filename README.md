@@ -1,6 +1,6 @@
 # OxeignBot
 
-OxeignBot is a single-file Telegram moderation bot built with [Pyrogram](https://docs.pyrogram.org/). It provides several moderation utilities with a simple inline control panel and stores its configuration in a local SQLite database.
+OxeignBot is a modular Telegram moderation bot built with [Pyrogram](https://docs.pyrogram.org/). It provides several moderation utilities with a simple inline control panel and stores its configuration in a local SQLite database.
 
 ## Features
 
