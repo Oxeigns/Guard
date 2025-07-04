@@ -32,6 +32,12 @@ if _missing:
         f"{missing_str}. Create a .env file from .env.example and set them."
     )
 
+if not MONGO_URI.startswith(("mongodb://", "mongodb+srv://")):
+    logger.error("Invalid MONGO_URI: %s", MONGO_URI)
+    raise RuntimeError(
+        "Invalid MONGO_URI. It must begin with 'mongodb://' or 'mongodb+srv://'"
+    )
+
 # Optional configuration
 UPDATE_CHANNEL_ID = int(os.getenv("UPDATE_CHANNEL_ID", "0"))
 SUPPORT_CHAT_URL = os.getenv("SUPPORT_CHAT_URL", "https://t.me/botsyard")
