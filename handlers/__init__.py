@@ -1,23 +1,9 @@
-"""Register all bot handlers."""
-
 from pyrogram import Client
 
-from . import (
-    admin,
-    callbacks,
-    filters as msg_filters,
-    general,
-    logging as msg_logging,
-    ping,
-    settings,
-)
+from . import start, help, admin
 
 
-def register_all(app: Client) -> None:
-    general.register(app)
-    admin.register(app)
-    settings.register(app)
-    msg_filters.register(app)
-    callbacks.register(app)
-    ping.register(app)
-    msg_logging.register(app)
+def init_all(app: Client) -> None:
+    start.init_start(app)
+    help.init_help(app)
+    admin.init_admin(app)
