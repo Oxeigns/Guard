@@ -1,5 +1,5 @@
+# OxeignBot - Enhanced single-file Pyrogram bot
 
-# OxeignBot - Single-file Pyrogram implementation
 import asyncio
 import logging
 import os
@@ -7,8 +7,11 @@ import re
 from contextlib import suppress
 
 from pyrogram import Client, filters, idle
-from pyrogram.enums import ParseMode
-from pyrogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from pyrogram.enums import ParseMode, ChatType
+from pyrogram.types import (
+    CallbackQuery, InlineKeyboardButton,
+    InlineKeyboardMarkup, Message, ChatPermissions
+)
 import aiosqlite
 from dotenv import load_dotenv
 
@@ -33,22 +36,20 @@ async def init_db(path: str) -> None:
     global db
     db = await aiosqlite.connect(path)
     await db.execute("PRAGMA journal_mode=WAL")
-    await db.execute(
-        """CREATE TABLE IF NOT EXISTS settings (
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
             chat_id INTEGER,
             key TEXT,
             value TEXT,
             PRIMARY KEY(chat_id, key)
-        )"""
-    )
-    await db.execute(
-        """CREATE TABLE IF NOT EXISTS group_meta (
+        )""")
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS group_meta (
             chat_id INTEGER PRIMARY KEY,
             title TEXT,
             owner_id INTEGER,
             photo_url TEXT
-        )"""
-    )
+        )""")
     await db.commit()
 
 async def set_setting(chat_id: int, key: str, value: str) -> None:
@@ -60,10 +61,7 @@ async def set_setting(chat_id: int, key: str, value: str) -> None:
     await db.commit()
 
 async def get_setting(chat_id: int, key: str, default: str | None = None) -> str | None:
-    cur = await db.execute(
-        "SELECT value FROM settings WHERE chat_id=? AND key=?",
-        (chat_id, key),
-    )
+    cur = await db.execute("SELECT value FROM settings WHERE chat_id=? AND key=?", (chat_id, key))
     row = await cur.fetchone()
     await cur.close()
     return row[0] if row else default
@@ -97,21 +95,14 @@ async def close_db() -> None:
     if db:
         await db.close()
 
-# ---------- Utils ----------
+# ---------- Utilities ----------
 
 LINK_REGEX = re.compile(r"(https?://|t\.me/|telegram\.me/)", re.IGNORECASE)
-
 
 def parse_duration(value: str) -> int:
     unit = value[-1]
     number = int(value[:-1])
-    if unit == "s":
-        return number
-    if unit == "m":
-        return number * 60
-    if unit == "h":
-        return number * 3600
-    raise ValueError("Invalid duration format")
+    return number * {"s": 1, "m": 60, "h": 3600}.get(unit, 1)
 
 async def is_admin(client: Client, chat_id: int, user_id: int) -> bool:
     try:
@@ -125,7 +116,7 @@ async def delete_later(client: Client, chat_id: int, message_id: int, delay: int
     with suppress(Exception):
         await client.delete_messages(chat_id, message_id)
 
-# ---------- Inline Panels ----------
+# ---------- UI Panels ----------
 
 async def build_group_panel(chat_id: int) -> InlineKeyboardMarkup:
     editmode = await get_setting(chat_id, "editmode", "0") == "1"
@@ -134,33 +125,24 @@ async def build_group_panel(chat_id: int) -> InlineKeyboardMarkup:
     biolink = await get_setting(chat_id, "biolink", "0") == "1"
     buttons = [
         [
-            InlineKeyboardButton(
-                f"Link Filter {'✅' if linkfilter else '❌'}", f"toggle|{chat_id}|linkfilter"
-            ),
-            InlineKeyboardButton(
-                f"Bio Link {'✅' if biolink else '❌'}", f"toggle|{chat_id}|biolink"
-            ),
+            InlineKeyboardButton(f"Link Filter {'✅' if linkfilter else '❌'}", f"toggle|{chat_id}|linkfilter"),
+            InlineKeyboardButton(f"Bio Link {'✅' if biolink else '❌'}", f"toggle|{chat_id}|biolink"),
         ],
         [
-            InlineKeyboardButton(
-                f"Auto Delete {'✅' if autodel else '❌'}", f"toggle|{chat_id}|autodelete"
-            ),
-            InlineKeyboardButton(
-                f"Edit Mode {'✅' if editmode else '❌'}", f"toggle|{chat_id}|editmode"
-            ),
+            InlineKeyboardButton(f"Auto Delete {'✅' if autodel else '❌'}", f"toggle|{chat_id}|autodelete"),
+            InlineKeyboardButton(f"Edit Mode {'✅' if editmode else '❌'}", f"toggle|{chat_id}|editmode"),
         ],
-        [InlineKeyboardButton("Ping", f"ping|{chat_id}"), InlineKeyboardButton("Close", "close")],
+        [InlineKeyboardButton("📡 Ping", f"ping|{chat_id}"), InlineKeyboardButton("❌ Close", "close")],
     ]
     return InlineKeyboardMarkup(buttons)
 
 def build_private_panel() -> InlineKeyboardMarkup:
-    buttons = [
-        [InlineKeyboardButton("My Settings", "noop"), InlineKeyboardButton("Help", "noop")],
-        [InlineKeyboardButton("Close", "close")],
-    ]
-    return InlineKeyboardMarkup(buttons)
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🛠️ My Settings", "noop"), InlineKeyboardButton("📖 Help", "noop")],
+        [InlineKeyboardButton("❌ Close", "close")],
+    ])
 
-# ---------- Handlers ----------
+# ---------- Pyrogram Client ----------
 
 app = Client(
     "oxeignbot",
@@ -170,6 +152,8 @@ app = Client(
     parse_mode=ParseMode.HTML,
 )
 
+# ---------- Commands ----------
+
 @app.on_message(filters.command(["start", "menu", "help", "settings"]))
 async def start_handler(client: Client, message: Message):
     if message.chat.type in ("group", "supergroup"):
@@ -177,172 +161,109 @@ async def start_handler(client: Client, message: Message):
         panel = await build_group_panel(message.chat.id)
     else:
         panel = build_private_panel()
-    await message.reply_text("OxeignBot Control Panel", reply_markup=panel)
+    await message.reply_text("🛡️ OxeignBot Control Panel", reply_markup=panel)
 
 @app.on_message(filters.command("ping"))
 async def ping_cmd(client: Client, message: Message):
     start = asyncio.get_event_loop().time()
-    msg = await message.reply_text("Pong")
+    msg = await message.reply_text("📡 Pong...")
     end = asyncio.get_event_loop().time()
-    await msg.edit_text(f"Pong: {int((end - start) * 1000)}ms")
+    await msg.edit_text(f"🎉 Pong: <b>{int((end - start) * 1000)}ms</b>")
 
-# Toggle commands
-
-@app.on_message(filters.command("editmode"))
-async def cmd_editmode(client: Client, message: Message):
+@app.on_message(filters.command(["editmode", "linkfilter", "biolink"]))
+async def toggle_feature(client: Client, message: Message):
+    cmd = message.command[0].lstrip("/")
     if message.chat.type not in ("group", "supergroup"):
-        return await message.reply_text("Group only command")
+        return await message.reply_text("🔒 Group-only command.")
     if not await is_admin(client, message.chat.id, message.from_user.id):
-        return
-    val = await toggle_setting(message.chat.id, "editmode")
-    await message.reply_text(f"Edit mode {'enabled' if val=='1' else 'disabled'}")
-
-@app.on_message(filters.command("linkfilter"))
-async def cmd_linkfilter(client: Client, message: Message):
-    if message.chat.type not in ("group", "supergroup"):
-        return await message.reply_text("Group only command")
-    if not await is_admin(client, message.chat.id, message.from_user.id):
-        return
-    val = await toggle_setting(message.chat.id, "linkfilter")
-    await message.reply_text(f"Link filter {'enabled' if val=='1' else 'disabled'}")
-
-@app.on_message(filters.command("biolink"))
-async def cmd_biolink(client: Client, message: Message):
-    if message.chat.type not in ("group", "supergroup"):
-        return await message.reply_text("Group only command")
-    if not await is_admin(client, message.chat.id, message.from_user.id):
-        return
-    val = await toggle_setting(message.chat.id, "biolink")
-    await message.reply_text(f"Bio link filter {'enabled' if val=='1' else 'disabled'}")
+        return await message.reply_text("🚫 Admins only.")
+    val = await toggle_setting(message.chat.id, cmd)
+    await message.reply_text(f"{cmd.capitalize()} {'enabled ✅' if val == '1' else 'disabled ❌'}")
 
 @app.on_message(filters.command("autodelete"))
 async def cmd_autodelete(client: Client, message: Message):
-    if message.chat.type not in ("group", "supergroup"):
-        return await message.reply_text("Group only command")
+    if message.chat.type != ChatType.SUPERGROUP:
+        return await message.reply_text("Group only.")
     if not await is_admin(client, message.chat.id, message.from_user.id):
         return
     parts = message.text.split(maxsplit=1)
     if len(parts) == 1:
         enabled = await get_setting(message.chat.id, "autodelete", "0")
         interval = await get_setting(message.chat.id, "autodelete_interval", "0")
-        if enabled == "1" and interval:
-            await message.reply_text(f"Auto delete after {interval}s")
-        else:
-            await message.reply_text("Auto delete is disabled")
-        return
-    arg = parts[1].lower()
-    if arg in ("on", "off"):
-        await set_setting(message.chat.id, "autodelete", "1" if arg == "on" else "0")
-        await message.reply_text(f"Auto delete {'enabled' if arg=='on' else 'disabled'}")
-        return
-    try:
-        seconds = parse_duration(arg)
-    except Exception:
-        return await message.reply_text("Invalid duration")
-    await set_setting(message.chat.id, "autodelete", "1")
-    await set_setting(message.chat.id, "autodelete_interval", str(seconds))
-    await message.reply_text(f"Auto delete set to {seconds}s")
-
-@app.on_message(filters.command("setautodelete"))
-async def cmd_setautodelete(client: Client, message: Message):
-    if message.chat.type not in ("group", "supergroup"):
-        return await message.reply_text("Group only command")
-    if not await is_admin(client, message.chat.id, message.from_user.id):
-        return
-    parts = message.text.split(maxsplit=1)
-    if len(parts) == 1:
-        return await message.reply_text("Usage: /setautodelete 30s|2m|1h")
+        return await message.reply_text(
+            f"Auto delete is {'on' if enabled == '1' else 'off'} ({interval}s)")
     try:
         seconds = parse_duration(parts[1])
+        await set_setting(message.chat.id, "autodelete", "1")
+        await set_setting(message.chat.id, "autodelete_interval", str(seconds))
+        await message.reply_text(f"Auto delete set to {seconds} seconds")
     except Exception:
-        return await message.reply_text("Invalid duration")
-    await set_setting(message.chat.id, "autodelete", "1")
-    await set_setting(message.chat.id, "autodelete_interval", str(seconds))
-    await message.reply_text(f"Auto delete set to {seconds}s")
+        await message.reply_text("❌ Invalid duration. Use 30s, 2m, 1h, etc.")
 
-# Admin commands
+# ---------- Admin Actions ----------
 
 async def admin_action(client: Client, message: Message, action: str):
     if message.chat.type not in ("group", "supergroup"):
         return await message.reply_text("Group only command")
     if not await is_admin(client, message.chat.id, message.from_user.id):
         return await message.reply_text("Admins only")
-    if not message.reply_to_message:
-        return await message.reply_text("Reply to a user")
-    target = message.reply_to_message.from_user
+    if not message.reply_to_message or not message.reply_to_message.from_user:
+        return await message.reply_text("Reply to a user's message.")
+
+    user = message.reply_to_message.from_user
     try:
         if action == "ban":
-            await client.ban_chat_member(message.chat.id, target.id)
+            await client.ban_chat_member(message.chat.id, user.id)
         elif action == "kick":
-            await client.ban_chat_member(message.chat.id, target.id)
-            await client.unban_chat_member(message.chat.id, target.id)
+            await client.ban_chat_member(message.chat.id, user.id)
+            await client.unban_chat_member(message.chat.id, user.id)
         elif action == "mute":
-            await client.restrict_chat_member(message.chat.id, target.id, permissions=filters.ChatPermissions())
-        elif action == "approve":
-            await message.reply_text("User approved (placeholder)")
-            return
-        await message.reply_text(f"{action.title()} successful")
+            await client.restrict_chat_member(message.chat.id, user.id, ChatPermissions())
+        await message.reply_text(f"{action.title()} successful ✅")
     except Exception as e:
-        await message.reply_text(f"Failed: {e}")
+        await message.reply_text(f"❌ Failed: {e}")
 
-@app.on_message(filters.command("ban"))
-async def cmd_ban(client: Client, message: Message):
-    await admin_action(client, message, "ban")
+@app.on_message(filters.command("ban"))   async def ban(client, m): await admin_action(client, m, "ban")
+@app.on_message(filters.command("kick"))  async def kick(client, m): await admin_action(client, m, "kick")
+@app.on_message(filters.command("mute"))  async def mute(client, m): await admin_action(client, m, "mute")
 
-@app.on_message(filters.command("kick"))
-async def cmd_kick(client: Client, message: Message):
-    await admin_action(client, message, "kick")
-
-@app.on_message(filters.command("mute"))
-async def cmd_mute(client: Client, message: Message):
-    await admin_action(client, message, "mute")
-
-@app.on_message(filters.command("approve"))
-async def cmd_approve(client: Client, message: Message):
-    await admin_action(client, message, "approve")
-
-# ---------- Message Filters ----------
+# ---------- Auto-filters ----------
 
 @app.on_message(filters.group & ~filters.service)
-async def group_message(client: Client, message: Message):
+async def filter_links(client: Client, message: Message):
     text = message.text or message.caption or ""
     chat_id = message.chat.id
-    linkfilter = await get_setting(chat_id, "linkfilter", "0") == "1"
-    if linkfilter and LINK_REGEX.search(text):
-        with suppress(Exception):
-            await message.delete()
-            return
-    biolink = await get_setting(chat_id, "biolink", "0") == "1"
-    if biolink and message.from_user:
+
+    if await get_setting(chat_id, "linkfilter", "0") == "1" and LINK_REGEX.search(text):
+        with suppress(Exception): await message.delete(); return
+
+    if await get_setting(chat_id, "biolink", "0") == "1" and message.from_user:
         try:
             user = await client.get_users(message.from_user.id)
             if user.bio and LINK_REGEX.search(user.bio):
-                with suppress(Exception):
-                    await message.delete()
-                    return
-        except Exception:
-            pass
-    autodel = await get_setting(chat_id, "autodelete", "0") == "1"
-    if autodel:
-        interval = int(await get_setting(chat_id, "autodelete_interval", "30"))
-        asyncio.create_task(delete_later(client, chat_id, message.id, interval))
+                with suppress(Exception): await message.delete(); return
+        except: pass
+
+    if await get_setting(chat_id, "autodelete", "0") == "1":
+        delay = int(await get_setting(chat_id, "autodelete_interval", "30"))
+        asyncio.create_task(delete_later(client, chat_id, message.id, delay))
 
 @app.on_edited_message(filters.group & ~filters.service)
 async def on_edit(client: Client, message: Message):
-    editmode = await get_setting(message.chat.id, "editmode", "0") == "1"
-    if editmode:
+    if await get_setting(message.chat.id, "editmode", "0") == "1":
         asyncio.create_task(delete_later(client, message.chat.id, message.id, 900))
+
+# ---------- Callbacks ----------
 
 @app.on_callback_query()
 async def callback_handler(client: Client, query: CallbackQuery):
     if query.data == "close":
-        with suppress(Exception):
-            await query.message.delete()
+        with suppress(Exception): await query.message.delete()
         return
-    if query.data.startswith("ping"):
-        await query.answer("Pong")
+    elif query.data.startswith("ping"):
+        await query.answer("📡 Pong")
         return
-    if query.data.startswith("toggle"):
+    elif query.data.startswith("toggle"):
         _, chat_id, key = query.data.split("|")
         if not await is_admin(client, int(chat_id), query.from_user.id):
             return await query.answer("Admins only", show_alert=True)
@@ -350,12 +271,16 @@ async def callback_handler(client: Client, query: CallbackQuery):
         panel = await build_group_panel(int(chat_id))
         with suppress(Exception):
             await query.message.edit_reply_markup(panel)
-        await query.answer("Enabled" if value == "1" else "Disabled")
+        await query.answer("Toggled successfully ✅")
+    else:
+        await query.answer("⚙️ Not implemented", show_alert=False)
 
-async def main() -> None:
+# ---------- Entrypoint ----------
+
+async def main():
     await init_db(DB_PATH)
     async with app:
-        logger.info("OxeignBot started")
+        logger.info("✅ OxeignBot is running")
         await idle()
     await close_db()
 
