@@ -20,10 +20,13 @@ def mention_html(user_id: int, name: str) -> str:
     return f'<a href="tg://user?id={user_id}">{escape(name)}</a>'
 
 
-async def build_start_panel() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📚 Commands", callback_data="cb_help_start")]
-    ])
+async def build_start_panel(is_admin: bool = False) -> InlineKeyboardMarkup:
+    """Return keyboard markup for the start panel."""
+
+    buttons = [[InlineKeyboardButton("📚 Commands", callback_data="cb_help_start")]]
+    if is_admin:
+        buttons.insert(0, [InlineKeyboardButton("⚙️ Settings", callback_data="cb_open_panel")])
+    return InlineKeyboardMarkup(buttons)
 
 
 async def send_start(client: Client, message: Message) -> None:
@@ -209,3 +212,24 @@ def register(app: Client):
                     parse_mode=ParseMode.HTML
                 )
             return await cb.answer()
+
+
+async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKeyboardMarkup]:
+    """Return caption and keyboard for the basic group control panel."""
+
+    caption = "<b>Group Control Panel</b>"
+    markup = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("◀️ Back", callback_data="cb_start")],
+            [InlineKeyboardButton("📚 Commands", callback_data="cb_help_panel")],
+        ]
+    )
+    return caption, markup
+
+
+async def send_control_panel(client: Client, message: Message) -> None:
+    """Send the simple control panel used for /help and /menu commands."""
+
+    caption, markup = await build_group_panel(message.chat.id, client)
+    await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
+
