@@ -14,7 +14,7 @@ from utils.perms import is_admin
 from utils.db import get_setting
 from utils.messages import safe_edit_message
 from config import SUPPORT_CHAT_URL, DEVELOPER_URL
-from .commands import COMMANDS
+from .bots_commands import COMMANDS
 
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
 

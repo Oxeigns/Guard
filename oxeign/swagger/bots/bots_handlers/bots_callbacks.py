@@ -19,7 +19,7 @@ from .bots_settings import (
     build_start_panel,
     get_help_keyboard,
 )
-from .commands import COMMANDS
+from .bots_commands import COMMANDS
 
 logger = logging.getLogger(__name__)
 
