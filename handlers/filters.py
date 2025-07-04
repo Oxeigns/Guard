@@ -22,9 +22,17 @@ from utils.db import (
 
 logger = logging.getLogger(__name__)
 
-LINK_RE = re.compile(r"(https?://\S+|t\.me/\S+|tg://\S+|@[\w\d_]+|\w+\.\w{2,})", re.IGNORECASE)
+# Detect common links such as http, https, t.me, bit.ly and generic domains
+LINK_RE = re.compile(
+    r"(https?://\S+|t\.me/\S+|bit\.ly/\S+|tg://\S+|(?:[\w-]+\.)+\w{2,})",
+    re.IGNORECASE,
+)
 MAX_BIO_LENGTH = 800
 SUPPORT_CHAT = "https://t.me/botsyard"
+
+
+def mention_html(user) -> str:
+    return f"<a href='tg://user?id={user.id}'>{user.first_name}</a>"
 
 
 def contains_link(text: str) -> bool:
@@ -55,6 +63,28 @@ def build_warning(count: int, user, is_final: bool = False):
         kb = InlineKeyboardMarkup([[support_btn]])
 
     return msg, kb
+
+
+async def warn_user(client: Client, chat_id: int, user) -> None:
+    """Issue a warning and ban if the limit is reached."""
+    count = await increment_warning(chat_id, user.id)
+    limit = int(await get_setting(chat_id, "warn_limit", "3"))
+    mention = mention_html(user)
+    if count >= limit:
+        with suppress(Exception):
+            await client.ban_chat_member(chat_id, user.id)
+        await reset_warning(chat_id, user.id)
+        await client.send_message(
+            chat_id,
+            f"🚫 {mention} banned after {limit} warnings.",
+            parse_mode=ParseMode.HTML,
+        )
+    else:
+        await client.send_message(
+            chat_id,
+            f"⚠️ Warning {count}/{limit} for {mention}",
+            parse_mode=ParseMode.HTML,
+        )
 
 
 def register(app: Client) -> None:
@@ -88,20 +118,18 @@ def register(app: Client) -> None:
         if not bio or (len(bio) <= MAX_BIO_LENGTH and not contains_link(bio)):
             return
 
-        try:
+        punishment = await get_setting(chat_id, "punish_biolink", "delete")
+        with suppress(Exception):
             await message.delete()
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Failed to delete user message with bad bio: %s", e)
 
-        count = await increment_warning(chat_id, user.id)
-        is_final = count >= 3
+        if punishment == "ban":
+            with suppress(Exception):
+                await client.ban_chat_member(chat_id, user.id)
+            return
 
-        if is_final:
-            await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
-            await reset_warning(chat_id, user.id)
-
-        msg, kb = build_warning(count, user, is_final)
-        await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
+        if punishment == "warn":
+            await warn_user(client, chat_id, user)
+        # delete action already performed above
 
     @app.on_message(filters.new_chat_members)
     @catch_errors
@@ -125,20 +153,17 @@ def register(app: Client) -> None:
             if not bio or (len(bio) <= MAX_BIO_LENGTH and not contains_link(bio)):
                 continue
 
-            try:
+            punishment = await get_setting(chat_id, "punish_biolink", "delete")
+            with suppress(Exception):
                 await message.delete()
-            except Exception:
-                pass
 
-            count = await increment_warning(chat_id, user.id)
-            is_final = count >= 3
+            if punishment == "ban":
+                with suppress(Exception):
+                    await client.ban_chat_member(chat_id, user.id)
+                continue
 
-            if is_final:
-                await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
-                await reset_warning(chat_id, user.id)
-
-            msg, kb = build_warning(count, user, is_final)
-            await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
+            if punishment == "warn":
+                await warn_user(client, chat_id, user)
 
     @app.on_callback_query(filters.regex(r"^biofilter_unmute_(\d+)$"))
     @catch_errors
@@ -172,31 +197,63 @@ def register(app: Client) -> None:
             logger.error("Error while unmuting user %s: %s", user_id, e)
             await query.answer("❌ Could not unmute user.")
 
-    async def delete_later(chat_id: int, message_id: int, delay: int) -> None:
+    async def delete_later(
+        chat_id: int, message_id: int, delay: int, notify: bool = False
+    ) -> None:
         await asyncio.sleep(delay)
         with suppress(Exception):
             await app.delete_messages(chat_id, message_id)
+        if notify:
+            with suppress(Exception):
+                note = await app.send_message(
+                    chat_id,
+                    "⚠️ This edited message was auto-deleted as per group rules.",
+                )
+                await asyncio.sleep(15)
+                await note.delete()
 
     @app.on_message(filters.group & ~filters.service)
     @catch_errors
     async def enforce_filters(client: Client, message: Message):
         text = message.text or message.caption or ""
         chat_id = message.chat.id
+        user = message.from_user
 
-        if await get_setting(chat_id, "linkfilter", "0") == "1" and LINK_RE.search(text):
-            with suppress(Exception):
-                await message.delete()
-            return
-
-        if await get_setting(chat_id, "biolink", "0") == "1" and message.from_user:
-            try:
-                user = await client.get_users(message.from_user.id)
-                if user.bio and LINK_RE.search(user.bio):
+        if user and await is_admin(client, message, user.id):
+            pass
+        else:
+            if (
+                await get_setting(chat_id, "linkfilter", "0") == "1"
+                and LINK_RE.search(text)
+            ):
+                punishment = await get_setting(chat_id, "punish_linkfilter", "delete")
+                with suppress(Exception):
+                    await message.delete()
+                if punishment == "ban":
                     with suppress(Exception):
-                        await message.delete()
-                    return
-            except Exception:
-                pass
+                        await client.ban_chat_member(chat_id, user.id)
+                elif punishment == "warn":
+                    await warn_user(client, chat_id, user)
+                return
+
+            if (
+                await get_setting(chat_id, "biolink", "0") == "1"
+                and user is not None
+            ):
+                try:
+                    u = await client.get_users(user.id)
+                    if u.bio and LINK_RE.search(u.bio):
+                        punishment = await get_setting(chat_id, "punish_biolink", "delete")
+                        with suppress(Exception):
+                            await message.delete()
+                        if punishment == "ban":
+                            with suppress(Exception):
+                                await client.ban_chat_member(chat_id, user.id)
+                        elif punishment == "warn":
+                            await warn_user(client, chat_id, user)
+                        return
+                except Exception:
+                    pass
 
         if await get_setting(chat_id, "autodelete", "0") == "1":
             delay = int(await get_setting(chat_id, "autodelete_interval", "30"))
@@ -206,4 +263,5 @@ def register(app: Client) -> None:
     @catch_errors
     async def on_edit(client: Client, message: Message):
         if await get_setting(message.chat.id, "editmode", "0") == "1":
-            asyncio.create_task(delete_later(message.chat.id, message.id, 900))
+            delay = int(await get_setting(message.chat.id, "autodelete_interval", "900"))
+            asyncio.create_task(delete_later(message.chat.id, message.id, delay, notify=True))

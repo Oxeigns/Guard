@@ -5,7 +5,8 @@ OxeignBot is a modular Telegram moderation bot built with [Pyrogram](https://doc
 ## Features
 
 - Toggleable edit deletion, auto delete, link filter and bio link filter
-- Admin commands: `/ban`, `/kick`, `/mute`, `/approve`
+- Custom punishments (`delete`, `warn`, `ban`) for link rules
+- Admin commands: `/ban`, `/kick`, `/approve`, `/setautodelete`, `/setpunishment`, `/setwarnlimit`
 - Inline control panel available via `/start`, `/menu`, `/help`, or `/settings`
 - Group metadata logging (title, owner ID, photo URL)
 - SQLite persistence using `aiosqlite`
