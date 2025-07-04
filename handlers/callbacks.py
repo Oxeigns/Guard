@@ -25,13 +25,16 @@ COMMANDS = [
     ("🔗 /linkfilter on | off", "Filter any link"),
 ]
 
+
 def register(app: Client) -> None:
-    @app.on_callback_query()
+    @app.on_callback_query(filters.regex(r"^cb_"))
     @catch_errors
     async def callback_handler(client: Client, query: CallbackQuery):
         data = query.data
         chat_id = query.message.chat.id
         user_id = query.from_user.id
+
+        logger.debug(f"Callback received: {data}")
 
         if data == "cb_ping":
             start = perf_counter()
@@ -45,12 +48,7 @@ def register(app: Client) -> None:
             help_text = "<b>📚 Commands</b>\n\n" + "\n".join(rows)
             back_cb = "cb_start" if data == "cb_help_start" else "cb_back_panel"
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data=back_cb)]])
-            await safe_edit_message(
-                query.message,
-                text=help_text,
-                reply_markup=markup,
-                parse_mode=ParseMode.HTML,
-            )
+            await safe_edit_message(query.message, text=help_text, reply_markup=markup, parse_mode=ParseMode.HTML)
 
         elif data == "cb_close":
             await query.answer()
@@ -61,18 +59,13 @@ def register(app: Client) -> None:
             await query.answer()
             if query.message.chat.type == "private":
                 markup = await build_start_panel(await is_admin(client, query.message))
-                await safe_edit_message(
-                    query.message,
-                    text="Choose an option:",
-                    reply_markup=markup
-                )
+                await safe_edit_message(query.message, text="Choose an option:", reply_markup=markup)
             else:
                 caption, markup = await build_group_panel(chat_id, client)
                 await safe_edit_message(query.message, text=caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
         elif data in {"cb_open_panel", "cb_back_panel"}:
             await query.answer()
-
             if query.message.chat.type == "private":
                 markup = await build_start_panel(await is_admin(client, query.message))
                 await safe_edit_message(
