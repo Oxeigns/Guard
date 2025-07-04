@@ -23,7 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BOT_USERNAME = os.getenv("BOT_USERNAME", "OxeignBot")
-BANNER_URL = os.getenv("BANNER_URL")
+PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL")
 SUPPORT_CHAT_URL = os.getenv("SUPPORT_CHAT_URL", "https://t.me/botsyard")
 DEVELOPER_URL = os.getenv("DEVELOPER_URL", "https://t.me/oxeign")
 

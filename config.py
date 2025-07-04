@@ -33,4 +33,4 @@ UPDATE_CHANNEL_ID = int(os.getenv("UPDATE_CHANNEL_ID", "0"))
 SUPPORT_CHAT_URL = os.getenv("SUPPORT_CHAT_URL", "https://t.me/botsyard")
 DEVELOPER_URL = os.getenv("DEVELOPER_URL", "https://t.me/oxeign")
 # Image shown at the top of the settings panel
-BANNER_URL = os.getenv("BANNER_URL", "https://files.catbox.moe/uvqeln.jpg")
+PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
