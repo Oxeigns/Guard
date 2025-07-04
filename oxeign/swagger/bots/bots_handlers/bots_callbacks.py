@@ -12,7 +12,6 @@ from pyrogram.types import (
 
 from utils.errors import catch_errors
 from utils.perms import is_admin
-from utils.db import toggle_setting, toggle_bio_filter
 from utils.messages import safe_edit_message
 from .bots_settings import (
     build_group_panel,

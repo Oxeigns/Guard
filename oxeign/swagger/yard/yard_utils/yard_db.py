@@ -104,12 +104,6 @@ async def get_bio_filter(chat_id: int) -> bool:
     return bool(doc.get("bio_filter", True)) if doc else True
 
 
-async def toggle_bio_filter(chat_id: int) -> bool:
-    current = await get_bio_filter(chat_id)
-    await set_bio_filter(chat_id, not current)
-    return not current
-
-
 async def set_bio_filter(chat_id: int, enabled: bool) -> None:
     await get_db().settings.update_one(
         {"chat_id": chat_id},
@@ -150,8 +144,3 @@ async def set_setting(chat_id: int, key: str, value: str) -> None:
     )
 
 
-async def toggle_setting(chat_id: int, key: str, default: str = "0") -> str:
-    current = await get_setting(chat_id, key, default)
-    new_value = "1" if current == "0" else "0"
-    await set_setting(chat_id, key, new_value)
-    return new_value
