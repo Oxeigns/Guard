@@ -10,10 +10,8 @@ from utils.db import (
     approve_user,
     unapprove_user,
     get_approved,
-    is_approved,
     toggle_approval_mode,
     set_approval_mode,
-    get_approval_mode,
 )
 
 logger = logging.getLogger(__name__)
@@ -21,14 +19,15 @@ logger = logging.getLogger(__name__)
 
 def register(app: Client) -> None:
     async def admin_action(message: Message, action: str) -> None:
+        """Perform ban/kick/mute if valid reply and admin."""
         if message.chat.type not in {"group", "supergroup"}:
-            await message.reply_text("Group only command", parse_mode=ParseMode.HTML)
+            await message.reply_text("❗ Group-only command.", parse_mode=ParseMode.HTML)
             return
         if not await is_admin(app, message):
-            await message.reply_text("Admins only", parse_mode=ParseMode.HTML)
+            await message.reply_text("🔒 <b>Admins only.</b>", parse_mode=ParseMode.HTML)
             return
         if not message.reply_to_message or not message.reply_to_message.from_user:
-            await message.reply_text("Reply to a user's message.")
+            await message.reply_text("📌 Reply to a user's message.", parse_mode=ParseMode.HTML)
             return
 
         user = message.reply_to_message.from_user
@@ -41,25 +40,27 @@ def register(app: Client) -> None:
             elif action == "mute":
                 await app.restrict_chat_member(message.chat.id, user.id, ChatPermissions())
             await message.reply_text(f"{action.title()} successful ✅")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
+            logger.error(f"{action} failed: {e}")
             await message.reply_text(f"❌ Failed: {e}")
 
-    @app.on_message(filters.command("ban"))
+    @app.on_message(filters.command("ban") & filters.group)
     @catch_errors
-    async def cmd_ban(client: Client, message: Message) -> None:
+    async def cmd_ban(client: Client, message: Message):
         await admin_action(message, "ban")
 
-    @app.on_message(filters.command("kick"))
+    @app.on_message(filters.command("kick") & filters.group)
     @catch_errors
-    async def cmd_kick(client: Client, message: Message) -> None:
+    async def cmd_kick(client: Client, message: Message):
         await admin_action(message, "kick")
 
-    @app.on_message(filters.command("mute"))
+    @app.on_message(filters.command("mute") & filters.group)
     @catch_errors
-    async def cmd_mute(client: Client, message: Message) -> None:
+    async def cmd_mute(client: Client, message: Message):
         await admin_action(message, "mute")
 
     async def require_admin_reply(message: Message, action: str):
+        """Ensure command is used by admin and as reply to a user."""
         if not await is_admin(app, message):
             await message.reply_text("🚫 <b>Only admins can do this.</b>", parse_mode=ParseMode.HTML)
             return None
@@ -73,21 +74,19 @@ def register(app: Client) -> None:
     @catch_errors
     async def approve_cmd(client: Client, message: Message):
         result = await require_admin_reply(message, "approve")
-        if result is None:
-            return
-        user_id, mention = result
-        await approve_user(message.chat.id, user_id)
-        await message.reply_text(f"✅ <b>Approved</b> {mention}", parse_mode=ParseMode.HTML)
+        if result:
+            user_id, mention = result
+            await approve_user(message.chat.id, user_id)
+            await message.reply_text(f"✅ <b>Approved</b> {mention}", parse_mode=ParseMode.HTML)
 
     @app.on_message(filters.command("unapprove") & filters.group)
     @catch_errors
     async def unapprove_cmd(client: Client, message: Message):
         result = await require_admin_reply(message, "unapprove")
-        if result is None:
-            return
-        user_id, mention = result
-        await unapprove_user(message.chat.id, user_id)
-        await message.reply_text(f"❌ <b>Unapproved</b> {mention}", parse_mode=ParseMode.HTML)
+        if result:
+            user_id, mention = result
+            await unapprove_user(message.chat.id, user_id)
+            await message.reply_text(f"❌ <b>Unapproved</b> {mention}", parse_mode=ParseMode.HTML)
 
     @app.on_message(filters.command("viewapproved") & filters.group)
     @catch_errors
@@ -98,16 +97,17 @@ def register(app: Client) -> None:
         users = await get_approved(message.chat.id)
         if not users:
             await message.reply_text("📭 <i>No approved users found.</i>", parse_mode=ParseMode.HTML)
-            return
-        text = "<b>📋 Approved Users:</b>\n" + "\n".join(f"• <code>{u}</code>" for u in users)
-        await message.reply_text(text, parse_mode=ParseMode.HTML)
+        else:
+            text = "<b>📋 Approved Users:</b>\n" + "\n".join(f"• <code>{u}</code>" for u in users)
+            await message.reply_text(text, parse_mode=ParseMode.HTML)
 
     @app.on_message(filters.command("approval") & filters.group)
     @catch_errors
     async def approval_mode_cmd(client: Client, message: Message):
         if not await is_admin(app, message):
-            await message.reply_text("🔒 <b>You must be an admin to change approval mode.</b>", parse_mode=ParseMode.HTML)
+            await message.reply_text("🔒 <b>Only admins can change approval mode.</b>", parse_mode=ParseMode.HTML)
             return
+
         if len(message.command) == 1:
             enabled = await toggle_approval_mode(message.chat.id)
         else:
@@ -121,6 +121,7 @@ def register(app: Client) -> None:
             else:
                 await message.reply_text("❗ <b>Usage:</b> <code>/approval [on|off]</code>", parse_mode=ParseMode.HTML)
                 return
+
         await message.reply_text(
             f"🔄 <b>Approval mode is now {'ENABLED ✅' if enabled else 'DISABLED ❌'}</b>",
             parse_mode=ParseMode.HTML,
