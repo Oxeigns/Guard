@@ -2,6 +2,7 @@
 
 import logging
 from pyrogram import Client, filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import Message
 
 from utils.db import (
@@ -32,7 +33,9 @@ def register(app: Client) -> None:
             return
         user_id = message.reply_to_message.from_user.id
         await approve_user(message.chat.id, user_id)
-        await message.reply_text(f"✅ Approved <code>{user_id}</code>")
+        await message.reply_text(
+            f"✅ Approved <code>{user_id}</code>", parse_mode=ParseMode.HTML
+        )
 
     @app.on_message(filters.command("unapprove") & filters.group)
     @catch_errors
@@ -46,7 +49,9 @@ def register(app: Client) -> None:
             return
         user_id = message.reply_to_message.from_user.id
         await unapprove_user(message.chat.id, user_id)
-        await message.reply_text(f"❌ Unapproved <code>{user_id}</code>")
+        await message.reply_text(
+            f"❌ Unapproved <code>{user_id}</code>", parse_mode=ParseMode.HTML
+        )
 
     @app.on_message(filters.command("viewapproved") & filters.group)
     @catch_errors
@@ -59,8 +64,10 @@ def register(app: Client) -> None:
         if not users:
             await message.reply_text("📭 No approved users.")
             return
-        text = "<b>📋 Approved Users:</b>\n" + "\n".join(f"<code>{u}</code>" for u in users)
-        await message.reply_text(text)
+        text = "<b>📋 Approved Users:</b>\n" + "\n".join(
+            f"<code>{u}</code>" for u in users
+        )
+        await message.reply_text(text, parse_mode=ParseMode.HTML)
 
     @app.on_message(filters.command("approval") & filters.group)
     @catch_errors
