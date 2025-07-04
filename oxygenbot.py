@@ -41,7 +41,11 @@ app = Client(
 
 async def main() -> None:
     logger.info("🔌 Connecting to database...")
-    await init_db(MONGO_URI, MONGO_DB)
+    try:
+        await init_db(MONGO_URI, MONGO_DB)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Database init failed: %s", exc)
+        return
 
     logger.info("📦 Registering all handlers...")
     register_all(app)

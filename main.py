@@ -52,7 +52,11 @@ async def fallback_cmd(_: Client, message: Message):
 # Entry point
 async def main() -> None:
     logger.info("🔌 Initializing database connection...")
-    await init_db(MONGO_URI, MONGO_DB)
+    try:
+        await init_db(MONGO_URI, MONGO_DB)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Database init failed: %s", exc)
+        return
 
     logger.info("📦 Registering handlers...")
     register_all(bot)
