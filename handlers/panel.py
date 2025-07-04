@@ -3,40 +3,31 @@ from time import perf_counter
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode, ChatType
 from pyrogram.types import (
-    Message, CallbackQuery, ChatPermissions,
+    Message, CallbackQuery,
     InlineKeyboardMarkup, InlineKeyboardButton
 )
 
-import config
-from utils.perms import is_admin
 from utils.errors import catch_errors
-from utils.db import (
-    get_bio_filter, toggle_bio_filter, set_bio_filter,
-    get_autodelete, set_autodelete
-)
+from oxygenbot import get_setting, toggle_setting, set_setting  # assumed imports from your DB logic
+from utils.perms import is_admin
 
 logger = logging.getLogger(__name__)
 
-BOT_USERNAME = getattr(config, "BOT_USERNAME", "YourBot")
-SUPPORT_CHAT_URL = getattr(config, "SUPPORT_CHAT_URL", "https://t.me/botsyard")
-DEVELOPER_URL = getattr(config, "DEVELOPER_URL", "https://t.me/botsyard")
-BANNER_URL = getattr(config, "BANNER_URL", None)
+BOT_USERNAME = "OxeignBot"
+SUPPORT_CHAT_URL = "https://t.me/botsyard"
+DEVELOPER_URL = "https://t.me/botsyard"
+BANNER_URL = None
 
 
-# Util: Shorten display names
-def elid(text: str, max_len: int = 25) -> str:
-    return text if len(text) <= max_len else text[:max_len - 1] + "…"
-
-
-# Panels
 async def build_group_panel(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
-    bio_status = await get_bio_filter(chat_id)
-    delete_delay = await get_autodelete(chat_id)
+    bio_status = await get_setting(chat_id, "biolink", "0") == "1"
+    delete_enabled = await get_setting(chat_id, "autodelete", "0") == "1"
+    delete_interval = await get_setting(chat_id, "autodelete_interval", "0")
 
     caption = (
         "<b>🛡️ Group Guard Panel</b>\n\n"
         f"🔗 Bio Filter: {'<b>✅ ON</b>' if bio_status else '<b>❌ OFF</b>'}\n"
-        f"🗑️ Auto Delete: {'<b>✅ {delete_delay}s</b>' if delete_delay else '<b>❌ OFF</b>'}"
+        f"🗑️ Auto Delete: {'<b>✅ ' + delete_interval + 's</b>' if delete_enabled and delete_interval else '<b>❌ OFF</b>'}"
     )
 
     buttons = [
@@ -46,14 +37,14 @@ async def build_group_panel(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
         ],
         [
             InlineKeyboardButton("🧹 Auto-Delete", callback_data="cb_toggle_autodel"),
-            InlineKeyboardButton("🔗 Bio Filter", callback_data="cb_biolink_toggle"),
+            InlineKeyboardButton("🔗 Bio Filter", callback_data="cb_toggle_biolink"),
         ],
         [
             InlineKeyboardButton("📖 Help", callback_data="cb_help"),
             InlineKeyboardButton("📡 Ping", callback_data="cb_ping"),
         ],
         [
-            InlineKeyboardButton("👨‍💻 Dev", url=DEVELOPER_URL),
+            InlineKeyboardButton("👨‍💻 Developer", url=DEVELOPER_URL),
             InlineKeyboardButton("💬 Support", url=SUPPORT_CHAT_URL),
         ],
     ]
@@ -63,7 +54,7 @@ async def build_group_panel(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
 async def build_private_panel() -> tuple[str, InlineKeyboardMarkup]:
     caption = (
         "<b>🤖 Bot Control Panel</b>\n\n"
-        "Use the buttons to manage settings or get help."
+        "Use the buttons below to manage settings or get help."
     )
     buttons = [
         [
@@ -79,8 +70,10 @@ async def build_private_panel() -> tuple[str, InlineKeyboardMarkup]:
 
 
 async def send_panel(client: Client, message: Message) -> None:
-    is_private = message.chat.type == ChatType.PRIVATE
-    caption, markup = await build_private_panel() if is_private else await build_group_panel(message.chat.id)
+    if message.chat.type == ChatType.PRIVATE:
+        caption, markup = await build_private_panel()
+    else:
+        caption, markup = await build_group_panel(message.chat.id)
 
     try:
         if BANNER_URL:
@@ -91,91 +84,81 @@ async def send_panel(client: Client, message: Message) -> None:
                 reply_markup=markup,
                 parse_mode=ParseMode.HTML
             )
-            return
+        else:
+            await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
     except Exception as e:
         logger.warning("Banner failed: %s", e)
+        await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
-    await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
-
-# Unified Handler Register
 def register(app: Client) -> None:
 
-    # Show start/help/menu
-    @app.on_message(filters.command(["start", "help", "menu"]))
+    @app.on_message(filters.command(["start", "menu", "help"]))
     @catch_errors
     async def handle_menu(client: Client, message: Message):
         await send_panel(client, message)
 
-    # Ping test
-    @app.on_callback_query(filters.regex(r"^cb_ping$"))
+    @app.on_callback_query()
     @catch_errors
-    async def cb_ping(client: Client, query: CallbackQuery):
-        start = perf_counter()
-        await query.answer("📡 Pinging...")
-        latency = round((perf_counter() - start) * 1000, 2)
-        await query.message.reply_text(f"🎉 Pong! <code>{latency}ms</code>", parse_mode=ParseMode.HTML)
+    async def callback_handler(client: Client, query: CallbackQuery):
+        data = query.data
+        chat_id = query.message.chat.id
+        user_id = query.from_user.id
 
-    # Help screen
-    @app.on_callback_query(filters.regex(r"^cb_help$"))
-    @catch_errors
-    async def cb_help(client: Client, query: CallbackQuery):
-        await query.answer()
-        help_text = (
-            "<b>📖 Bot Commands</b>\n\n"
-            "/approve – Approve user\n"
-            "/unapprove – Remove approval\n"
-            "/viewapproved – List approved users\n"
-            "/setautodelete <sec>\n"
-            "/autodeleteon | /autodeleteoff\n"
-            "/mute | /kick | /ban\n"
-            "/biolink on/off – Toggle bio filter"
-        )
-        markup = InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Back", callback_data="cb_back")]])
-        await query.message.edit_text(help_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+        if data == "cb_ping":
+            start = perf_counter()
+            await query.answer("📡 Pinging...")
+            latency = round((perf_counter() - start) * 1000, 2)
+            await query.message.reply_text(f"🎉 Pong! <code>{latency}ms</code>", parse_mode=ParseMode.HTML)
 
-    # Return to main panel
-    @app.on_callback_query(filters.regex(r"^cb_back$"))
-    @catch_errors
-    async def cb_back(client: Client, query: CallbackQuery):
-        await query.answer()
-        caption, markup = await build_group_panel(query.message.chat.id)
-        await query.message.edit_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
+        elif data == "cb_help":
+            await query.answer()
+            help_text = (
+                "<b>📖 Bot Commands</b>\n\n"
+                "/approve – Approve user\n"
+                "/unapprove – Revoke approval\n"
+                "/viewapproved – List approved users\n"
+                "/setautodelete <seconds>\n"
+                "/autodeleteon | /autodeleteoff\n"
+                "/mute | /kick | /ban\n"
+                "/biolink on/off – Toggle bio link filter"
+            )
+            markup = InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Back", callback_data="cb_back")]])
+            await query.message.edit_text(help_text, reply_markup=markup, parse_mode=ParseMode.HTML)
 
-    # Toggle bio filter
-    @app.on_callback_query(filters.regex(r"^cb_biolink_toggle$"))
-    @catch_errors
-    async def cb_bio_toggle(client: Client, query: CallbackQuery):
-        if not await is_admin(client, query.message, query.from_user.id):
-            await query.answer("Admins only!", show_alert=True)
-            return
-        state = await toggle_bio_filter(query.message.chat.id)
-        await query.answer(f"Bio Filter is now {'ON ✅' if state else 'OFF ❌'}")
-        await cb_back(client, query)
+        elif data == "cb_back":
+            await query.answer()
+            caption, markup = await build_group_panel(chat_id)
+            await query.message.edit_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
-    # Toggle auto-delete
-    @app.on_callback_query(filters.regex(r"^cb_toggle_autodel$"))
-    @catch_errors
-    async def cb_toggle_autodel(client: Client, query: CallbackQuery):
-        if not await is_admin(client, query.message, query.from_user.id):
-            await query.answer("Admins only!", show_alert=True)
-            return
-        current = await get_autodelete(query.message.chat.id)
-        new_val = 0 if current > 0 else 60
-        await set_autodelete(query.message.chat.id, new_val)
-        await query.answer(f"Auto-Delete is now {'ENABLED ✅' if new_val else 'DISABLED ❌'}")
-        await cb_back(client, query)
+        elif data == "cb_toggle_biolink":
+            if not await is_admin(client, query.message, user_id):
+                await query.answer("Admins only!", show_alert=True)
+                return
+            state = await toggle_setting(chat_id, "biolink")
+            await query.answer(f"Bio Filter is now {'ON ✅' if state == '1' else 'OFF ❌'}")
+            caption, markup = await build_group_panel(chat_id)
+            await query.message.edit_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
-    # Approve tip
-    @app.on_callback_query(filters.regex(r"^cb_approve$"))
-    @catch_errors
-    async def cb_approve_tip(client: Client, query: CallbackQuery):
-        await query.answer()
-        await query.message.reply_text("✅ Reply to a user with /approve to allow them to speak.")
+        elif data == "cb_toggle_autodel":
+            if not await is_admin(client, query.message, user_id):
+                await query.answer("Admins only!", show_alert=True)
+                return
+            current = await get_setting(chat_id, "autodelete", "0")
+            new_value = "0" if current == "1" else "1"
+            await set_setting(chat_id, "autodelete", new_value)
+            await set_setting(chat_id, "autodelete_interval", "60" if new_value == "1" else "0")
+            await query.answer(f"Auto-Delete is now {'ENABLED ✅' if new_value == '1' else 'DISABLED ❌'}")
+            caption, markup = await build_group_panel(chat_id)
+            await query.message.edit_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
 
-    # Unapprove tip
-    @app.on_callback_query(filters.regex(r"^cb_unapprove$"))
-    @catch_errors
-    async def cb_unapprove_tip(client: Client, query: CallbackQuery):
-        await query.answer()
-        await query.message.reply_text("🚫 Reply to a user with /unapprove to remove access.")
+        elif data == "cb_approve":
+            await query.answer()
+            await query.message.reply_text("✅ Reply to a user with <code>/approve</code> to approve them.", parse_mode=ParseMode.HTML)
+
+        elif data == "cb_unapprove":
+            await query.answer()
+            await query.message.reply_text("🚫 Reply to a user with <code>/unapprove</code> to unapprove them.", parse_mode=ParseMode.HTML)
+
+        else:
+            await query.answer("Unknown command", show_alert=True)
