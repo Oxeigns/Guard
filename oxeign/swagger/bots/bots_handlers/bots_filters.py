@@ -14,6 +14,7 @@ from utils.db import (
     increment_warning,
     reset_warning,
     is_approved,
+    get_approval_mode,
 )
 
 logger = logging.getLogger(__name__)
@@ -68,10 +69,33 @@ def register(app: Client) -> None:
         finally:
             edited_messages.discard((chat_id, message_id))
 
-    async def schedule_auto_delete(chat_id: int, message_id: int, *, fallback: int = 900) -> None:
+    async def schedule_auto_delete(
+        chat_id: int, message_id: int, *, fallback: int | None = None
+    ) -> None:
         delay = int(await get_setting(chat_id, "autodelete_interval", "0"))
-        delay = delay if delay > 0 else fallback
+        if delay <= 0:
+            if fallback is None:
+                return
+            delay = fallback
         asyncio.create_task(delete_later(chat_id, message_id, delay))
+
+    @app.on_message(filters.group & (filters.text | filters.caption) & ~filters.service)
+    @catch_errors
+    async def enforce_approval(client: Client, message: Message) -> None:
+        user = message.from_user
+        chat_id = message.chat.id
+        if not user or user.is_bot:
+            return
+        if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
+            return
+        if not await get_approval_mode(chat_id):
+            return
+        await suppress_delete(message)
+        await message.reply_text(
+            "❌ You are not approved to speak here.",
+            parse_mode=ParseMode.HTML,
+            quote=True,
+        )
 
     @app.on_message(filters.group & (filters.text | filters.caption))
     @catch_errors
@@ -110,10 +134,12 @@ def register(app: Client) -> None:
             return
         bot_id = (await client.get_me()).id
         if message.from_user.id != bot_id:
+            if await get_setting(message.chat.id, "editmode", "0") != "1":
+                return
             key = (message.chat.id, message.id)
             if key not in edited_messages:
                 edited_messages.add(key)
-                await schedule_auto_delete(message.chat.id, message.id, fallback=900)
+                await schedule_auto_delete(message.chat.id, message.id, fallback=0)
 
     @app.on_message(filters.new_chat_members)
     @catch_errors
