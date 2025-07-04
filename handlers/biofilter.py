@@ -1,4 +1,4 @@
-"""Bio link detection with 3-warnings system and admin-side unmute logic."""
+"""Bio link moderation with 3 warnings, mute, and admin unmute button."""
 
 import logging
 import re
@@ -6,25 +6,26 @@ from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import (
     Message,
+    CallbackQuery,
     ChatPermissions,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
-    CallbackQuery,
 )
-from utils.perms import is_admin
-from utils.errors import catch_errors
+
 from utils.db import (
+    get_bio_filter,
     is_approved,
     increment_warning,
     reset_warning,
-    get_bio_filter,
 )
+from utils.errors import catch_errors
+from utils.perms import is_admin
 
 logger = logging.getLogger(__name__)
 
 LINK_RE = re.compile(r"(https?://\S+|t\.me/\S+|tg://\S+|@[\w\d_]+|\w+\.\w{2,})", re.IGNORECASE)
 MAX_BIO_LENGTH = 800
-SUPPORT_CHAT = "https://t.me/botsyard"  # Ideally from config
+SUPPORT_CHAT = "https://t.me/botsyard"  # Load from config ideally
 
 
 def contains_link(text: str) -> bool:
@@ -59,11 +60,44 @@ def build_warning(count: int, user, is_final=False) -> tuple[str, InlineKeyboard
 
 def register(app: Client) -> None:
 
-    @app.on_message(filters.group & (filters.text | filters.caption))
-    @catch_errors
-    async def check_message_bio(client: Client, message: Message):
+    async def process_user(client: Client, message: Message, user):
         chat_id = message.chat.id
+        user_id = user.id
+
+        try:
+            user_data = await client.get_chat(user_id)
+            bio = getattr(user_data, "bio", "")
+        except Exception as e:
+            logger.warning("Couldn't fetch bio for %s: %s", user_id, e)
+            return
+
+        if not bio or (len(bio) <= MAX_BIO_LENGTH and not contains_link(bio)):
+            return
+
+        # Delete user's message
+        try:
+            await message.delete()
+            logger.debug("Deleted message from user %s due to bad bio", user_id)
+        except Exception as e:
+            logger.warning("Failed to delete message from %s: %s", user_id, e)
+
+        count = await increment_warning(chat_id, user_id)
+        logger.info("Bio warning %d for %s in chat %s", count, user_id, chat_id)
+
+        if count >= 3:
+            await client.restrict_chat_member(chat_id, user_id, ChatPermissions())
+            await reset_warning(chat_id, user_id)
+            msg, kb = build_warning(count, user, is_final=True)
+        else:
+            msg, kb = build_warning(count, user, is_final=False)
+
+        await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
+
+    @app.on_message(filters.group & filters.text)
+    @catch_errors
+    async def on_message_check_bio(client: Client, message: Message):
         user = message.from_user
+        chat_id = message.chat.id
 
         if not user or user.is_bot:
             return
@@ -72,37 +106,12 @@ def register(app: Client) -> None:
         if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
             return
 
-        try:
-            user_info = await client.get_chat(user.id)
-            bio = getattr(user_info, "bio", "")
-        except Exception as e:
-            logger.warning("Bio fetch failed for %s: %s", user.id, e)
-            return
-
-        if not bio or (len(bio) <= MAX_BIO_LENGTH and not contains_link(bio)):
-            return
-
-        try:
-            await message.delete()
-        except Exception as e:
-            logger.warning("Failed to delete message: %s", e)
-
-        count = await increment_warning(chat_id, user.id)
-        restricted = False
-
-        if count >= 3:
-            await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
-            await reset_warning(chat_id, user.id)
-            restricted = True
-
-        msg, kb = build_warning(count, user, restricted)
-        await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
+        await process_user(client, message, user)
 
     @app.on_message(filters.new_chat_members)
     @catch_errors
-    async def check_new_member_bio(client: Client, message: Message):
+    async def on_new_user_check_bio(client: Client, message: Message):
         chat_id = message.chat.id
-
         if not await get_bio_filter(chat_id):
             return
 
@@ -111,32 +120,7 @@ def register(app: Client) -> None:
                 continue
             if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
                 continue
-
-            try:
-                user_info = await client.get_chat(user.id)
-                bio = getattr(user_info, "bio", "")
-            except Exception as e:
-                logger.warning("Failed to fetch new member bio: %s", e)
-                continue
-
-            if not bio or (len(bio) <= MAX_BIO_LENGTH and not contains_link(bio)):
-                continue
-
-            try:
-                await message.delete()
-            except Exception as e:
-                logger.warning("Cannot delete join message: %s", e)
-
-            count = await increment_warning(chat_id, user.id)
-            restricted = False
-
-            if count >= 3:
-                await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
-                await reset_warning(chat_id, user.id)
-                restricted = True
-
-            msg, kb = build_warning(count, user, restricted)
-            await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
+            await process_user(client, message, user)
 
     @app.on_callback_query(filters.regex(r"^unmute_user_(\d+)$"))
     @catch_errors
@@ -144,7 +128,7 @@ def register(app: Client) -> None:
         import re
         match = re.match(r"^unmute_user_(\d+)$", query.data)
         if not match:
-            return await query.answer("Invalid action.")
+            return await query.answer("Invalid callback.")
 
         user_id = int(match.group(1))
         chat_id = query.message.chat.id
