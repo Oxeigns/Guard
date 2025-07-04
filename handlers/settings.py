@@ -11,6 +11,8 @@ import os
 from html import escape
 
 from utils.perms import is_admin
+from utils.db import get_setting
+from utils.messages import safe_edit_message
 from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
@@ -23,7 +25,7 @@ def mention_html(user_id: int, name: str) -> str:
 async def build_start_panel(is_admin: bool = False) -> InlineKeyboardMarkup:
     """Return keyboard markup for the start panel."""
 
-    buttons = [[InlineKeyboardButton("📚 Commands", callback_data="cb_help_start")]]
+    buttons = [[InlineKeyboardButton("📘 Commands", callback_data="cb_help_start")]]
     if is_admin:
         buttons.insert(0, [InlineKeyboardButton("⚙️ Settings", callback_data="cb_open_panel")])
     return InlineKeyboardMarkup(buttons)
@@ -100,18 +102,12 @@ def register(app: Client):
                 "👇 Tap the buttons below to view help for each module:"
             )
             markup = get_help_keyboard()
-            try:
-                await cb.message.edit_caption(
-                    caption=text,
-                    reply_markup=markup,
-                    parse_mode=ParseMode.HTML
-                )
-            except:
-                await cb.message.edit_text(
-                    text=text,
-                    reply_markup=markup,
-                    parse_mode=ParseMode.HTML
-                )
+            await safe_edit_message(
+                cb.message,
+                caption=text,
+                reply_markup=markup,
+                parse_mode=ParseMode.HTML,
+            )
             return await cb.answer()
 
         # -- Individual Help Sections --
@@ -127,11 +123,10 @@ def register(app: Client):
             ),
             "help_autodelete": (
                 "🧹 <b>AutoDelete</b>\n\n"
-                "Deletes messages after a delay.\n\n"
+                "Removes messages after the configured delay.\n\n"
                 "<b>Usage:</b>\n"
-                "➤ <code>/autodelete 60</code>\n"
-                "➤ <code>/autodeleteon</code>\n"
-                "➤ <code>/autodeleteoff</code>\n\n"
+                "➤ <code>/setautodelete 30</code> - delete after 30s\n"
+                "➤ <code>/setautodelete 0</code> - disable\n\n"
                 "🧼 Helps keep the chat clean."
             ),
             "help_linkfilter": (
@@ -144,84 +139,62 @@ def register(app: Client):
             ),
             "help_editmode": (
                 "✏️ <b>EditMode</b>\n\n"
-                "Deletes edited messages instantly.\n\n"
-                "<b>Usage:</b>\n"
-                "➤ <code>/editmode on</code>\n"
-                "➤ <code>/editmode off</code>\n\n"
+                "Edited messages are removed automatically.\n"
+                "No command is required.\n\n"
                 "🔍 Prevents stealth spam edits."
             ),
         }
 
         if data in help_texts:
-            try:
-                await cb.message.edit_caption(
-                    caption=help_texts[data],
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
-                    ]),
-                    parse_mode=ParseMode.HTML
-                )
-            except:
-                await cb.message.edit_text(
-                    text=help_texts[data],
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
-                    ]),
-                    parse_mode=ParseMode.HTML
-                )
+            await safe_edit_message(
+                cb.message,
+                caption=help_texts[data],
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]]
+                ),
+                parse_mode=ParseMode.HTML,
+            )
             return await cb.answer()
 
         if data == "help_support":
-            try:
-                await cb.message.edit_caption(
-                    caption="🆘 <b>Need help?</b>\n\nJoin our support group for assistance and community help.",
-                    reply_markup=InlineKeyboardMarkup([
+            await safe_edit_message(
+                cb.message,
+                caption="🆘 <b>Need help?</b>\n\nJoin our support group for assistance and community help.",
+                reply_markup=InlineKeyboardMarkup(
+                    [
                         [InlineKeyboardButton("🔗 Join Support", url=SUPPORT_CHAT_URL)],
-                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
-                    ]),
-                    parse_mode=ParseMode.HTML
-                )
-            except:
-                await cb.message.edit_text(
-                    text="🆘 <b>Need help?</b>\n\nJoin our support group for assistance and community help.",
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🔗 Join Support", url=SUPPORT_CHAT_URL)],
-                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
-                    ]),
-                    parse_mode=ParseMode.HTML
-                )
+                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")],
+                    ]
+                ),
+                parse_mode=ParseMode.HTML,
+            )
             return await cb.answer()
 
         if data == "help_developer":
-            try:
-                await cb.message.edit_caption(
-                    caption="👨‍💻 <b>Developer Info</b>\n\nGot feedback or questions? Contact the developer directly.",
-                    reply_markup=InlineKeyboardMarkup([
+            await safe_edit_message(
+                cb.message,
+                caption="👨‍💻 <b>Developer Info</b>\n\nGot feedback or questions? Contact the developer directly.",
+                reply_markup=InlineKeyboardMarkup(
+                    [
                         [InlineKeyboardButton("✉️ Message Developer", url=DEVELOPER_URL)],
-                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
-                    ]),
-                    parse_mode=ParseMode.HTML
-                )
-            except:
-                await cb.message.edit_text(
-                    text="👨‍💻 <b>Developer Info</b>\n\nGot feedback or questions? Contact the developer directly.",
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("✉️ Message Developer", url=DEVELOPER_URL)],
-                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
-                    ]),
-                    parse_mode=ParseMode.HTML
-                )
+                        [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")],
+                    ]
+                ),
+                parse_mode=ParseMode.HTML,
+            )
             return await cb.answer()
 
 
 async def build_group_panel(chat_id: int, client: Client) -> tuple[str, InlineKeyboardMarkup]:
     """Return caption and keyboard for the basic group control panel."""
 
-    caption = "<b>Group Control Panel</b>"
+    interval = int(await get_setting(chat_id, "autodelete_interval", "0"))
+    ad_status = f"{interval}s" if interval > 0 else "OFF"
+    caption = f"<b>Group Control Panel</b>\n🧹 Auto-Delete: <b>{ad_status}</b>"
     markup = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("◀️ Back", callback_data="cb_start")],
-            [InlineKeyboardButton("📚 Commands", callback_data="cb_help_panel")],
+            [InlineKeyboardButton("🔙 Back", callback_data="cb_start")],
+            [InlineKeyboardButton("📘 Commands", callback_data="cb_help_panel")],
         ]
     )
     return caption, markup

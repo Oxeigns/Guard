@@ -197,37 +197,28 @@ def register(app: Client) -> None:
             parse_mode=ParseMode.HTML,
         )
 
-    @app.on_message(filters.command("autodeleteoff") & filters.group)
-    @catch_errors
-    async def autodelete_off_cmd(client: Client, message: Message):
-        if not await _require_admin(message):
-            return
-        await set_setting(message.chat.id, "autodelete", "0")
-        await set_setting(message.chat.id, "autodelete_interval", "0")
-        await message.reply_text("🧹 <b>Auto delete disabled.</b>", parse_mode=ParseMode.HTML)
 
-    @app.on_message(filters.command("autodelete") & filters.group)
+    @app.on_message(filters.command("setautodelete") & filters.group)
     @catch_errors
-    async def autodelete_cmd(client: Client, message: Message):
+    async def set_autodelete_cmd(client: Client, message: Message):
         if not await _require_admin(message):
             return
-        if len(message.command) < 2:
+
+        seconds = 0
+        if len(message.command) > 1:
+            try:
+                seconds = int(message.command[1])
+                if seconds < 0:
+                    raise ValueError
+            except ValueError:
+                await message.reply_text("❗ Provide a valid number of seconds.", parse_mode=ParseMode.HTML)
+                return
+
+        await set_setting(message.chat.id, "autodelete_interval", str(seconds))
+        if seconds > 0:
             await message.reply_text(
-                "❗ <b>Usage:</b> <code>/autodelete &lt;seconds&gt;</code>",
+                f"🧹 <b>Auto delete set to {seconds}s.</b>",
                 parse_mode=ParseMode.HTML,
             )
-            return
-        try:
-            seconds = int(message.command[1])
-            if seconds <= 0:
-                raise ValueError
-        except ValueError:
-            await message.reply_text("❗ Provide a valid number of seconds.", parse_mode=ParseMode.HTML)
-            return
-
-        await set_setting(message.chat.id, "autodelete", "1")
-        await set_setting(message.chat.id, "autodelete_interval", str(seconds))
-        await message.reply_text(
-            f"🧹 <b>Auto delete enabled for {seconds}s.</b>",
-            parse_mode=ParseMode.HTML,
-        )
+        else:
+            await message.reply_text("🧹 <b>Auto delete disabled.</b>", parse_mode=ParseMode.HTML)

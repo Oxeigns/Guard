@@ -207,23 +207,20 @@ def register(app: Client) -> None:
             except Exception:
                 pass
 
-        if await get_setting(chat_id, "autodelete", "0") == "1":
-            delay = int(await get_setting(chat_id, "autodelete_interval", "30"))
+        bot_id = (await client.get_me()).id
+        delay = int(await get_setting(chat_id, "autodelete_interval", "0"))
+        if delay > 0 and message.from_user and message.from_user.id != bot_id:
             asyncio.create_task(delete_later(chat_id, message.id, delay))
 
     @app.on_edited_message(filters.group & ~filters.service)
     @catch_errors
     async def on_edit(client: Client, message: Message):
-        if await get_setting(message.chat.id, "editmode", "0") == "1":
-            try:
-                await message.delete()
-                notify = await message.chat.send_message(
-                    f"✂️ Edited message by <a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a> was deleted (Edit Mode Active).",
-                    parse_mode=ParseMode.HTML
-                )
-                asyncio.create_task(delete_later(notify.chat.id, notify.id, 10))
-            except Exception as e:
-                logger.warning(f"Failed to delete edited message: {e}")
+        bot_id = (await client.get_me()).id
+        if message.from_user and message.from_user.id != bot_id:
+            delay = int(await get_setting(message.chat.id, "autodelete_interval", "0"))
+            if delay <= 0:
+                delay = 900
+            asyncio.create_task(delete_later(message.chat.id, message.id, delay))
 
 
 async def suppress_delete(message: Message):
