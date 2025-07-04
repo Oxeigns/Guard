@@ -4,10 +4,7 @@ import re
 from contextlib import suppress
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
-from pyrogram.types import (
-    Message, ChatPermissions, InlineKeyboardButton,
-    InlineKeyboardMarkup
-)
+from pyrogram.types import Message, ChatPermissions, InlineKeyboardMarkup, InlineKeyboardButton
 
 from utils.errors import catch_errors
 from utils.perms import is_admin
@@ -38,30 +35,25 @@ async def suppress_delete(message: Message):
         await message.delete()
 
 
-def build_warning(count: int, user, is_final: bool = False):
+def build_warning(count: int, user, reason: str, is_final: bool = False):
     name = f"@{user.username}" if user.username else f"{user.first_name} ({user.id})"
     support_btn = InlineKeyboardButton("📨 Support", url=SUPPORT_CHAT)
 
     if is_final:
         msg = (
             f"🔇 <b>Final Warning for {name}</b>\n\n"
-            "Your bio contains a link or is too long.\n"
+            f"{reason}\n"
             "You have been <b>muted</b>.\n"
-            "Fix your bio and contact support or an admin."
+            "Contact an admin or support to regain permissions."
         )
-        kb = InlineKeyboardMarkup([
-            [support_btn],
-            [InlineKeyboardButton("🔓 Unmute", callback_data=f"biofilter_unmute_{user.id}")]
-        ])
     else:
         msg = (
             f"⚠️ <b>Warning {count}/3 for {name}</b>\n\n"
-            "Your bio contains a link or is too long.\n"
-            "Fix it before you're muted."
+            f"{reason}\n"
+            "Fix this before you're muted."
         )
-        kb = InlineKeyboardMarkup([[support_btn]])
 
-    return msg, kb
+    return msg, InlineKeyboardMarkup([[support_btn]])
 
 
 def register(app: Client) -> None:
@@ -95,10 +87,11 @@ def register(app: Client) -> None:
         if contains_link(message.text or message.caption or ""):
             await suppress_delete(message)
             count = await increment_warning(chat_id, user.id)
+            reason = "You are not allowed to share links in this group."
             if count >= 3:
                 await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
                 await reset_warning(chat_id, user.id)
-            msg, kb = build_warning(count, user, is_final=(count >= 3))
+            msg, kb = build_warning(count, user, reason, is_final=(count >= 3))
             await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
 
     @app.on_message(filters.group & ~filters.service)
@@ -142,8 +135,9 @@ def register(app: Client) -> None:
 
             await suppress_delete(message)
             count = await increment_warning(chat_id, user.id)
+            reason = "Your bio contains a link or is too long, which is not allowed."
             if count >= 3:
                 await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
                 await reset_warning(chat_id, user.id)
-            msg, kb = build_warning(count, user, is_final=(count >= 3))
+            msg, kb = build_warning(count, user, reason, is_final=(count >= 3))
             await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
