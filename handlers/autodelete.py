@@ -3,6 +3,7 @@
 import logging
 import asyncio
 from pyrogram import Client, filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import (
     Message,
     CallbackQuery,
@@ -46,7 +47,7 @@ def register(app: Client) -> None:
             )
             await message.reply_text(
                 text,
-                parse_mode="markdown",
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=InlineKeyboardMarkup(
                     [[InlineKeyboardButton("Disable", callback_data="autodel_0")]]
                 ),
@@ -59,7 +60,8 @@ def register(app: Client) -> None:
                 raise ValueError
         except (IndexError, ValueError):
             await message.reply_text(
-                "⚠️ Usage: `/autodelete <seconds>`", parse_mode="markdown"
+                "⚠️ Usage: `/autodelete <seconds>`",
+                parse_mode=ParseMode.MARKDOWN,
             )
             return
 
@@ -70,7 +72,7 @@ def register(app: Client) -> None:
             if seconds > 0
             else "🧹 Auto-delete has been **disabled**."
         )
-        await message.reply_text(msg, parse_mode="markdown")
+        await message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
     @app.on_callback_query(filters.regex(r"^autodel_(\d+)$"))
     @catch_errors
@@ -87,7 +89,10 @@ def register(app: Client) -> None:
             else "🧹 Auto-delete has been **disabled**."
         )
         await query.answer("Updated")
-        await query.message.edit_text(msg, parse_mode="markdown")
+        await query.message.edit_text(
+            msg,
+            parse_mode=ParseMode.MARKDOWN,
+        )
 
     @app.on_message(filters.group & ~filters.service)
     @catch_errors
