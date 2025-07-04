@@ -12,7 +12,7 @@ from pyrogram.types import (
 
 from utils.errors import catch_errors
 from utils.perms import is_admin
-from utils.db import toggle_setting
+from utils.db import toggle_setting, toggle_bio_filter
 from utils.messages import safe_edit_message
 from .bots_settings import (
     build_group_panel,
@@ -67,22 +67,33 @@ def register(app: Client) -> None:
         # Toggle Settings
         elif data.startswith("cb_toggle_"):
             feature_map = {
-                "cb_toggle_biolink": "biolink",
                 "cb_toggle_linkfilter": "linkfilter",
                 "cb_toggle_editmode": "editmode",
             }
-            feature = feature_map.get(data)
-            if not feature:
-                await query.answer("❌ Unknown feature.", show_alert=True)
-                return
 
-            if not await is_admin(client, query.message, user_id):
-                await query.answer("🔒 Admins only!", show_alert=True)
-                return
+            if data == "cb_toggle_biolink":
+                if not await is_admin(client, query.message, user_id):
+                    await query.answer("🔒 Admins only!", show_alert=True)
+                    return
+                state = await toggle_bio_filter(chat_id)
+                await query.answer(
+                    f"Bio Filter is now {'ON ✅' if state else 'OFF ❌'}"
+                )
+            else:
+                feature = feature_map.get(data)
+                if not feature:
+                    await query.answer("❌ Unknown feature.", show_alert=True)
+                    return
 
-            state = await toggle_setting(chat_id, feature)
-            label = feature.replace("filter", " Filter").title()
-            await query.answer(f"{label} is now {'ON ✅' if state == '1' else 'OFF ❌'}")
+                if not await is_admin(client, query.message, user_id):
+                    await query.answer("🔒 Admins only!", show_alert=True)
+                    return
+
+                state = await toggle_setting(chat_id, feature)
+                label = feature.replace("filter", " Filter").title()
+                await query.answer(
+                    f"{label} is now {'ON ✅' if state == '1' else 'OFF ❌'}"
+                )
 
             caption, markup = await build_group_panel(chat_id, client)
             await safe_edit_message(query.message, text=caption, reply_markup=markup, parse_mode=ParseMode.HTML)
