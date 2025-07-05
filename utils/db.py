@@ -1,6 +1,7 @@
 """Database helpers using Motor."""
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from pymongo import ReturnDocument
 
 _client: AsyncIOMotorClient | None = None
 _db: AsyncIOMotorDatabase | None = None
@@ -81,7 +82,7 @@ async def increment_warning(chat_id: int, user_id: int) -> int:
         {"chat_id": chat_id, "user_id": user_id},
         {"$inc": {"count": 1}},
         upsert=True,
-        return_document=True,
+        return_document=ReturnDocument.AFTER,
     )
     return doc["count"]
 

@@ -45,6 +45,7 @@ def register(app: Client) -> None:
     @app.on_callback_query()
     async def callbacks(client: Client, query: CallbackQuery):
         data = query.data
+        logger.debug("[CALLBACK] %s from %s in %s", data, query.from_user.id, query.message.chat.id)
         if data in {"cb_start", "cb_back_panel"}:
             await query.answer()
             await send_start(client, query.message, include_back=data == "cb_back_panel")

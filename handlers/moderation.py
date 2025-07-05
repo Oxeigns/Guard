@@ -68,6 +68,7 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.group & ~filters.service)
     async def moderate_message(client: Client, message: Message) -> None:
+        logger.debug("[MODERATION] message from %s in %s", message.from_user.id if message.from_user else 'unknown', message.chat.id)
         if not message.from_user or message.from_user.is_bot:
             return
         if (await client.get_me()).id == message.from_user.id:
@@ -114,6 +115,7 @@ def register(app: Client) -> None:
 
     @app.on_edited_message(filters.group & ~filters.service)
     async def on_edit(client: Client, message: Message):
+        logger.debug("[MODERATION] edit event from %s in %s", message.from_user.id if message.from_user else 'unknown', message.chat.id)
         if not message.from_user or message.from_user.is_bot:
             return
         user = message.from_user
@@ -130,6 +132,7 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.new_chat_members)
     async def check_new_member_bio(client: Client, message: Message):
+        logger.debug("[MODERATION] new member(s) in %s", message.chat.id)
         chat_id = message.chat.id
         bio_filter_enabled = await get_bio_filter(chat_id)
         if not bio_filter_enabled:
