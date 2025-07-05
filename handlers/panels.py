@@ -2,6 +2,7 @@ import os
 from html import escape
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram import Client
 
 from utils.perms import is_admin
 from utils.db import get_setting, get_bio_filter
