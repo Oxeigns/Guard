@@ -17,7 +17,9 @@ from utils.db import (
 
 logger = logging.getLogger(__name__)
 
-
+def register(app: Client) -> None:
+    print("✅ Registered: admin.py")
+    ...
 async def _require_admin_group(client: Client, message: Message) -> bool:
     """Ensure the command is used by an admin inside a group."""
     from pyrogram.enums import ChatType, ChatMemberStatus
