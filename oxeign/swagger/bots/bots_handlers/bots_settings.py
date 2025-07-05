@@ -30,9 +30,9 @@ async def build_start_panel(
 
     buttons = [[InlineKeyboardButton("📘 Commands", callback_data="cb_help_start")]]
     if is_admin:
-        buttons.insert(0, [InlineKeyboardButton("⚙️ Settings", callback_data="cb_open_panel")])
+        buttons.insert(0, [InlineKeyboardButton("⚙️ Settings", callback_data="cb_start")])
     if include_back:
-        buttons.append([InlineKeyboardButton("🔙 Back", callback_data="cb_close")])
+        buttons.append([InlineKeyboardButton("🔙 Back", callback_data="cb_back_panel")])
     return InlineKeyboardMarkup(buttons)
 
 
