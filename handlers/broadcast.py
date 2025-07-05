@@ -12,30 +12,26 @@ from pyrogram.enums import ParseMode
 from pyrogram.types import Message
 
 from config import OWNER_ID
-from utils.db import get_broadcast_users, get_broadcast_groups
+from utils.db import get_broadcast_groups
 
 logger = logging.getLogger(__name__)
 
 
 def register(app: Client) -> None:
     @app.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
-    async def broadcast_cmd(client: Client, message: Message):
-        if len(message.command) < 2 or message.command[1] not in {"users", "groups"}:
-            await message.reply_text("Usage: /broadcast users|groups <text> or reply")
-            return
-        target = message.command[1]
+    async def broadcast_cmd(client: Client, message: Message) -> None:
+        """Broadcast a message to all known groups."""
         if message.reply_to_message:
             payload_msg = message.reply_to_message
-            payload_text = None
+            text = None
         else:
-            if len(message.command) < 3:
-                await message.reply_text("Provide text or reply to a message")
+            if len(message.command) < 2:
+                await message.reply_text("Usage: /broadcast <text> or reply to a message")
                 return
-            payload_text = message.text.split(None, 2)[2]
+            text = message.text.split(None, 1)[1]
             payload_msg = None
-        ids = await (
-            get_broadcast_users() if target == "users" else get_broadcast_groups()
-        )
+
+        ids = await get_broadcast_groups()
         sent = 0
         failed = 0
         for cid in ids:
@@ -43,7 +39,7 @@ def register(app: Client) -> None:
                 if payload_msg:
                     await payload_msg.copy(cid)
                 else:
-                    await client.send_message(cid, payload_text, parse_mode=ParseMode.HTML)
+                    await client.send_message(cid, text, parse_mode=ParseMode.HTML)
                 sent += 1
             except FloodWait as e:
                 await asyncio.sleep(e.value)
@@ -51,7 +47,7 @@ def register(app: Client) -> None:
                     if payload_msg:
                         await payload_msg.copy(cid)
                     else:
-                        await client.send_message(cid, payload_text, parse_mode=ParseMode.HTML)
+                        await client.send_message(cid, text, parse_mode=ParseMode.HTML)
                     sent += 1
                 except (ChatWriteForbidden, UserKicked, PeerIdInvalid, UserIsBlocked, Exception):
                     failed += 1

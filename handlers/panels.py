@@ -29,24 +29,35 @@ async def build_start_panel(is_admin: bool = False, *, is_owner: bool = False, i
 
 # Send welcome/start panel (used for /start, /help, /menu)
 async def send_start(client, message: Message, *, include_back: bool = False) -> None:
+    """Send the main panel in private chats or the settings panel in groups."""
     bot_user = await client.get_me()
     user = message.from_user
+    chat = message.chat
     is_owner = user.id == OWNER_ID
-    markup = await build_start_panel(
-        bool(await is_admin(client, message)),
-        is_owner=is_owner,
-        include_back=include_back,
-    )
 
-    await message.reply_photo(
-        photo=PANEL_IMAGE_URL,
-        caption=(
+    if chat.type in {"group", "supergroup"}:  # group context
+        if not await is_admin(client, message):
+            await message.reply_text("🔒 Only admins can view the control panel.")
+            return
+        markup = await build_settings_panel(chat.id)
+        caption = "⚙️ <b>Group Settings</b>"
+    else:  # private chat
+        markup = await build_start_panel(
+            bool(await is_admin(client, message)),
+            is_owner=is_owner,
+            include_back=include_back,
+        )
+        caption = (
             f"🎉 <b>Welcome to {bot_user.first_name}</b>\n\n"
             f"Hello {mention_html(user.id, user.first_name)}!\n\n"
             "I'm here to help manage your group efficiently.\n"
             "You can tap the buttons below to explore available features.\n\n"
             "✅ Works in groups\n🛠 Admin-only settings\n🧠 Smart automation tools"
-        ),
+        )
+
+    await message.reply_photo(
+        photo=PANEL_IMAGE_URL,
+        caption=caption,
         reply_markup=markup,
         parse_mode=ParseMode.HTML,
     )

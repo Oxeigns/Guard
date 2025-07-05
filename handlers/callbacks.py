@@ -35,9 +35,8 @@ help_sections = {
     ),
     "help_broadcast": (
         "📢 <b>Broadcast</b>\n"
-        "Send a message to all known users or groups.\n"
-        "Use <code>/broadcast users &lt;text&gt;</code> or"
-        " <code>/broadcast groups &lt;text&gt;</code>."
+        "Send a message to every group I've joined.\n"
+        "Only the owner can use <code>/broadcast &lt;text&gt;</code>."
     ),
 }
 
