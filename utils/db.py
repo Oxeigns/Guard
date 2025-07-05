@@ -111,6 +111,31 @@ async def get_broadcast_groups() -> list[int]:
     return [doc["_id"] async for doc in cursor]
 
 
+# ------------------ GENERIC USERS/GROUPS STORAGE ------------------ #
+async def add_user(user_id: int) -> None:
+    """Save a user ID to the users collection."""
+    await _db.users.update_one({"_id": user_id}, {"$set": {}}, upsert=True)
+
+
+async def add_group(chat_id: int) -> None:
+    """Save a group ID to the groups collection."""
+    await _db.groups.update_one({"_id": chat_id}, {"$set": {}}, upsert=True)
+
+
+async def remove_group(chat_id: int) -> None:
+    await _db.groups.delete_one({"_id": chat_id})
+
+
+async def get_users() -> list[int]:
+    cursor = _db.users.find()
+    return [doc["_id"] async for doc in cursor]
+
+
+async def get_groups() -> list[int]:
+    cursor = _db.groups.find()
+    return [doc["_id"] async for doc in cursor]
+
+
 # ------------------ DB LIFECYCLE ------------------ #
 async def init_db(uri: str, db_name: str):
     """Initialize MongoDB client with URI and database name."""
