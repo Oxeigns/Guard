@@ -10,7 +10,7 @@ from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 from utils.errors import catch_errors
 from utils.perms import is_admin
 from utils.messages import safe_edit_message
-from .bots_settings import (
+from .panels import (
     build_group_panel,
     build_start_panel,
     get_help_keyboard,
@@ -29,7 +29,7 @@ def register(app: Client) -> None:
 
         logger.debug("Callback triggered: %s", data)
 
-        # ⏱ Ping
+        # ⏱ Ping response
         if data == "cb_ping":
             start = perf_counter()
             await query.answer("📡 Pinging...")
@@ -38,13 +38,13 @@ def register(app: Client) -> None:
                 f"🎉 Pong! <code>{latency}ms</code>", parse_mode=ParseMode.HTML
             )
 
-        # ❌ Close message
+        # ❌ Close current message
         elif data == "cb_close":
             await query.answer()
             with suppress(Exception):
                 await query.message.delete()
 
-        # 🔄 Open main control panel
+        # 🔁 Load main control/start panel
         elif data in {"cb_start", "cb_open_panel", "cb_back_panel"}:
             await query.answer()
             if query.message.chat.type == "private":
@@ -64,11 +64,7 @@ def register(app: Client) -> None:
                     parse_mode=ParseMode.HTML,
                 )
 
-        # 🛠 Disabled toggle
-        elif data.startswith("cb_toggle_"):
-            await query.answer("⚠️ Toggle buttons have been removed. Use commands instead.", show_alert=True)
-
-        # ✅ Approve user help
+        # ✅ Approve help tip
         elif data == "cb_approve":
             await query.answer()
             await query.message.reply_text(
@@ -76,7 +72,7 @@ def register(app: Client) -> None:
                 parse_mode=ParseMode.HTML,
             )
 
-        # ❌ Unapprove user help
+        # ❌ Unapprove help tip
         elif data == "cb_unapprove":
             await query.answer()
             await query.message.reply_text(
@@ -84,15 +80,14 @@ def register(app: Client) -> None:
                 parse_mode=ParseMode.HTML,
             )
 
-        # 🔇 Filter unmute buttons (disabled)
+        # 🔇 Filter unmute placeholders (disabled)
         elif data.startswith("biofilter_unmute_") or data.startswith("linkfilter_unmute_"):
             await query.answer("❌ Manual unmute is disabled.\nAsk an admin.", show_alert=True)
 
-        # 📘 Help menu
+        # 📘 Help command list panel
         elif data in {"cb_help_start", "cb_help_panel"}:
             commands_text = "\n".join([f"{cmd} - {desc}" for cmd, desc in COMMANDS])
             back_cb = "cb_start" if data == "cb_help_start" else "cb_back_panel"
-
             await safe_edit_message(
                 query.message,
                 caption=f"<b>📚 Commands</b>\n\n{commands_text}\n\n👇 Tap the buttons below to view module help:",
@@ -101,7 +96,7 @@ def register(app: Client) -> None:
             )
             return await query.answer()
 
-        # 📖 Module: BioMode
+        # 📖 BioMode Help
         elif data == "help_biomode":
             await safe_edit_message(
                 query.message,
@@ -114,7 +109,9 @@ def register(app: Client) -> None:
                     "🚫 Blocks users with links in bio from messaging.\n"
                     "👮 Admins only."
                 ),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]]),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                ]),
                 parse_mode=ParseMode.HTML,
             )
             return await query.answer()
@@ -127,11 +124,13 @@ def register(app: Client) -> None:
                     "🧹 <b>AutoDelete</b>\n\n"
                     "Removes messages after a delay.\n\n"
                     "<b>Usage:</b>\n"
-                    "➤ <code>/setautodelete 30</code> – deletes after 30s\n"
+                    "➤ <code>/setautodelete 30</code> – delete after 30s\n"
                     "➤ <code>/setautodelete 0</code> – disable\n\n"
-                    "🧼 Keeps chat clean automatically."
+                    "🧼 Keeps your chat clean automatically."
                 ),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]]),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                ]),
                 parse_mode=ParseMode.HTML,
             )
             return await query.answer()
@@ -146,9 +145,11 @@ def register(app: Client) -> None:
                     "<b>Usage:</b>\n"
                     "➤ <code>/linkfilter on</code>\n"
                     "➤ <code>/linkfilter off</code>\n\n"
-                    "🔒 Stops spam links before they spread."
+                    "🔒 Stops spam and scam links."
                 ),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]]),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                ]),
                 parse_mode=ParseMode.HTML,
             )
             return await query.answer()
@@ -161,39 +162,41 @@ def register(app: Client) -> None:
                     "✏️ <b>EditMode</b>\n\n"
                     "Auto-removes edited messages.\n\n"
                     "No command needed.\n\n"
-                    "🔍 Prevents sneaky message edits."
+                    "🔍 Prevents stealth spam edits."
                 ),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]]),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                ]),
                 parse_mode=ParseMode.HTML,
             )
             return await query.answer()
 
-        # 🆘 Support Button
+        # 🆘 Support
         elif data == "help_support":
             await safe_edit_message(
                 query.message,
                 caption="🆘 <b>Need help?</b>\n\nJoin our support group for assistance and community help.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔗 Join Support", url=SUPPORT_CHAT_URL)],
-                    [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")],
+                    [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
                 ]),
                 parse_mode=ParseMode.HTML,
             )
             return await query.answer()
 
-        # 👨‍💻 Developer Contact
+        # 👨‍💻 Developer
         elif data == "help_developer":
             await safe_edit_message(
                 query.message,
                 caption="👨‍💻 <b>Developer Info</b>\n\nGot feedback or questions? Contact the developer directly.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("✉️ Message Developer", url=DEVELOPER_URL)],
-                    [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")],
+                    [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
                 ]),
                 parse_mode=ParseMode.HTML,
             )
             return await query.answer()
 
-        # ❓ Unknown Button
+        # ⚠️ Unknown callback
         else:
             await query.answer("⚠️ Unknown callback", show_alert=True)
