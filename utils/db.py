@@ -2,7 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from config import MONGO_URI, MONGO_DB
 
 _client = AsyncIOMotorClient(MONGO_URI)
-_db = _client[MONGO_DB]  # Use from config for flexibility
+_db = _client[MONGO_DB]
 
 
 def get_db():
@@ -79,14 +79,14 @@ async def reset_warning(chat_id: int, user_id: int) -> None:
     await _db.warnings.delete_one({"chat_id": chat_id, "user_id": user_id})
 
 
-# ------------------ DB LIFECYCLE: Fixes your error ------------------ #
+# ------------------ DB LIFECYCLE ------------------ #
 async def init_db(uri: str, db_name: str):
-    """Initialize MongoDB client with new URI and DB name."""
+    """Initialize MongoDB client with URI and database name."""
     global _client, _db
     _client = AsyncIOMotorClient(uri)
     _db = _client[db_name]
 
 
 async def close_db():
-    """Gracefully close MongoDB connection."""
+    """Gracefully close the MongoDB connection."""
     _client.close()
