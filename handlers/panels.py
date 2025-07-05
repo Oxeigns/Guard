@@ -18,7 +18,7 @@ def mention_html(user_id: int, name: str) -> str:
 async def build_start_panel(is_admin: bool = False, *, include_back: bool = False) -> InlineKeyboardMarkup:
     buttons = [[InlineKeyboardButton("📘 Commands", callback_data="cb_help_start")]]
     if is_admin:
-        buttons.insert(0, [InlineKeyboardButton("⚙️ Settings", callback_data="cb_start")])
+        buttons.insert(0, [InlineKeyboardButton("⚙️ Settings", callback_data="open_settings")])
     if include_back:
         buttons.append([InlineKeyboardButton("🔙 Back", callback_data="cb_back_panel")])
     return InlineKeyboardMarkup(buttons)
