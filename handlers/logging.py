@@ -2,7 +2,14 @@ import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message, ChatMemberUpdated
 from config import LOG_GROUP_ID
-from utils.db import add_user, add_group, remove_group
+from utils.db import (
+    add_user,
+    add_group,
+    remove_group,
+    add_broadcast_user,
+    add_broadcast_group,
+    remove_broadcast_group,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +22,7 @@ def register(app: Client) -> None:
             return
         try:
             await add_user(user.id)
+            await add_broadcast_user(user.id)
         except Exception as exc:
             logger.warning("Failed to store user: %s", exc)
         log_text = (
@@ -31,6 +39,7 @@ def register(app: Client) -> None:
         if update.new_chat_member.user.is_self and update.old_chat_member.status in {"kicked", "left"}:
             try:
                 await add_group(chat.id)
+                await add_broadcast_group(chat.id)
             except Exception as exc:
                 logger.warning("Failed to store group: %s", exc)
             inviter = update.from_user
@@ -48,6 +57,7 @@ def register(app: Client) -> None:
         elif update.old_chat_member.user.is_self and update.new_chat_member.status in {"kicked", "left"}:
             try:
                 await remove_group(chat.id)
+                await remove_broadcast_group(chat.id)
             except Exception as exc:
                 logger.warning("Failed to remove group: %s", exc)
             text = f"❌ Removed from group: {chat.title} | ID: {chat.id}"

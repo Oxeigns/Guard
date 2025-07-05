@@ -1,11 +1,15 @@
-from motor.motor_asyncio import AsyncIOMotorClient
-from config import MONGO_URI, MONGO_DB
+"""Database helpers using Motor."""
 
-_client = AsyncIOMotorClient(MONGO_URI)
-_db = _client[MONGO_DB]
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+
+_client: AsyncIOMotorClient | None = None
+_db: AsyncIOMotorDatabase | None = None
 
 
-def get_db():
+def get_db() -> AsyncIOMotorDatabase:
+    """Return the active database instance."""
+    if _db is None:
+        raise RuntimeError("Database has not been initialised")
     return _db
 
 
@@ -142,8 +146,12 @@ async def init_db(uri: str, db_name: str):
     global _client, _db
     _client = AsyncIOMotorClient(uri)
     _db = _client[db_name]
+    await _db.kv_settings.create_index([("chat_id", 1), ("key", 1)], unique=True)
+    await _db.approved_users.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
+    await _db.warnings.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
 
 
 async def close_db():
     """Gracefully close the MongoDB connection."""
-    _client.close()
+    if _client:
+        _client.close()
