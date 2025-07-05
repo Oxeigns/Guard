@@ -16,6 +16,7 @@ from utils.db import (
     is_approved,
     get_approval_mode,
 )
+from config import SUPPORT_CHAT_URL
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ LINK_RE = re.compile(
     re.IGNORECASE,
 )
 MAX_BIO_LENGTH = 800
-SUPPORT_CHAT = "https://t.me/botsyard"
+SUPPORT_CHAT = SUPPORT_CHAT_URL
 
 
 def contains_link(text: str) -> bool:
@@ -106,11 +107,14 @@ def register(app: Client) -> None:
             return
         if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
             return
-        if await get_setting(chat_id, "linkfilter", "0") != "1":
+        link_state = await get_setting(chat_id, "linkfilter", "0")
+        logger.debug("linkfilter[%s] -> %s", chat_id, link_state)
+        if link_state != "1":
             return
         if contains_link(message.text or message.caption or ""):
             await suppress_delete(message)
             count = await increment_warning(chat_id, user.id)
+            logger.debug("Warn %s in %s: count=%s", user.id, chat_id, count)
             reason = "You are not allowed to share links in this group."
             if count >= 3:
                 await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
@@ -151,7 +155,9 @@ def register(app: Client) -> None:
     @catch_errors
     async def check_new_member_bio(client: Client, message: Message):
         chat_id = message.chat.id
-        if not await get_bio_filter(chat_id):
+        bio_filter_enabled = await get_bio_filter(chat_id)
+        logger.debug("bio_filter[%s] -> %s", chat_id, bio_filter_enabled)
+        if not bio_filter_enabled:
             return
 
         for user in message.new_chat_members:
@@ -167,6 +173,7 @@ def register(app: Client) -> None:
 
             await suppress_delete(message)
             count = await increment_warning(chat_id, user.id)
+            logger.debug("Warn %s in %s: count=%s", user.id, chat_id, count)
             reason = "Your bio contains a link or is too long, which is not allowed."
             if count >= 3:
                 await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
