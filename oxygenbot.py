@@ -1,4 +1,4 @@
-from oxeign.swagger.oxy.oxy_oxygenbot import main
+from mybot.main import main
 import asyncio
 
 if __name__ == "__main__":
