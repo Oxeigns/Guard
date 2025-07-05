@@ -12,10 +12,27 @@ from .panels import send_start, get_help_keyboard, build_settings_panel
 logger = logging.getLogger(__name__)
 
 help_sections = {
-    "help_biomode": "🛡️ <b>BioMode</b>\nDeletes messages from users whose bios contain links.",
-    "help_autodelete": "🧹 <b>AutoDelete</b>\nAutomatically deletes messages after a delay.",
-    "help_linkfilter": "🔗 <b>LinkFilter</b>\nBlocks non-admins from sending links.",
-    "help_editmode": "✏️ <b>EditMode</b>\nDeletes edited messages instantly.",
+    "help_biomode": (
+        "🛡️ <b>BioMode</b>\n"
+        "Enables scanning of user bios when they join. If the bio contains a link "
+        "or is unusually long, the join message is deleted and the user is warned.\n"
+        "Use <code>/biolink on|off</code> to toggle."
+    ),
+    "help_autodelete": (
+        "🧹 <b>AutoDelete</b>\n"
+        "Automatically removes all non-admin messages after the configured delay.\n"
+        "Set the delay with <code>/setautodelete &lt;seconds&gt;</code>. Use 0 to disable."
+    ),
+    "help_linkfilter": (
+        "🔗 <b>LinkFilter</b>\n"
+        "Deletes messages containing URLs from non-admin users. Useful against spam links.\n"
+        "Turn on or off with <code>/linkfilter on|off</code>."
+    ),
+    "help_editmode": (
+        "✏️ <b>EditMode</b>\n"
+        "Deletes edited messages from regular users. This prevents stealth editing of spam.\n"
+        "Toggle using <code>/editfilter on|off</code>."
+    ),
 }
 
 
