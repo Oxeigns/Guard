@@ -84,130 +84,84 @@ def register(app: Client) -> None:
     async def schedule_auto_delete(
         chat_id: int, message_id: int, *, fallback: int | None = None
     ) -> None:
-        delay_str = await get_setting(chat_id, "autodelete_interval", "0")
+        delay_raw = await get_setting(chat_id, "autodelete_interval", "0")
         try:
-            delay = int(delay_str or 0)
+            delay = int(delay_raw or 0)
         except (TypeError, ValueError):
             delay = 0
         if delay <= 0:
             if fallback is None:
                 return
             delay = fallback
-        logger.warning(
-            f"[AUTODELETE] scheduling delete chat_id={chat_id} msg={message_id} delay={delay}"
+        logger.debug(
+            "[AUTODELETE] schedule %s/%s after %ss", chat_id, message_id, delay
         )
         asyncio.create_task(delete_later(chat_id, message_id, delay))
 
-    @app.on_message(filters.group & (filters.text | filters.caption) & ~filters.service)
-    @catch_errors
-    async def enforce_approval(client: Client, message: Message) -> None:
-        user = message.from_user
-        chat_id = message.chat.id
-        if not user or user.is_bot:
-            return
-        if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
-            return
-        if not await get_approval_mode(chat_id):
-            return
-        logger.debug("Deleting message from %s in %s: not approved", user.id, chat_id)
-        await suppress_delete(message)
-        await message.reply_text(
-            "❌ You are not approved to speak here.",
-            parse_mode=ParseMode.HTML,
-            quote=True,
-        )
-
-    @app.on_message(filters.group & (filters.text | filters.caption))
-    @catch_errors
-    async def check_message_links(client: Client, message: Message):
-        """Delete messages containing links from unapproved users."""
-        user = message.from_user
-        chat_id = message.chat.id
-        if not user or user.is_bot:
-            return
-        user_admin = await is_admin(client, message, user.id)
-        user_approved = await is_approved(chat_id, user.id)
-        link_state = await get_setting(chat_id, "linkfilter", "0")
-        enabled = link_state == "1"
-        logger.warning(
-            f"[LINKFILTER] {chat_id=} enabled={enabled} admin={user_admin} approved={user_approved} user={user.id}"
-        )
-        if user_admin or user_approved or not enabled:
-            return
-
-        has_link = contains_link(message.text or message.caption or "")
-        logger.warning(f"[LINKFILTER] contains_link={has_link}")
-        if has_link:
-            logger.debug("Link detected from %s in %s", user.id, chat_id)
-            await suppress_delete(message)
-            count = await increment_warning(chat_id, user.id)
-            logger.debug("Warn %s in %s: count=%s", user.id, chat_id, count)
-            reason = "You are not allowed to share links in this group."
-            if count >= 3:
-                logger.debug("Muting %s in %s due to repeated link violations", user.id, chat_id)
-                await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
-                await reset_warning(chat_id, user.id)
-            msg, kb = build_warning(count, user, reason, is_final=(count >= 3))
-            await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
-
-    @app.on_message(filters.group & (filters.text | filters.caption))
-    @catch_errors
-    async def check_bio_on_message(client: Client, message: Message):
-        """Check sender bio for links when they speak."""
-        user = message.from_user
-        chat_id = message.chat.id
-        if not user or user.is_bot:
-            return
-        user_admin = await is_admin(client, message, user.id)
-        user_approved = await is_approved(chat_id, user.id)
-        bio_state = await get_bio_filter(chat_id)
-        logger.warning(
-            f"[BIOFILTER] {chat_id=} enabled={bio_state} admin={user_admin} approved={user_approved}"
-        )
-        if user_admin or user_approved or not bio_state:
-            return
-
-        try:
-            user_info = await client.get_chat(user.id)
-            bio = getattr(user_info, "bio", "")
-        except Exception as exc:
-            logger.debug("Failed to fetch bio for %s: %s", user.id, exc)
-            return
-
-        has_link = contains_link(bio)
-        if not bio or (len(bio) <= MAX_BIO_LENGTH and not has_link):
-            return
-        logger.warning(f"[BIOFILTER] Bio of {user.id}: {bio}")
-
-        logger.debug("Bio link detected for %s in %s", user.id, chat_id)
-        await suppress_delete(message)
-        count = await increment_warning(chat_id, user.id)
-        logger.debug("Warn %s in %s: count=%s", user.id, chat_id, count)
-        reason = "Your bio contains a link or is too long, which is not allowed."
-        if count >= 3:
-            logger.debug("Muting %s in %s due to bio violation", user.id, chat_id)
-            await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
-            await reset_warning(chat_id, user.id)
-        msg, kb = build_warning(count, user, reason, is_final=(count >= 3))
-        await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
-
     @app.on_message(filters.group & ~filters.service)
     @catch_errors
-    async def enforce_autodelete(client: Client, message: Message):
+    async def moderate_message(client: Client, message: Message) -> None:
+        """Main entry for all incoming group messages."""
         if not message.from_user or message.from_user.is_bot:
             return
 
         bot_id = (await client.get_me()).id
-        if message.from_user.id != bot_id:
-            user = message.from_user
-            user_admin = await is_admin(client, message, user.id)
-            user_approved = await is_approved(message.chat.id, user.id)
-            logger.warning(
-                f"[AUTODELETE] {message.chat.id=} msg={message.id} admin={user_admin} approved={user_approved}"
+        if message.from_user.id == bot_id:
+            return
+
+        chat_id = message.chat.id
+        user = message.from_user
+
+        user_admin = bool(await is_admin(client, message, user.id))
+        user_approved = bool(await is_approved(chat_id, user.id))
+
+        if not user_admin and not user_approved and await get_approval_mode(chat_id):
+            logger.debug("Unapproved user %s in %s", user.id, chat_id)
+            await suppress_delete(message)
+            await message.reply_text(
+                "❌ You are not approved to speak here.",
+                parse_mode=ParseMode.HTML,
+                quote=True,
             )
-            if user_admin or user_approved:
+            return
+
+        text = message.text or message.caption or ""
+
+        link_enabled = str(await get_setting(chat_id, "linkfilter", "0")) == "1"
+        if text and link_enabled and not user_admin and not user_approved and contains_link(text):
+            logger.debug("Link blocked from %s in %s", user.id, chat_id)
+            await suppress_delete(message)
+            count = await increment_warning(chat_id, user.id)
+            reason = "You are not allowed to share links in this group."
+            if count >= 3:
+                await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
+                await reset_warning(chat_id, user.id)
+            msg, kb = build_warning(count, user, reason, is_final=(count >= 3))
+            await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
+            return
+
+        bio_filter_enabled = bool(await get_bio_filter(chat_id))
+        if bio_filter_enabled and not user_admin and not user_approved:
+            try:
+                user_info = await client.get_users(user.id)
+                bio = getattr(user_info, "bio", "") or ""
+            except Exception as exc:
+                logger.debug("Bio fetch failed for %s: %s", user.id, exc)
+                bio = ""
+            if bio and (len(bio) > MAX_BIO_LENGTH or contains_link(bio)):
+                logger.debug("Bio violation from %s in %s", user.id, chat_id)
+                await suppress_delete(message)
+                count = await increment_warning(chat_id, user.id)
+                reason = "Your bio contains a link or is too long, which is not allowed."
+                if count >= 3:
+                    await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
+                    await reset_warning(chat_id, user.id)
+                msg, kb = build_warning(count, user, reason, is_final=(count >= 3))
+                await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
                 return
-            await schedule_auto_delete(message.chat.id, message.id)
+
+        if not user_admin and not user_approved:
+            await schedule_auto_delete(chat_id, message.id)
 
     @app.on_edited_message(filters.group & ~filters.service)
     @catch_errors
@@ -217,14 +171,18 @@ def register(app: Client) -> None:
         bot_id = (await client.get_me()).id
         if message.from_user.id != bot_id:
             user = message.from_user
-            user_admin = await is_admin(client, message, user.id)
-            user_approved = await is_approved(message.chat.id, user.id)
-            logger.warning(
-                f"[EDITMODE] {message.chat.id=} msg={message.id} admin={user_admin} approved={user_approved}"
+            user_admin = bool(await is_admin(client, message, user.id))
+            user_approved = bool(await is_approved(message.chat.id, user.id))
+            logger.debug(
+                "[EDITMODE] %s %s admin=%s approved=%s",
+                message.chat.id,
+                message.id,
+                user_admin,
+                user_approved,
             )
             if user_admin or user_approved:
                 return
-            if await get_setting(message.chat.id, "editmode", "0") != "1":
+            if str(await get_setting(message.chat.id, "editmode", "0")) != "1":
                 return
             key = (message.chat.id, message.id)
             if key not in edited_messages:
@@ -237,13 +195,13 @@ def register(app: Client) -> None:
     async def check_new_member_bio(client: Client, message: Message):
         chat_id = message.chat.id
         bio_filter_enabled = await get_bio_filter(chat_id)
-        logger.warning(f"[BIOFILTER] join {chat_id=} enabled={bio_filter_enabled}")
+        logger.debug("[BIOFILTER] join %s enabled=%s", chat_id, bio_filter_enabled)
         if not bio_filter_enabled:
             return
 
         for user in message.new_chat_members:
-            user_admin = await is_admin(client, message, user.id)
-            user_approved = await is_approved(chat_id, user.id)
+            user_admin = bool(await is_admin(client, message, user.id))
+            user_approved = bool(await is_approved(chat_id, user.id))
             if user.is_bot or user_admin or user_approved:
                 continue
             try:
@@ -256,7 +214,7 @@ def register(app: Client) -> None:
             if not bio or (len(bio) <= MAX_BIO_LENGTH and not has_link):
                 continue
 
-            logger.warning(f"[BIOFILTER] Bio of {user.id}: {bio}")
+            logger.debug("[BIOFILTER] join bio %s: %s", user.id, bio)
 
             logger.debug("Bio link detected on join for %s in %s", user.id, chat_id)
             await suppress_delete(message)

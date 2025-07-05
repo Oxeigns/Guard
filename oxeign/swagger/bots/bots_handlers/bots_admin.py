@@ -26,7 +26,7 @@ def register(app: Client) -> None:
         if message.chat.type not in {"group", "supergroup"}:
             await message.reply_text("❗ Group-only command.", parse_mode=ParseMode.HTML)
             return
-        if not await is_admin(app, message):
+        if not bool(await is_admin(app, message)):
             await message.reply_text("🔒 <b>Admins only.</b>", parse_mode=ParseMode.HTML)
             return
         if not message.reply_to_message or not message.reply_to_message.from_user:
@@ -49,7 +49,7 @@ def register(app: Client) -> None:
 
     async def require_admin_reply(message: Message, action: str):
         """Ensure command is by admin and used as a reply."""
-        if not await is_admin(app, message):
+        if not bool(await is_admin(app, message)):
             await message.reply_text("🚫 <b>Only admins can do this.</b>", parse_mode=ParseMode.HTML)
             return None
         if not message.reply_to_message or not message.reply_to_message.from_user:
@@ -94,7 +94,7 @@ def register(app: Client) -> None:
     @app.on_message(filters.command("viewapproved") & filters.group)
     @catch_errors
     async def view_approved(client: Client, message: Message):
-        if not await is_admin(app, message):
+        if not bool(await is_admin(app, message)):
             await message.reply_text("🚫 <b>Only admins can view approvals.</b>", parse_mode=ParseMode.HTML)
             return
         users = await get_approved(message.chat.id)
@@ -107,7 +107,7 @@ def register(app: Client) -> None:
     @app.on_message(filters.command("approval") & filters.group)
     @catch_errors
     async def approval_mode_cmd(client: Client, message: Message):
-        if not await is_admin(app, message):
+        if not bool(await is_admin(app, message)):
             await message.reply_text("🔒 <b>Only admins can change approval mode.</b>", parse_mode=ParseMode.HTML)
             return
 
@@ -142,7 +142,7 @@ def register(app: Client) -> None:
         return None
 
     async def _require_admin(message: Message) -> bool:
-        if not await is_admin(app, message):
+        if not bool(await is_admin(app, message)):
             await message.reply_text("🔒 <b>Admins only.</b>", parse_mode=ParseMode.HTML)
             return False
         return True
