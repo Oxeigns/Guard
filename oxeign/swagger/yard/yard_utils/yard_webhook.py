@@ -22,7 +22,7 @@ async def set_webhook(bot_token: str, url: str) -> None:
     try:
         logger.debug(f"Setting webhook to: {url}")
         resp = await loop.run_in_executor(None, request.urlopen, req)
-        response_data = resp.read()
+        resp.read()
         logger.info("✅ Webhook successfully set via Bot API.")
     except error.URLError as exc:
         logger.error("❌ Failed to set webhook: %s", exc.reason)
