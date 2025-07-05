@@ -1,10 +1,18 @@
+"""Message based moderation filters."""
+
 import asyncio
 import logging
 import re
 from contextlib import suppress
+
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
-from pyrogram.types import Message, ChatPermissions, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import (
+    Message,
+    ChatPermissions,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 
 from utils.errors import catch_errors
 from utils.perms import is_admin
@@ -65,6 +73,7 @@ def register(app: Client) -> None:
         await asyncio.sleep(max(delay, 0))
         try:
             await app.delete_messages(chat_id, message_id)
+            logger.debug("Deleted %s/%s after %ss", chat_id, message_id, delay)
         except Exception as exc:
             logger.warning("Failed to delete %s/%s: %s", chat_id, message_id, exc)
         finally:
@@ -73,11 +82,12 @@ def register(app: Client) -> None:
     async def schedule_auto_delete(
         chat_id: int, message_id: int, *, fallback: int | None = None
     ) -> None:
-        delay = int(await get_setting(chat_id, "autodelete_interval", "0"))
+        delay = int(await get_setting(chat_id, "autodelete_interval", "0") or 0)
         if delay <= 0:
             if fallback is None:
                 return
             delay = fallback
+        logger.debug("Scheduling delete of %s/%s in %ss", chat_id, message_id, delay)
         asyncio.create_task(delete_later(chat_id, message_id, delay))
 
     @app.on_message(filters.group & (filters.text | filters.caption) & ~filters.service)
@@ -91,6 +101,7 @@ def register(app: Client) -> None:
             return
         if not await get_approval_mode(chat_id):
             return
+        logger.debug("Deleting message from %s in %s: not approved", user.id, chat_id)
         await suppress_delete(message)
         await message.reply_text(
             "❌ You are not approved to speak here.",
@@ -101,32 +112,73 @@ def register(app: Client) -> None:
     @app.on_message(filters.group & (filters.text | filters.caption))
     @catch_errors
     async def check_message_links(client: Client, message: Message):
+        """Delete messages containing links from unapproved users."""
         user = message.from_user
         chat_id = message.chat.id
         if not user or user.is_bot:
             return
         if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
             return
+
         link_state = await get_setting(chat_id, "linkfilter", "0")
         logger.debug("linkfilter[%s] -> %s", chat_id, link_state)
         if link_state != "1":
             return
+
         if contains_link(message.text or message.caption or ""):
+            logger.debug("Link detected from %s in %s", user.id, chat_id)
             await suppress_delete(message)
             count = await increment_warning(chat_id, user.id)
             logger.debug("Warn %s in %s: count=%s", user.id, chat_id, count)
             reason = "You are not allowed to share links in this group."
             if count >= 3:
+                logger.debug("Muting %s in %s due to repeated link violations", user.id, chat_id)
                 await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
                 await reset_warning(chat_id, user.id)
             msg, kb = build_warning(count, user, reason, is_final=(count >= 3))
             await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
+
+    @app.on_message(filters.group & (filters.text | filters.caption))
+    @catch_errors
+    async def check_bio_on_message(client: Client, message: Message):
+        """Check sender bio for links when they speak."""
+        user = message.from_user
+        chat_id = message.chat.id
+        if not user or user.is_bot:
+            return
+        if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
+            return
+        if not await get_bio_filter(chat_id):
+            return
+
+        try:
+            user_info = await client.get_chat(user.id)
+            bio = getattr(user_info, "bio", "")
+        except Exception as exc:
+            logger.debug("Failed to fetch bio for %s: %s", user.id, exc)
+            return
+
+        if not bio or (len(bio) <= MAX_BIO_LENGTH and not contains_link(bio)):
+            return
+
+        logger.debug("Bio link detected for %s in %s", user.id, chat_id)
+        await suppress_delete(message)
+        count = await increment_warning(chat_id, user.id)
+        logger.debug("Warn %s in %s: count=%s", user.id, chat_id, count)
+        reason = "Your bio contains a link or is too long, which is not allowed."
+        if count >= 3:
+            logger.debug("Muting %s in %s due to bio violation", user.id, chat_id)
+            await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
+            await reset_warning(chat_id, user.id)
+        msg, kb = build_warning(count, user, reason, is_final=(count >= 3))
+        await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
 
     @app.on_message(filters.group & ~filters.service)
     @catch_errors
     async def enforce_autodelete(client: Client, message: Message):
         if not message.from_user or message.from_user.is_bot:
             return
+
         bot_id = (await client.get_me()).id
         if message.from_user.id != bot_id:
             user = message.from_user
@@ -149,6 +201,7 @@ def register(app: Client) -> None:
             key = (message.chat.id, message.id)
             if key not in edited_messages:
                 edited_messages.add(key)
+                logger.debug("Deleting edited message %s/%s", message.chat.id, message.id)
                 await schedule_auto_delete(message.chat.id, message.id, fallback=0)
 
     @app.on_message(filters.new_chat_members)
@@ -166,16 +219,19 @@ def register(app: Client) -> None:
             try:
                 user_info = await client.get_chat(user.id)
                 bio = getattr(user_info, "bio", "")
-            except Exception:
+            except Exception as exc:
+                logger.debug("Failed to fetch bio for %s on join: %s", user.id, exc)
                 continue
             if not bio or (len(bio) <= MAX_BIO_LENGTH and not contains_link(bio)):
                 continue
 
+            logger.debug("Bio link detected on join for %s in %s", user.id, chat_id)
             await suppress_delete(message)
             count = await increment_warning(chat_id, user.id)
             logger.debug("Warn %s in %s: count=%s", user.id, chat_id, count)
             reason = "Your bio contains a link or is too long, which is not allowed."
             if count >= 3:
+                logger.debug("Muting %s in %s due to bio violation", user.id, chat_id)
                 await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
                 await reset_warning(chat_id, user.id)
             msg, kb = build_warning(count, user, reason, is_final=(count >= 3))
