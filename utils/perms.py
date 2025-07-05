@@ -1,25 +1,19 @@
-from pyrogram.enums import ChatMemberStatus
+from pyrogram import Client
+from pyrogram.types import Message, ChatMember
 
-
-async def is_admin(client, message, user_id: int | None = None) -> bool:
+async def is_admin(client: Client, message: Message, user_id: int = None) -> bool:
     """
-    Check if the user is an admin or owner in the chat.
-
-    Args:
-        client: Pyrogram Client
-        message: Pyrogram Message object
-        user_id (optional): User ID to check. If None, checks the message sender.
-
-    Returns:
-        bool: True if user is admin or owner, else False
+    Checks whether the given user (or message sender) is an admin in the chat.
+    Supports groups and supergroups.
     """
-    if not user_id:
-        if not message.from_user:
-            return False
-        user_id = message.from_user.id
-
     try:
-        member = await client.get_chat_member(message.chat.id, user_id)
-        return member.status in (ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER)
-    except Exception:
+        chat_id = message.chat.id
+        user_id = user_id or message.from_user.id
+
+        # Skip check if the user is the group creator (owner)
+        member: ChatMember = await client.get_chat_member(chat_id, user_id)
+        return member.status in ("administrator", "creator")
+    except Exception as e:
+        # Fallback to False if any error occurs
+        print(f"[is_admin] Error checking admin status: {e}")
         return False
