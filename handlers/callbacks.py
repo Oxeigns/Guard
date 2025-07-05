@@ -43,6 +43,8 @@ help_sections = {
 
 
 def register(app: Client) -> None:
+    print("✅ Registered: callbacks.py")
+    ...
     @app.on_callback_query()
     @catch_errors
     async def callbacks(client: Client, query: CallbackQuery):
