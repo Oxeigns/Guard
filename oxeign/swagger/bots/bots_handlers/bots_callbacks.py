@@ -13,43 +13,42 @@ from utils.messages import safe_edit_message
 from .panels import (
     build_start_panel,
     get_help_keyboard,
-    send_start,  # ✅ Use this everywhere now
+    send_start,  # ✅ Used for all panels now
 )
 from .bots_commands import COMMANDS
 
 logger = logging.getLogger(__name__)
 
-# 💡 Refined Help Descriptions
+# 📘 Help Content Dictionary
 help_sections = {
     "help_biomode": (
         "🛡️ <b>BioMode</b>\n\n"
-        "Automatically deletes messages from users whose bios contain links or suspicious content.\n"
-        "Prevents self-promotion or spam before it starts.\n\n"
+        "Deletes messages from users whose bios contain links or suspicious content.\n"
+        "Protects your group from self-promoters.\n\n"
         "<b>Commands:</b>\n"
         "• <code>/biolink on</code> – Enable BioMode\n"
         "• <code>/biolink off</code> – Disable BioMode"
     ),
     "help_autodelete": (
         "🧹 <b>AutoDelete</b>\n\n"
-        "Keeps your group clean by auto-deleting messages after a set time.\n"
-        "Ideal for temporary or spam-prone content.\n\n"
+        "Automatically removes messages after a delay to keep the group clean.\n\n"
         "<b>Commands:</b>\n"
-        "• <code>/setautodelete 30</code> – Auto-delete after 30 seconds\n"
+        "• <code>/setautodelete 30</code> – Delete after 30s\n"
         "• <code>/setautodelete 0</code> – Disable AutoDelete"
     ),
     "help_linkfilter": (
         "🔗 <b>LinkFilter</b>\n\n"
-        "Blocks link messages from non-admins.\n"
-        "Protects your group from spam and malicious URLs.\n\n"
+        "Blocks non-admins from sending links.\n"
+        "Useful against spam, scams, and promotions.\n\n"
         "<b>Commands:</b>\n"
-        "• <code>/linkfilter on</code> – Enable LinkFilter\n"
-        "• <code>/linkfilter off</code> – Disable LinkFilter"
+        "• <code>/linkfilter on</code>\n"
+        "• <code>/linkfilter off</code>"
     ),
     "help_editmode": (
         "✏️ <b>EditMode</b>\n\n"
-        "Automatically deletes edited messages to stop sneaky spam edits.\n"
-        "No command required – works in the background.\n\n"
-        "<i>Admin access required to manage settings.</i>"
+        "Deletes edited messages instantly.\n"
+        "Prevents sneaky edits after posting.\n\n"
+        "<i>No commands required – works silently in background.</i>"
     ),
 }
 
@@ -63,7 +62,7 @@ def register(app: Client) -> None:
 
         logger.debug("Callback triggered: %s", data)
 
-        # ⏱ Ping
+        # ⏱ Ping test
         if data == "cb_ping":
             start = perf_counter()
             await query.answer("📡 Pinging...")
@@ -72,50 +71,30 @@ def register(app: Client) -> None:
                 f"🎉 Pong! <code>{latency}ms</code>", parse_mode=ParseMode.HTML
             )
 
-        # ❌ Close Message
+        # ❌ Close button
         elif data == "cb_close":
             await query.answer()
             with suppress(Exception):
                 await query.message.delete()
 
-        # 🔁 Load universal start panel (even in groups)
+        # 🔁 Reload main panel
         elif data in {"cb_start", "cb_open_panel", "cb_back_panel"}:
             await query.answer()
             await send_start(client, query.message)
 
-        # ✅ Approve Tip
-        elif data == "cb_approve":
-            await query.answer()
-            await query.message.reply_text(
-                "✅ Reply to a user with <code>/approve</code> to approve them.",
-                parse_mode=ParseMode.HTML,
-            )
-
-        # ❌ Unapprove Tip
-        elif data == "cb_unapprove":
-            await query.answer()
-            await query.message.reply_text(
-                "❌ Reply to a user with <code>/unapprove</code> to unapprove them.",
-                parse_mode=ParseMode.HTML,
-            )
-
-        # 🔇 Manual Unmute Blocked
-        elif data.startswith("biofilter_unmute_") or data.startswith("linkfilter_unmute_"):
-            await query.answer("❌ Manual unmute is disabled.\nAsk an admin.", show_alert=True)
-
-        # 📘 All Commands Panel
+        # 🧾 Full command list
         elif data in {"cb_help_start", "cb_help_panel"}:
             commands_text = "\n".join([f"{cmd} - {desc}" for cmd, desc in COMMANDS])
             back_cb = "cb_start" if data == "cb_help_start" else "cb_back_panel"
             await safe_edit_message(
                 query.message,
-                caption=f"<b>📚 Commands</b>\n\n{commands_text}\n\n👇 Tap the buttons below to view module help:",
+                caption=f"<b>📚 Commands</b>\n\n{commands_text}\n\n👇 Tap below for help on each module:",
                 reply_markup=get_help_keyboard(back_cb),
                 parse_mode=ParseMode.HTML,
             )
             return await query.answer()
 
-        # ℹ️ Specific Help Modules
+        # ℹ️ Specific module help (from dictionary)
         elif data in help_sections:
             await safe_edit_message(
                 query.message,
@@ -127,11 +106,11 @@ def register(app: Client) -> None:
             )
             return await query.answer()
 
-        # 🆘 Support
+        # 🆘 Support group
         elif data == "help_support":
             await safe_edit_message(
                 query.message,
-                caption="🆘 <b>Need help?</b>\n\nJoin our support group for assistance and community help.",
+                caption="🆘 <b>Need help?</b>\n\nJoin our support group below.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔗 Join Support", url=SUPPORT_CHAT_URL)],
                     [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
@@ -140,11 +119,11 @@ def register(app: Client) -> None:
             )
             return await query.answer()
 
-        # 👨‍💻 Developer
+        # 👨‍💻 Developer contact
         elif data == "help_developer":
             await safe_edit_message(
                 query.message,
-                caption="👨‍💻 <b>Developer Info</b>\n\nGot feedback or questions? Contact the developer directly.",
+                caption="👨‍💻 <b>Developer Info</b>\n\nFor feature requests or bug reports, contact the developer.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("✉️ Message Developer", url=DEVELOPER_URL)],
                     [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
@@ -153,6 +132,26 @@ def register(app: Client) -> None:
             )
             return await query.answer()
 
-        # ❗ Unknown callback
+        # ✅ Approve user usage tip
+        elif data == "cb_approve":
+            await query.answer()
+            await query.message.reply_text(
+                "✅ Reply to a user with <code>/approve</code> to approve them.",
+                parse_mode=ParseMode.HTML,
+            )
+
+        # ❌ Unapprove user usage tip
+        elif data == "cb_unapprove":
+            await query.answer()
+            await query.message.reply_text(
+                "❌ Reply to a user with <code>/unapprove</code> to unapprove them.",
+                parse_mode=ParseMode.HTML,
+            )
+
+        # 🔇 Disabled manual unmute
+        elif data.startswith("biofilter_unmute_") or data.startswith("linkfilter_unmute_"):
+            await query.answer("❌ Manual unmute is disabled.\nAsk an admin.", show_alert=True)
+
+        # ⚠️ Unknown fallback
         else:
-            await query.answer("⚠️ Unknown callback", show_alert=True)
+            await query.answer("⚠️ Unknown callback received.", show_alert=True)
