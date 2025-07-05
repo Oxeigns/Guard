@@ -125,6 +125,9 @@ def register(app: Client) -> None:
             return
         bot_id = (await client.get_me()).id
         if message.from_user.id != bot_id:
+            user = message.from_user
+            if await is_admin(client, message, user.id) or await is_approved(message.chat.id, user.id):
+                return
             await schedule_auto_delete(message.chat.id, message.id)
 
     @app.on_edited_message(filters.group & ~filters.service)
@@ -134,6 +137,9 @@ def register(app: Client) -> None:
             return
         bot_id = (await client.get_me()).id
         if message.from_user.id != bot_id:
+            user = message.from_user
+            if await is_admin(client, message, user.id) or await is_approved(message.chat.id, user.id):
+                return
             if await get_setting(message.chat.id, "editmode", "0") != "1":
                 return
             key = (message.chat.id, message.id)
