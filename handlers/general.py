@@ -22,3 +22,8 @@ def register(app: Client) -> None:
         else:
             text = f"<b>Your ID:</b> <code>{target.id}</code>"
         await message.reply_text(text, parse_mode=ParseMode.HTML)
+
+    @app.on_message(filters.command("ping"))
+    async def ping_cmd(client: Client, message: Message) -> None:
+        """Simple health check command."""
+        await message.reply_text("🏓 Pong!")

@@ -1,6 +1,6 @@
 from pyrogram import Client
 from pyrogram.types import Message, ChatMember
-from pyrogram.enums import ChatType
+from pyrogram.enums import ChatType, ChatMemberStatus
 
 async def is_admin(client: Client, message: Message, user_id: int = None) -> bool:
     """
@@ -16,7 +16,10 @@ async def is_admin(client: Client, message: Message, user_id: int = None) -> boo
         user_id = user_id or message.from_user.id
 
         member: ChatMember = await client.get_chat_member(chat_id, user_id)
-        return member.status in ("administrator", "creator")
+        return member.status in {
+            ChatMemberStatus.ADMINISTRATOR,
+            ChatMemberStatus.OWNER,
+        }
     except Exception as e:
         # Fallback to False if any error occurs
         print(f"[is_admin] Error checking admin status: {e}")

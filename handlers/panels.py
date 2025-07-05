@@ -5,6 +5,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 from utils.perms import is_admin
 from utils.db import get_setting, get_bio_filter
+from config import OWNER_ID
 
 # Default image for all welcome messages
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
@@ -15,10 +16,12 @@ def mention_html(user_id: int, name: str) -> str:
 
 
 # Build the main inline keyboard
-async def build_start_panel(is_admin: bool = False, *, include_back: bool = False) -> InlineKeyboardMarkup:
+async def build_start_panel(is_admin: bool = False, *, is_owner: bool = False, include_back: bool = False) -> InlineKeyboardMarkup:
     buttons = [[InlineKeyboardButton("📘 Commands", callback_data="cb_help_start")]]
     if is_admin:
         buttons.insert(0, [InlineKeyboardButton("⚙️ Settings", callback_data="open_settings")])
+    if is_owner:
+        buttons.append([InlineKeyboardButton("📢 Broadcast", callback_data="help_broadcast")])
     if include_back:
         buttons.append([InlineKeyboardButton("🔙 Back", callback_data="cb_back_panel")])
     return InlineKeyboardMarkup(buttons)
@@ -28,7 +31,12 @@ async def build_start_panel(is_admin: bool = False, *, include_back: bool = Fals
 async def send_start(client, message: Message, *, include_back: bool = False) -> None:
     bot_user = await client.get_me()
     user = message.from_user
-    markup = await build_start_panel(bool(await is_admin(client, message)), include_back=include_back)
+    is_owner = user.id == OWNER_ID
+    markup = await build_start_panel(
+        bool(await is_admin(client, message)),
+        is_owner=is_owner,
+        include_back=include_back,
+    )
 
     await message.reply_photo(
         photo=PANEL_IMAGE_URL,
@@ -56,6 +64,7 @@ def get_help_keyboard(back_cb: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton("🧹 AutoDelete", callback_data="help_autodelete")],
         [InlineKeyboardButton("🔗 LinkFilter", callback_data="help_linkfilter")],
         [InlineKeyboardButton("✏️ EditMode", callback_data="help_editmode")],
+        [InlineKeyboardButton("📢 Broadcast", callback_data="help_broadcast")],
         [
             InlineKeyboardButton("👨‍💻 Developer", callback_data="help_developer"),
             InlineKeyboardButton("🆘 Support", callback_data="help_support")
