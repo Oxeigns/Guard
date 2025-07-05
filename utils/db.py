@@ -141,8 +141,15 @@ async def get_groups() -> list[int]:
 async def init_db(uri: str, db_name: str) -> None:
     """Initialize MongoDB with required collections and indexes."""
     global _client, _db
-    _client = AsyncIOMotorClient(uri)
+    # Short timeout so startup fails fast if DB is unreachable
+    _client = AsyncIOMotorClient(uri, serverSelectionTimeoutMS=5000)
     _db = _client[db_name]
+
+    # Force a connection attempt to provide immediate feedback
+    try:
+        await _client.admin.command("ping")
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(f"Could not connect to MongoDB: {exc}") from exc
 
     await _db.kv_settings.create_index([("chat_id", 1), ("key", 1)], unique=True)
     await _db.approved_users.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
