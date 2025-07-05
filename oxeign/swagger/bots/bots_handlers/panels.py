@@ -3,7 +3,6 @@ from html import escape
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
-from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 from utils.perms import is_admin
 
 # Default image for all welcome messages
@@ -28,7 +27,7 @@ async def build_start_panel(is_admin: bool = False, *, include_back: bool = Fals
 async def send_start(client, message: Message, *, include_back: bool = False) -> None:
     bot_user = await client.get_me()
     user = message.from_user
-    markup = await build_start_panel(await is_admin(client, message), include_back=include_back)
+    markup = await build_start_panel(bool(await is_admin(client, message)), include_back=include_back)
 
     await message.reply_photo(
         photo=PANEL_IMAGE_URL,

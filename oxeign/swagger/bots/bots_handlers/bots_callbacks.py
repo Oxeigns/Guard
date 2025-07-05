@@ -2,16 +2,14 @@ import logging
 from contextlib import suppress
 from time import perf_counter
 
-from pyrogram import Client, filters
+from pyrogram import Client
 from pyrogram.enums import ParseMode
 from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 from utils.errors import catch_errors
-from utils.perms import is_admin
 from utils.messages import safe_edit_message
 from .panels import (
-    build_start_panel,
     get_help_keyboard,
     send_start,
 )
@@ -58,7 +56,6 @@ def register(app: Client) -> None:
     @catch_errors
     async def callback_handler(client: Client, query: CallbackQuery):
         data = query.data
-        chat_id = query.message.chat.id
 
         logger.debug("Callback triggered: %s", data)
 
