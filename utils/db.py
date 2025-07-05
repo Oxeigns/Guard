@@ -1,4 +1,4 @@
-"""Database helpers using Motor."""
+"""Database helpers using Motor (async MongoDB)."""
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo import ReturnDocument
@@ -7,8 +7,9 @@ _client: AsyncIOMotorClient | None = None
 _db: AsyncIOMotorDatabase | None = None
 
 
+# ------------------ CORE ------------------ #
 def get_db() -> AsyncIOMotorDatabase:
-    """Return the active database instance."""
+    """Return the active MongoDB database."""
     if _db is None:
         raise RuntimeError("Database has not been initialised")
     return _db
@@ -38,7 +39,7 @@ async def set_bio_filter(chat_id: int, enabled: bool) -> None:
     await set_setting(chat_id, "biofilter", "1" if enabled else "0")
 
 
-# ------------------ APPROVAL ------------------ #
+# ------------------ APPROVAL SYSTEM ------------------ #
 async def approve_user(chat_id: int, user_id: int) -> None:
     await _db.approved_users.update_one(
         {"chat_id": chat_id, "user_id": user_id},
@@ -70,7 +71,6 @@ async def get_approval_mode(chat_id: int) -> bool:
 
 
 async def toggle_approval_mode(chat_id: int) -> bool:
-    """Flip the approval mode for the given chat and return the new state."""
     current = await get_approval_mode(chat_id)
     await set_approval_mode(chat_id, not current)
     return not current
@@ -93,12 +93,10 @@ async def reset_warning(chat_id: int, user_id: int) -> None:
 
 # ------------------ BROADCAST STORAGE ------------------ #
 async def add_broadcast_user(user_id: int) -> None:
-    """Store a user ID for future broadcasts."""
     await _db.broadcast_users.update_one({"_id": user_id}, {"$set": {}}, upsert=True)
 
 
 async def add_broadcast_group(chat_id: int) -> None:
-    """Store a group ID for future broadcasts."""
     await _db.broadcast_groups.update_one({"_id": chat_id}, {"$set": {}}, upsert=True)
 
 
@@ -116,14 +114,12 @@ async def get_broadcast_groups() -> list[int]:
     return [doc["_id"] async for doc in cursor]
 
 
-# ------------------ GENERIC USERS/GROUPS STORAGE ------------------ #
+# ------------------ USER / GROUP LOGGING ------------------ #
 async def add_user(user_id: int) -> None:
-    """Save a user ID to the users collection."""
     await _db.users.update_one({"_id": user_id}, {"$set": {}}, upsert=True)
 
 
 async def add_group(chat_id: int) -> None:
-    """Save a group ID to the groups collection."""
     await _db.groups.update_one({"_id": chat_id}, {"$set": {}}, upsert=True)
 
 
@@ -141,18 +137,19 @@ async def get_groups() -> list[int]:
     return [doc["_id"] async for doc in cursor]
 
 
-# ------------------ DB LIFECYCLE ------------------ #
-async def init_db(uri: str, db_name: str):
-    """Initialize MongoDB client with URI and database name."""
+# ------------------ LIFECYCLE MANAGEMENT ------------------ #
+async def init_db(uri: str, db_name: str) -> None:
+    """Initialize MongoDB with required collections and indexes."""
     global _client, _db
     _client = AsyncIOMotorClient(uri)
     _db = _client[db_name]
+
     await _db.kv_settings.create_index([("chat_id", 1), ("key", 1)], unique=True)
     await _db.approved_users.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
     await _db.warnings.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
 
 
-async def close_db():
-    """Gracefully close the MongoDB connection."""
+async def close_db() -> None:
+    """Close MongoDB client connection."""
     if _client:
         _client.close()
