@@ -6,6 +6,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 from utils.perms import is_admin
 
+# Default image for all welcome messages
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
 
 
@@ -13,6 +14,7 @@ def mention_html(user_id: int, name: str) -> str:
     return f'<a href="tg://user?id={user_id}">{escape(name)}</a>'
 
 
+# Build the main inline keyboard
 async def build_start_panel(is_admin: bool = False, *, include_back: bool = False) -> InlineKeyboardMarkup:
     buttons = [[InlineKeyboardButton("📘 Commands", callback_data="cb_help_start")]]
     if is_admin:
@@ -22,6 +24,7 @@ async def build_start_panel(is_admin: bool = False, *, include_back: bool = Fals
     return InlineKeyboardMarkup(buttons)
 
 
+# Send welcome/start panel (used for /start, /help, /menu)
 async def send_start(client, message: Message, *, include_back: bool = False) -> None:
     bot_user = await client.get_me()
     user = message.from_user
@@ -41,6 +44,12 @@ async def send_start(client, message: Message, *, include_back: bool = False) ->
     )
 
 
+# Alias for group usage - now uses same layout as send_start
+async def send_control_panel(client, message: Message) -> None:
+    await send_start(client, message)
+    
+
+# Help menu inline keyboard
 def get_help_keyboard(back_cb: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🛡️ BioMode", callback_data="help_biomode")],
