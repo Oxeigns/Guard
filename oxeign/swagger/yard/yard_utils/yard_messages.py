@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 async def safe_edit_message(message: Message, *, text: str | None = None, caption: str | None = None, **kwargs) -> None:
     """Edit a message only if content differs to avoid MESSAGE_NOT_MODIFIED."""
     if text is not None:
-        if message.text == text:
+        if (message.text or "").strip() == text.strip():
             return
         try:
             await message.edit_text(text, **kwargs)
@@ -18,7 +18,7 @@ async def safe_edit_message(message: Message, *, text: str | None = None, captio
                 exc,
             )
     elif caption is not None:
-        if message.caption == caption:
+        if (message.caption or "").strip() == caption.strip():
             return
         try:
             await message.edit_caption(caption, **kwargs)
