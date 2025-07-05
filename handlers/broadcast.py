@@ -1,7 +1,13 @@
 import asyncio
 import logging
 from pyrogram import Client, filters
-from pyrogram.errors import FloodWait, ChatWriteForbidden, PeerIdInvalid, UserIsBlocked, BotKicked
+from pyrogram.errors import (
+    FloodWait,
+    ChatWriteForbidden,
+    PeerIdInvalid,
+    UserIsBlocked,
+    UserKicked,
+)
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message
 
@@ -45,9 +51,9 @@ def register(app: Client) -> None:
                     else:
                         await client.send_message(cid, payload_text, parse_mode=ParseMode.HTML)
                     sent += 1
-                except (ChatWriteForbidden, BotKicked, PeerIdInvalid, UserIsBlocked, Exception):
+                except (ChatWriteForbidden, UserKicked, PeerIdInvalid, UserIsBlocked, Exception):
                     failed += 1
-            except (ChatWriteForbidden, BotKicked, PeerIdInvalid, UserIsBlocked, Exception):
+            except (ChatWriteForbidden, UserKicked, PeerIdInvalid, UserIsBlocked, Exception):
                 failed += 1
             await asyncio.sleep(0.1)
         await message.reply_text(f"✅ Done. Sent: {sent}, Failed: {failed}")
