@@ -33,6 +33,12 @@ help_sections = {
         "Deletes edited messages from regular users. This prevents stealth editing of spam.\n"
         "Toggle using <code>/editfilter on|off</code>."
     ),
+    "help_broadcast": (
+        "📢 <b>Broadcast</b>\n"
+        "Send a message to all known users or groups.\n"
+        "Use <code>/broadcast users &lt;text&gt;</code> or"
+        " <code>/broadcast groups &lt;text&gt;</code>."
+    ),
 }
 
 

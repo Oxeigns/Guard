@@ -17,13 +17,16 @@ logger = logging.getLogger(__name__)
 
 async def _require_admin_group(client: Client, message: Message) -> bool:
     """Ensure the command is used by an admin inside a group."""
-    from pyrogram.enums import ChatType
+    from pyrogram.enums import ChatType, ChatMemberStatus
 
     if message.chat.type not in {ChatType.GROUP, ChatType.SUPERGROUP}:
         await message.reply_text("❗ Group-only command.")
         return False
     member = await client.get_chat_member(message.chat.id, message.from_user.id)
-    if member.status not in ("administrator", "creator"):
+    if member.status not in {
+        ChatMemberStatus.ADMINISTRATOR,
+        ChatMemberStatus.OWNER,
+    }:
         await message.reply_text("🔒 Admins only.")
         return False
     return True
