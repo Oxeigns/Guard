@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 def register(app: Client) -> None:
+    print("✅ Registered: broadcast.py")
+    ...
     @app.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
     @catch_errors
     async def broadcast_cmd(client: Client, message: Message) -> None:
