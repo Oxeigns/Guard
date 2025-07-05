@@ -64,6 +64,13 @@ async def get_approval_mode(chat_id: int) -> bool:
     return value == "1"
 
 
+async def toggle_approval_mode(chat_id: int) -> bool:
+    """Flip the approval mode for the given chat and return the new state."""
+    current = await get_approval_mode(chat_id)
+    await set_approval_mode(chat_id, not current)
+    return not current
+
+
 # ------------------ WARNINGS ------------------ #
 async def increment_warning(chat_id: int, user_id: int) -> int:
     doc = await _db.warnings.find_one_and_update(
