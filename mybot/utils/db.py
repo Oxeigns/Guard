@@ -1,7 +1,10 @@
 """Database helpers using Motor (async MongoDB)."""
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-from pymongo import ReturnDocument
+from pymongo import ReturnDocument, errors
+import logging
+
+logger = logging.getLogger(__name__)
 
 _client: AsyncIOMotorClient | None = None
 _db: AsyncIOMotorDatabase | None = None
@@ -141,8 +144,20 @@ async def get_groups() -> list[int]:
 async def init_db(uri: str, db_name: str) -> None:
     """Initialize MongoDB with required collections and indexes."""
     global _client, _db
-    _client = AsyncIOMotorClient(uri)
+
+    logger.info("Connecting to MongoDB")
+    # Short timeout so startup fails fast if DB is unreachable
+    _client = AsyncIOMotorClient(uri, serverSelectionTimeoutMS=5000)
     _db = _client[db_name]
+
+    # Force a connection attempt to provide immediate feedback
+    try:
+        await _client.admin.command("ping")
+    except errors.ServerSelectionTimeoutError as exc:
+        logger.error("Could not connect to MongoDB: %s", exc)
+        raise RuntimeError(f"Could not connect to MongoDB: {exc}") from exc
+    else:
+        logger.info("MongoDB connection established")
 
     await _db.kv_settings.create_index([("chat_id", 1), ("key", 1)], unique=True)
     await _db.approved_users.create_index([("chat_id", 1), ("user_id", 1)], unique=True)
