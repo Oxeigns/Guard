@@ -86,6 +86,31 @@ async def reset_warning(chat_id: int, user_id: int) -> None:
     await _db.warnings.delete_one({"chat_id": chat_id, "user_id": user_id})
 
 
+# ------------------ BROADCAST STORAGE ------------------ #
+async def add_broadcast_user(user_id: int) -> None:
+    """Store a user ID for future broadcasts."""
+    await _db.broadcast_users.update_one({"_id": user_id}, {"$set": {}}, upsert=True)
+
+
+async def add_broadcast_group(chat_id: int) -> None:
+    """Store a group ID for future broadcasts."""
+    await _db.broadcast_groups.update_one({"_id": chat_id}, {"$set": {}}, upsert=True)
+
+
+async def remove_broadcast_group(chat_id: int) -> None:
+    await _db.broadcast_groups.delete_one({"_id": chat_id})
+
+
+async def get_broadcast_users() -> list[int]:
+    cursor = _db.broadcast_users.find()
+    return [doc["_id"] async for doc in cursor]
+
+
+async def get_broadcast_groups() -> list[int]:
+    cursor = _db.broadcast_groups.find()
+    return [doc["_id"] async for doc in cursor]
+
+
 # ------------------ DB LIFECYCLE ------------------ #
 async def init_db(uri: str, db_name: str):
     """Initialize MongoDB client with URI and database name."""

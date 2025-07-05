@@ -14,6 +14,7 @@ MONGO_DB = os.getenv("MONGO_DB", "oxygen")
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 BOT_USERNAME = os.getenv("BOT_USERNAME", "OxygenBot")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID", "-1002822775608"))
 
 _missing = [
     name

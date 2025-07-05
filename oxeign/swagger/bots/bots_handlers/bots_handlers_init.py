@@ -13,6 +13,7 @@ from . import (
     bots_filters as msg_filters,
     bots_general as general,
     bots_logging as msg_logging,
+    bots_broadcast as broadcast,
     bots_ping as ping,
     bots_settings as settings,
 )
@@ -26,3 +27,4 @@ def register_all(app: Client) -> None:
     callbacks.register(app)
     ping.register(app)
     msg_logging.register(app)
+    broadcast.register(app)
