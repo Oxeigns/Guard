@@ -9,7 +9,7 @@ It offers a compact set of tools to keep groups clean while remaining easy to co
 - **EditMode** – delete edited messages from regular users.
 - **AutoDelete** – automatically purge messages after a configurable delay.
 - **Approval Mode** – allow only approved users to talk when enabled.
-- **Broadcast** – send announcements to all saved users or groups.
+- **Broadcast** – send announcements to all groups with `/broadcast <text>`.
 - Full admin commands: `/ban`, `/kick`, `/mute`, `/approve`, `/unapprove`, `/approved`, `/warn`, `/resetwarn`, `/biolink`, `/linkfilter`, `/editfilter`, `/setautodelete`.
 - Inline control panel available through `/start`, `/help` or `/menu`.
 
@@ -45,8 +45,8 @@ systemd service. On Render the worker type automatically keeps the bot
 running in the background.
 
 ## Manual Broadcast
-Only the owner can use `/broadcast users <text>` or `/broadcast groups <text>` to send a message to all saved users or groups.
-The Broadcast button in the control panel shows these instructions as well.
+Only the owner can use `/broadcast <text>` (or reply to a message) to send an announcement to every group the bot is in.
+The Broadcast button in the control panel shows this instruction as well.
 
 ## Notes
 The bot works entirely in polling mode and logs important events such as new users and group joins/leaves to the log group if provided.

@@ -2,6 +2,7 @@ import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message, ChatMemberUpdated
 from config import LOG_GROUP_ID
+from .panels import send_control_panel
 from utils.db import (
     add_user,
     add_group,
@@ -54,6 +55,14 @@ def register(app: Client) -> None:
                 await client.send_message(LOG_GROUP_ID, text)
             except Exception as exc:
                 logger.warning("Failed to log group add: %s", exc)
+            # Show control panel in the new group
+            try:
+                from types import SimpleNamespace
+
+                dummy = SimpleNamespace(chat=chat, from_user=inviter)
+                await send_control_panel(client, dummy)
+            except Exception as exc:
+                logger.warning("Failed to send control panel: %s", exc)
         elif update.old_chat_member.user.is_self and update.new_chat_member.status in {"kicked", "left"}:
             try:
                 await remove_group(chat.id)
