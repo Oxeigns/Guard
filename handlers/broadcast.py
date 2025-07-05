@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from pyrogram import Client, filters
+from utils.errors import catch_errors
 from pyrogram.errors import (
     FloodWait,
     ChatWriteForbidden,
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 def register(app: Client) -> None:
     @app.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
+    @catch_errors
     async def broadcast_cmd(client: Client, message: Message) -> None:
         """Broadcast a message to all known groups."""
         logger.debug("[BROADCAST] broadcast initiated by %s", message.from_user.id)
