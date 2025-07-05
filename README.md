@@ -35,11 +35,14 @@ It offers a compact set of tools to keep groups clean while remaining easy to co
    - `OWNER_ID` – your Telegram user ID for owner commands
    - `LOG_GROUP_ID` – ID of a private channel for logs
    - `SUPPORT_CHAT_URL`, `DEVELOPER_URL`, `PANEL_IMAGE_URL`
-3. Run the bot
+3. Run the bot locally for testing
    ```bash
    python3 main.py
    ```
    Keep it running using `screen`, `tmux` or a `systemd` service.
+
+4. To deploy on a server provide the same environment variables and execute
+   `sh start.sh`. The script simply runs `python main.py` with logging enabled.
 
 ## Render Deployment
 Create a new **Background Worker** on [Render](https://render.com) and use `render.yaml` for automatic configuration.
@@ -53,6 +56,10 @@ running in the background.
 ## Manual Broadcast
 Only the owner can use `/broadcast <text>` (or reply to a message) to send an announcement to every group the bot is in.
 The Broadcast button in the control panel shows this instruction as well.
+
+### Tips
+- Give the bot administrator rights in your groups so it can delete messages and manage users.
+- Use `/start` or `/menu` in a group as an admin to open the settings panel.
 
 ## Notes
 The bot works entirely in polling mode and logs important events such as new users and group joins/leaves to the log group if provided.

@@ -4,6 +4,7 @@ import re
 from contextlib import suppress
 
 from pyrogram import Client, filters
+from utils.errors import catch_errors
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message, ChatPermissions, InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -67,6 +68,7 @@ def register(app: Client) -> None:
         asyncio.create_task(delete_later(chat_id, msg_id, delay))
 
     @app.on_message(filters.group & ~filters.service)
+    @catch_errors
     async def moderate_message(client: Client, message: Message) -> None:
         logger.debug("[MODERATION] message from %s in %s", message.from_user.id if message.from_user else 'unknown', message.chat.id)
         if not message.from_user or message.from_user.is_bot:
@@ -114,6 +116,7 @@ def register(app: Client) -> None:
                     await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
 
     @app.on_edited_message(filters.group & ~filters.service)
+    @catch_errors
     async def on_edit(client: Client, message: Message):
         logger.debug("[MODERATION] edit event from %s in %s", message.from_user.id if message.from_user else 'unknown', message.chat.id)
         if not message.from_user or message.from_user.is_bot:
@@ -131,6 +134,7 @@ def register(app: Client) -> None:
             await schedule_auto_delete(message.chat.id, message.id, fallback=0)
 
     @app.on_message(filters.new_chat_members)
+    @catch_errors
     async def check_new_member_bio(client: Client, message: Message):
         logger.debug("[MODERATION] new member(s) in %s", message.chat.id)
         chat_id = message.chat.id

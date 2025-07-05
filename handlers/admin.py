@@ -2,6 +2,7 @@ import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message, ChatPermissions
 from pyrogram.enums import ParseMode
+from utils.errors import catch_errors
 from utils.db import (
     approve_user,
     unapprove_user,
@@ -54,22 +55,26 @@ def register(app: Client) -> None:
             logger.error("%s failed: %s", action, exc)
             await message.reply_text(f"❌ Failed: {exc}")
 
-    @app.on_message(filters.command("ban"))
+    @app.on_message(filters.command("ban") & filters.group)
+    @catch_errors
     async def ban_cmd(_, message: Message):
         logger.debug("[ADMIN] ban command by %s in %s", message.from_user.id, message.chat.id)
         await _admin_action(message, "ban")
 
-    @app.on_message(filters.command("kick"))
+    @app.on_message(filters.command("kick") & filters.group)
+    @catch_errors
     async def kick_cmd(_, message: Message):
         logger.debug("[ADMIN] kick command by %s in %s", message.from_user.id, message.chat.id)
         await _admin_action(message, "kick")
 
-    @app.on_message(filters.command("mute"))
+    @app.on_message(filters.command("mute") & filters.group)
+    @catch_errors
     async def mute_cmd(_, message: Message):
         logger.debug("[ADMIN] mute command by %s in %s", message.from_user.id, message.chat.id)
         await _admin_action(message, "mute")
 
-    @app.on_message(filters.command("warn"))
+    @app.on_message(filters.command("warn") & filters.group)
+    @catch_errors
     async def warn_cmd(_, message: Message):
         logger.debug("[ADMIN] warn command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):
@@ -86,7 +91,8 @@ def register(app: Client) -> None:
         else:
             await message.reply_text(f"⚠ Warned {user.mention}. ({count}/3)")
 
-    @app.on_message(filters.command("resetwarn"))
+    @app.on_message(filters.command("resetwarn") & filters.group)
+    @catch_errors
     async def resetwarn_cmd(_, message: Message):
         logger.debug("[ADMIN] resetwarn command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):
@@ -105,7 +111,8 @@ def register(app: Client) -> None:
         state = "ENABLED ✅" if value == "1" else "DISABLED ❌"
         await message.reply_text(f"{label} {state}")
 
-    @app.on_message(filters.command("biolink"))
+    @app.on_message(filters.command("biolink") & filters.group)
+    @catch_errors
     async def biolink_cmd(_, message: Message):
         logger.debug("[ADMIN] biolink command by %s in %s", message.from_user.id, message.chat.id)
         if len(message.command) < 2:
@@ -117,7 +124,8 @@ def register(app: Client) -> None:
             f"🌐 Bio link filter {'ENABLED ✅' if state else 'DISABLED ❌'}"
         )
 
-    @app.on_message(filters.command("linkfilter"))
+    @app.on_message(filters.command("linkfilter") & filters.group)
+    @catch_errors
     async def linkfilter_cmd(_, message: Message):
         logger.debug("[ADMIN] linkfilter command by %s in %s", message.from_user.id, message.chat.id)
         if len(message.command) < 2:
@@ -126,7 +134,8 @@ def register(app: Client) -> None:
         state = message.command[1].lower() in {"on", "enable", "1", "true"}
         await _toggle_setting(message, "linkfilter", "1" if state else "0", "🔗 Link filter")
 
-    @app.on_message(filters.command("editfilter"))
+    @app.on_message(filters.command("editfilter") & filters.group)
+    @catch_errors
     async def editfilter_cmd(_, message: Message):
         logger.debug("[ADMIN] editfilter command by %s in %s", message.from_user.id, message.chat.id)
         if len(message.command) < 2:
@@ -135,7 +144,8 @@ def register(app: Client) -> None:
         state = message.command[1].lower() in {"on", "enable", "1", "true"}
         await _toggle_setting(message, "editmode", "1" if state else "0", "✏️ Edit filter")
 
-    @app.on_message(filters.command("setautodelete"))
+    @app.on_message(filters.command("setautodelete") & filters.group)
+    @catch_errors
     async def set_autodelete_cmd(_, message: Message):
         logger.debug("[ADMIN] setautodelete command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):
@@ -155,7 +165,8 @@ def register(app: Client) -> None:
         else:
             await message.reply_text("🧹 Auto delete disabled")
 
-    @app.on_message(filters.command("approve"))
+    @app.on_message(filters.command("approve") & filters.group)
+    @catch_errors
     async def approve_cmd(_, message: Message):
         logger.debug("[ADMIN] approve command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):
@@ -167,7 +178,8 @@ def register(app: Client) -> None:
         await approve_user(message.chat.id, user.id)
         await message.reply_text(f"✅ Approved {user.mention}")
 
-    @app.on_message(filters.command("unapprove"))
+    @app.on_message(filters.command("unapprove") & filters.group)
+    @catch_errors
     async def unapprove_cmd(_, message: Message):
         logger.debug("[ADMIN] unapprove command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):
@@ -179,7 +191,8 @@ def register(app: Client) -> None:
         await unapprove_user(message.chat.id, user.id)
         await message.reply_text(f"❌ Unapproved {user.mention}")
 
-    @app.on_message(filters.command("approved"))
+    @app.on_message(filters.command("approved") & filters.group)
+    @catch_errors
     async def approved_cmd(_, message: Message):
         logger.debug("[ADMIN] approved command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):

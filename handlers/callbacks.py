@@ -1,6 +1,7 @@
 import logging
 
 from pyrogram import Client, filters
+from utils.errors import catch_errors
 from pyrogram.enums import ParseMode
 from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -43,6 +44,7 @@ help_sections = {
 
 def register(app: Client) -> None:
     @app.on_callback_query()
+    @catch_errors
     async def callbacks(client: Client, query: CallbackQuery):
         data = query.data
         logger.debug("[CALLBACK] %s from %s in %s", data, query.from_user.id, query.message.chat.id)
