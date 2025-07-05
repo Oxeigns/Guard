@@ -2,10 +2,11 @@ import logging
 
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
-from pyrogram.types import CallbackQuery
+from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 from utils.messages import safe_edit_message
 from utils.db import set_bio_filter, set_setting, get_setting, get_bio_filter
+from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 from .panels import send_start, get_help_keyboard, build_settings_panel
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,30 @@ def register(app: Client) -> None:
                 query.message,
                 caption=help_sections[data],
                 reply_markup=get_help_keyboard("cb_start"),
+                parse_mode=ParseMode.HTML,
+            )
+            await query.answer()
+        elif data == "help_support":
+            markup = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔗 Join Support", url=SUPPORT_CHAT_URL)],
+                [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")],
+            ])
+            await safe_edit_message(
+                query.message,
+                caption="🆘 <b>Need help?</b>",
+                reply_markup=markup,
+                parse_mode=ParseMode.HTML,
+            )
+            await query.answer()
+        elif data == "help_developer":
+            markup = InlineKeyboardMarkup([
+                [InlineKeyboardButton("✉️ Message Developer", url=DEVELOPER_URL)],
+                [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")],
+            ])
+            await safe_edit_message(
+                query.message,
+                caption="👨‍💻 <b>Developer Info</b>",
+                reply_markup=markup,
                 parse_mode=ParseMode.HTML,
             )
             await query.answer()

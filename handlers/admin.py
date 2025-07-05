@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 
 async def _require_admin_group(client: Client, message: Message) -> bool:
     if message.chat.type not in {"group", "supergroup"}:
-        await message.reply_text("❗ Group-only command")
+        await message.reply_text("❗ Group-only command.")
         return False
     member = await client.get_chat_member(message.chat.id, message.from_user.id)
     if member.status not in ("administrator", "creator"):
-        await message.reply_text("🔒 Admins only")
+        await message.reply_text("🔒 Admins only.")
         return False
     return True
 
