@@ -13,7 +13,7 @@ from utils.messages import safe_edit_message
 from .panels import (
     build_start_panel,
     get_help_keyboard,
-    send_start,  # ✅ Used for all panels now
+    send_start,
 )
 from .bots_commands import COMMANDS
 
@@ -54,7 +54,7 @@ help_sections = {
 
 
 def register(app: Client) -> None:
-    @app.on_callback_query(filters.regex(r"^cb_"))
+    @app.on_callback_query()  # ✅ Fixed: allow all callback data
     @catch_errors
     async def callback_handler(client: Client, query: CallbackQuery):
         data = query.data
@@ -94,7 +94,7 @@ def register(app: Client) -> None:
             )
             return await query.answer()
 
-        # ℹ️ Specific module help (from dictionary)
+        # ℹ️ Specific module help
         elif data in help_sections:
             await safe_edit_message(
                 query.message,
