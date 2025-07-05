@@ -21,6 +21,7 @@ def register(app: Client) -> None:
     @app.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
     async def broadcast_cmd(client: Client, message: Message) -> None:
         """Broadcast a message to all known groups."""
+        logger.debug("[BROADCAST] broadcast initiated by %s", message.from_user.id)
         if message.reply_to_message:
             payload_msg = message.reply_to_message
             text = None

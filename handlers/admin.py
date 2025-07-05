@@ -40,6 +40,7 @@ def register(app: Client) -> None:
             await message.reply_text("📌 Reply to a user")
             return
         user = message.reply_to_message.from_user
+        logger.debug("[ADMIN] %s on %s in chat %s", action, user.id, message.chat.id)
         try:
             if action == "ban":
                 await app.ban_chat_member(message.chat.id, user.id)
@@ -55,18 +56,22 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.command("ban"))
     async def ban_cmd(_, message: Message):
+        logger.debug("[ADMIN] ban command by %s in %s", message.from_user.id, message.chat.id)
         await _admin_action(message, "ban")
 
     @app.on_message(filters.command("kick"))
     async def kick_cmd(_, message: Message):
+        logger.debug("[ADMIN] kick command by %s in %s", message.from_user.id, message.chat.id)
         await _admin_action(message, "kick")
 
     @app.on_message(filters.command("mute"))
     async def mute_cmd(_, message: Message):
+        logger.debug("[ADMIN] mute command by %s in %s", message.from_user.id, message.chat.id)
         await _admin_action(message, "mute")
 
     @app.on_message(filters.command("warn"))
     async def warn_cmd(_, message: Message):
+        logger.debug("[ADMIN] warn command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):
             return
         if not message.reply_to_message or not message.reply_to_message.from_user:
@@ -83,6 +88,7 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.command("resetwarn"))
     async def resetwarn_cmd(_, message: Message):
+        logger.debug("[ADMIN] resetwarn command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):
             return
         if not message.reply_to_message or not message.reply_to_message.from_user:
@@ -101,6 +107,7 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.command("biolink"))
     async def biolink_cmd(_, message: Message):
+        logger.debug("[ADMIN] biolink command by %s in %s", message.from_user.id, message.chat.id)
         if len(message.command) < 2:
             await message.reply_text("Usage: /biolink on|off")
             return
@@ -112,6 +119,7 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.command("linkfilter"))
     async def linkfilter_cmd(_, message: Message):
+        logger.debug("[ADMIN] linkfilter command by %s in %s", message.from_user.id, message.chat.id)
         if len(message.command) < 2:
             await message.reply_text("Usage: /linkfilter on|off")
             return
@@ -120,6 +128,7 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.command("editfilter"))
     async def editfilter_cmd(_, message: Message):
+        logger.debug("[ADMIN] editfilter command by %s in %s", message.from_user.id, message.chat.id)
         if len(message.command) < 2:
             await message.reply_text("Usage: /editfilter on|off")
             return
@@ -128,6 +137,7 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.command("setautodelete"))
     async def set_autodelete_cmd(_, message: Message):
+        logger.debug("[ADMIN] setautodelete command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):
             return
         seconds = 0
@@ -147,6 +157,7 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.command("approve"))
     async def approve_cmd(_, message: Message):
+        logger.debug("[ADMIN] approve command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):
             return
         if not message.reply_to_message or not message.reply_to_message.from_user:
@@ -158,6 +169,7 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.command("unapprove"))
     async def unapprove_cmd(_, message: Message):
+        logger.debug("[ADMIN] unapprove command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):
             return
         if not message.reply_to_message or not message.reply_to_message.from_user:
@@ -169,6 +181,7 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.command("approved"))
     async def approved_cmd(_, message: Message):
+        logger.debug("[ADMIN] approved command by %s in %s", message.from_user.id, message.chat.id)
         if not await _require_admin_group(app, message):
             return
         users = await get_approved(message.chat.id)

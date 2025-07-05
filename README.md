@@ -10,8 +10,10 @@ It offers a compact set of tools to keep groups clean while remaining easy to co
 - **AutoDelete** – automatically purge messages after a configurable delay.
 - **Approval Mode** – allow only approved users to talk when enabled.
 - **Broadcast** – send announcements to all groups with `/broadcast <text>`.
-- Full admin commands: `/ban`, `/kick`, `/mute`, `/approve`, `/unapprove`, `/approved`, `/warn`, `/resetwarn`, `/biolink`, `/linkfilter`, `/editfilter`, `/setautodelete`.
 - Inline control panel available through `/start`, `/help` or `/menu`.
+
+## Commands
+`/ban`, `/kick`, `/mute`, `/warn`, `/resetwarn`, `/approve`, `/unapprove`, `/approved`, `/biolink`, `/linkfilter`, `/editfilter`, `/setautodelete`, `/broadcast` (owner only) and `/ping`.
 
 ## Requirements
 - Python 3.10+
@@ -25,10 +27,14 @@ It offers a compact set of tools to keep groups clean while remaining easy to co
    cd guard-bot
    pip install -r requirements.txt
    ```
-2. Copy `.env.example` to `.env` and fill in the variables:
+2. Copy `.env.example` to `.env` and fill in the variables.
+   Required variables are:
    - `API_ID`, `API_HASH`, `BOT_TOKEN`
-   - `MONGO_URI` and `MONGO_DB`
-   - optional: `OWNER_ID`, `SUPPORT_CHAT_URL`, `DEVELOPER_URL`, `LOG_GROUP_ID`
+   - `MONGO_URI`, `MONGO_DB`
+   Optional variables:
+   - `OWNER_ID` – your Telegram user ID for owner commands
+   - `LOG_GROUP_ID` – ID of a private channel for logs
+   - `SUPPORT_CHAT_URL`, `DEVELOPER_URL`, `PANEL_IMAGE_URL`
 3. Run the bot
    ```bash
    python3 main.py
