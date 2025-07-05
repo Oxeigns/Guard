@@ -12,7 +12,8 @@ from config import OWNER_ID
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
 
 def register(app: Client) -> None:
-    print("✅ Registered: panels.py")
+    """Register panel handlers (no runtime hooks required)."""
+    pass
 
 
 def mention_html(user_id: int, name: str) -> str:

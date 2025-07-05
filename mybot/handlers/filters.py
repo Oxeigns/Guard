@@ -48,7 +48,6 @@ def build_warning(count: int, user, reason: str, is_final: bool = False):
 
 
 def register(app: Client) -> None:
-    print("✅ Registered: filters.py")
 
     edited_messages: set[tuple[int, int]] = set()
 

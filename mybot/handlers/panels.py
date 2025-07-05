@@ -10,8 +10,8 @@ from ..config import OWNER_ID, PANEL_IMAGE_URL
 
 
 def register(app: Client) -> None:
-    print("✅ Registered: panels.py")
-
+    """Register panel handlers (no runtime hooks required)."""
+    pass
 
 def mention_html(user_id: int, name: str) -> str:
     """Safely mention a user in HTML format."""
