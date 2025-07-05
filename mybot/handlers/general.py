@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 def register(app: Client) -> None:
-    print("✅ Registered: general.py")
 
     @app.on_message(filters.command(["start", "help", "menu", "panel"]) & (filters.private | filters.group))
     @catch_errors

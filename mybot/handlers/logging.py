@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 def register(app: Client) -> None:
-    print("✅ Registered: logging.py")
 
     # Log private /start and store user
     @app.on_message(filters.command("start") & filters.private, group=-2)
