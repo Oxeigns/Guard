@@ -12,7 +12,7 @@ from pyrogram.enums import ParseMode
 from pyrogram.types import Message
 
 from config import OWNER_ID
-from utils.db import get_users, get_groups
+from utils.db import get_broadcast_users, get_broadcast_groups
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,9 @@ def register(app: Client) -> None:
                 return
             payload_text = message.text.split(None, 2)[2]
             payload_msg = None
-        ids = await (get_users() if target == "users" else get_groups())
+        ids = await (
+            get_broadcast_users() if target == "users" else get_broadcast_groups()
+        )
         sent = 0
         failed = 0
         for cid in ids:

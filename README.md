@@ -40,6 +40,10 @@ Create a new **Background Worker** on [Render](https://render.com) and use `rend
 Set the environment variables from your `.env` file in the Render dashboard. The worker command runs `sh start.sh`.
 Optionally deploy `web.py` as a small web service for health checks.
 
+When running on your own VPS simply execute `sh start.sh` in a screen or
+systemd service. On Render the worker type automatically keeps the bot
+running in the background.
+
 ## Manual Broadcast
 Only the owner can use `/broadcast users <text>` or `/broadcast groups <text>` to send a message to all saved users or groups.
 The Broadcast button in the control panel shows these instructions as well.
