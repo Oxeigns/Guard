@@ -30,6 +30,12 @@ async def _ping(_, message):
 async def main():
     logger.info("🚀 Starting bot")
     await init_db(MONGO_URI, MONGO_DB)
+
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+        logger.info("✅ Cleared any existing webhook")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to delete webhook: %s", exc)
     register_all(bot)
 
     async with bot:

@@ -48,6 +48,12 @@ async def main():
     logger.info("🔌 Initializing MongoDB connection")
     await init_db(MONGO_URI, MONGO_DB)
 
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+        logger.info("✅ Cleared any existing webhook")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to delete webhook: %s", exc)
+
     logger.info("⚙️ Registering all handlers")
     register_all(bot)
 
