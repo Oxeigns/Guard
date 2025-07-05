@@ -57,3 +57,28 @@ Use `/start` in private chat to see the welcome panel with:
 - **⚙️ Settings** – open the group control panel if used in a group.
 
 Use the provided commands to enable or disable features. Support and developer buttons open the URLs you set in `.env`.
+
+## 🚀 Deploying on Render
+
+1. Fork this repo and create a new **Background Worker** on [Render](https://render.com). You can use the provided `render.yaml` for one-click setup.
+2. Set the environment variables from `.env.example` in the Render dashboard.
+3. The worker command should run `sh start.sh` (same as the provided `Procfile`).
+4. Optionally deploy the included `web.py` as a separate web service for simple health checks.
+
+`render.yaml` already defines two services:
+
+```yaml
+services:
+  - type: worker
+    name: guard-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+  - type: web
+    name: guard-web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python web.py
+```
+
+Deploy the worker and, if desired, the web service. No ports need to be exposed for the worker since it runs the Telegram bot in polling mode.

@@ -11,8 +11,11 @@ def register(app: Client) -> None:
 
     @app.on_message(filters.command("id"))
     async def id_cmd(client: Client, message: Message) -> None:
+        """Return chat and/or user IDs."""
+        from pyrogram.enums import ChatType
+
         target = message.reply_to_message.from_user if message.reply_to_message else message.from_user
-        if message.chat.type in {"group", "supergroup", "channel"}:
+        if message.chat.type in {ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL}:
             text = f"<b>Chat ID:</b> <code>{message.chat.id}</code>"
             if target:
                 text += f"\n<b>User ID:</b> <code>{target.id}</code>"
