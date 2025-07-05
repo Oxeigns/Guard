@@ -5,7 +5,6 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 from config import SUPPORT_CHAT_URL, DEVELOPER_URL
 from utils.perms import is_admin
-from utils.db import get_setting, get_bio_filter
 
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
 
@@ -54,32 +53,3 @@ def get_help_keyboard(back_cb: str) -> InlineKeyboardMarkup:
         ],
         [InlineKeyboardButton("🔙 Back", callback_data=back_cb)]
     ])
-
-
-async def build_group_panel(chat_id: int, client) -> tuple[str, InlineKeyboardMarkup]:
-    interval = int(await get_setting(chat_id, "autodelete_interval", "0"))
-    biolink = await get_bio_filter(chat_id)
-    linkfilter = await get_setting(chat_id, "linkfilter", "0") == "1"
-    editmode = await get_setting(chat_id, "editmode", "0") == "1"
-
-    ad_status = f"{interval}s" if interval > 0 else "OFF"
-
-    caption = (
-        "<b>Group Control Panel</b>\n"
-        f"🧹 Auto-Delete: <b>{ad_status}</b>\n"
-        f"🛡 BioFilter: <b>{'ON ✅' if biolink else 'OFF ❌'}</b>\n"
-        f"🔗 LinkFilter: <b>{'ON ✅' if linkfilter else 'OFF ❌'}</b>\n"
-        f"✏️ EditMode: <b>{'ON ✅' if editmode else 'OFF ❌'}</b>"
-    )
-
-    markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔙 Back", callback_data="cb_start")],
-        [InlineKeyboardButton("📘 Commands", callback_data="cb_help_panel")]
-    ])
-
-    return caption, markup
-
-
-async def send_control_panel(client, message: Message) -> None:
-    caption, markup = await build_group_panel(message.chat.id, client)
-    await message.reply_text(caption, reply_markup=markup, parse_mode=ParseMode.HTML)
