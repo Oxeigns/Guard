@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 LINK_RE = re.compile(r"(?:https?://\S+|tg://\S+|t\.me/\S+|telegram\.me/\S+|(?:\w+\.)+\w{2,})", re.IGNORECASE)
 MAX_BIO_LENGTH = 800
 
-
+def register(app: Client) -> None:
+    print("✅ Registered: filters.py")
+    ...
 def contains_link(text: str) -> bool:
     return bool(LINK_RE.search(text or ""))
 
