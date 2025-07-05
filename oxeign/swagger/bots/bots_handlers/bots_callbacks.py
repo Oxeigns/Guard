@@ -11,9 +11,9 @@ from utils.errors import catch_errors
 from utils.perms import is_admin
 from utils.messages import safe_edit_message
 from .panels import (
-    build_group_panel,
     build_start_panel,
     get_help_keyboard,
+    send_start,  # ✅ Use this everywhere now
 )
 from .bots_commands import COMMANDS
 
@@ -78,27 +78,12 @@ def register(app: Client) -> None:
             with suppress(Exception):
                 await query.message.delete()
 
-        # 🔁 Main Panel Handler
+        # 🔁 Load universal start panel (even in groups)
         elif data in {"cb_start", "cb_open_panel", "cb_back_panel"}:
             await query.answer()
-            if query.message.chat.type == "private":
-                markup = await build_start_panel(await is_admin(client, query.message))
-                await safe_edit_message(
-                    query.message,
-                    text="⚙️ Settings are available only in groups.\n\nUse this bot in a group to access the control panel.",
-                    reply_markup=markup,
-                    parse_mode=ParseMode.HTML,
-                )
-            else:
-                caption, markup = await build_group_panel(chat_id, client)
-                await safe_edit_message(
-                    query.message,
-                    text=caption,
-                    reply_markup=markup,
-                    parse_mode=ParseMode.HTML,
-                )
+            await send_start(client, query.message)
 
-        # ✅ Approve User Tip
+        # ✅ Approve Tip
         elif data == "cb_approve":
             await query.answer()
             await query.message.reply_text(
@@ -106,7 +91,7 @@ def register(app: Client) -> None:
                 parse_mode=ParseMode.HTML,
             )
 
-        # ❌ Unapprove User Tip
+        # ❌ Unapprove Tip
         elif data == "cb_unapprove":
             await query.answer()
             await query.message.reply_text(
@@ -114,11 +99,11 @@ def register(app: Client) -> None:
                 parse_mode=ParseMode.HTML,
             )
 
-        # 🔇 Manual Unmute Disabled
+        # 🔇 Manual Unmute Blocked
         elif data.startswith("biofilter_unmute_") or data.startswith("linkfilter_unmute_"):
             await query.answer("❌ Manual unmute is disabled.\nAsk an admin.", show_alert=True)
 
-        # 📘 Command List Panel
+        # 📘 All Commands Panel
         elif data in {"cb_help_start", "cb_help_panel"}:
             commands_text = "\n".join([f"{cmd} - {desc}" for cmd, desc in COMMANDS])
             back_cb = "cb_start" if data == "cb_help_start" else "cb_back_panel"
@@ -130,7 +115,7 @@ def register(app: Client) -> None:
             )
             return await query.answer()
 
-        # 🧠 Individual Help Sections
+        # ℹ️ Specific Help Modules
         elif data in help_sections:
             await safe_edit_message(
                 query.message,
@@ -142,7 +127,7 @@ def register(app: Client) -> None:
             )
             return await query.answer()
 
-        # 🆘 Support Button
+        # 🆘 Support
         elif data == "help_support":
             await safe_edit_message(
                 query.message,
@@ -155,7 +140,7 @@ def register(app: Client) -> None:
             )
             return await query.answer()
 
-        # 👨‍💻 Developer Info
+        # 👨‍💻 Developer
         elif data == "help_developer":
             await safe_edit_message(
                 query.message,
@@ -168,6 +153,6 @@ def register(app: Client) -> None:
             )
             return await query.answer()
 
-        # ⚠️ Unknown Callback
+        # ❗ Unknown callback
         else:
             await query.answer("⚠️ Unknown callback", show_alert=True)
