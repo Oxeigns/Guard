@@ -7,28 +7,32 @@ from pyrogram.enums import ChatType, ChatMemberStatus
 
 logger = logging.getLogger(__name__)
 
-async def is_admin(client: Client, message: Message, user_id: int = None) -> bool:
+async def is_admin(client: Client, message: Message, user_id: int | None = None) -> bool:
     """
-    Checks whether the given user (or message sender) is an admin in the chat.
-    Supports groups and supergroups.
+    Check whether the specified user (or message sender) is an admin in the current chat.
+    Returns False in private chats or on error.
     """
-    # Private chats have no admin concept
     if message.chat.type == ChatType.PRIVATE:
         return False
 
+    chat_id = message.chat.id
     try:
-        chat_id = message.chat.id
-        user_id = user_id or message.from_user.id
-        member: ChatMember = await client.get_chat_member(chat_id, user_id)
+        uid = user_id or (message.from_user.id if message.from_user else None)
+        if uid is None:
+            logger.debug("No user_id available for admin check in chat %s", chat_id)
+            return False
+
+        member: ChatMember = await client.get_chat_member(chat_id, uid)
         return member.status in {
             ChatMemberStatus.ADMINISTRATOR,
             ChatMemberStatus.OWNER,
         }
+
     except Exception as exc:  # noqa: BLE001
-        logger.debug(
-            "Admin check failed for %s in %s: %s",
-            user_id or (message.from_user.id if message.from_user else 0),
-            message.chat.id,
+        logger.warning(
+            "Admin check failed for user %s in chat %s: %s",
+            user_id or (message.from_user.id if message.from_user else "unknown"),
+            chat_id,
             exc,
         )
         return False
