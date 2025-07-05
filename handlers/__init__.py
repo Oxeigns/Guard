@@ -1,8 +1,6 @@
-# handlers/__init__.py
+from . import admin, filters, callbacks, logging, broadcast, general, panels  # ← added panels
 
-from . import admin, filters, callbacks, logging, broadcast, general
-
-MODULES = [admin, filters, callbacks, logging, broadcast, general]
+MODULES = [admin, filters, callbacks, logging, broadcast, general, panels]  # ← added panels
 
 def register_all(app):
     for module in MODULES:
