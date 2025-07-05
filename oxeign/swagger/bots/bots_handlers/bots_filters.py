@@ -28,8 +28,10 @@ from config import SUPPORT_CHAT_URL
 
 logger = logging.getLogger(__name__)
 
+# Regex to match typical web/telegram links. This is intentionally simple as
+# we only need a coarse filter for moderation purposes.
 LINK_RE = re.compile(
-    r"(?:https?://\S+|t\.me/\S+|tg://\S+|(?:\w+\.)+\w{2,})",
+    r"(?:https?://\S+|tg://\S+|t\.me/\S+|telegram\.me/\S+|(?:\w+\.)+\w{2,})",
     re.IGNORECASE,
 )
 MAX_BIO_LENGTH = 800
@@ -82,12 +84,18 @@ def register(app: Client) -> None:
     async def schedule_auto_delete(
         chat_id: int, message_id: int, *, fallback: int | None = None
     ) -> None:
-        delay = int(await get_setting(chat_id, "autodelete_interval", "0") or 0)
+        delay_str = await get_setting(chat_id, "autodelete_interval", "0")
+        try:
+            delay = int(delay_str or 0)
+        except (TypeError, ValueError):
+            delay = 0
         if delay <= 0:
             if fallback is None:
                 return
             delay = fallback
-        logger.debug("Scheduling delete of %s/%s in %ss", chat_id, message_id, delay)
+        logger.warning(
+            f"[AUTODELETE] scheduling delete chat_id={chat_id} msg={message_id} delay={delay}"
+        )
         asyncio.create_task(delete_later(chat_id, message_id, delay))
 
     @app.on_message(filters.group & (filters.text | filters.caption) & ~filters.service)
@@ -117,15 +125,19 @@ def register(app: Client) -> None:
         chat_id = message.chat.id
         if not user or user.is_bot:
             return
-        if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
-            return
-
+        user_admin = await is_admin(client, message, user.id)
+        user_approved = await is_approved(chat_id, user.id)
         link_state = await get_setting(chat_id, "linkfilter", "0")
-        logger.debug("linkfilter[%s] -> %s", chat_id, link_state)
-        if link_state != "1":
+        enabled = link_state == "1"
+        logger.warning(
+            f"[LINKFILTER] {chat_id=} enabled={enabled} admin={user_admin} approved={user_approved} user={user.id}"
+        )
+        if user_admin or user_approved or not enabled:
             return
 
-        if contains_link(message.text or message.caption or ""):
+        has_link = contains_link(message.text or message.caption or "")
+        logger.warning(f"[LINKFILTER] contains_link={has_link}")
+        if has_link:
             logger.debug("Link detected from %s in %s", user.id, chat_id)
             await suppress_delete(message)
             count = await increment_warning(chat_id, user.id)
@@ -146,9 +158,13 @@ def register(app: Client) -> None:
         chat_id = message.chat.id
         if not user or user.is_bot:
             return
-        if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
-            return
-        if not await get_bio_filter(chat_id):
+        user_admin = await is_admin(client, message, user.id)
+        user_approved = await is_approved(chat_id, user.id)
+        bio_state = await get_bio_filter(chat_id)
+        logger.warning(
+            f"[BIOFILTER] {chat_id=} enabled={bio_state} admin={user_admin} approved={user_approved}"
+        )
+        if user_admin or user_approved or not bio_state:
             return
 
         try:
@@ -158,8 +174,10 @@ def register(app: Client) -> None:
             logger.debug("Failed to fetch bio for %s: %s", user.id, exc)
             return
 
-        if not bio or (len(bio) <= MAX_BIO_LENGTH and not contains_link(bio)):
+        has_link = contains_link(bio)
+        if not bio or (len(bio) <= MAX_BIO_LENGTH and not has_link):
             return
+        logger.warning(f"[BIOFILTER] Bio of {user.id}: {bio}")
 
         logger.debug("Bio link detected for %s in %s", user.id, chat_id)
         await suppress_delete(message)
@@ -182,7 +200,12 @@ def register(app: Client) -> None:
         bot_id = (await client.get_me()).id
         if message.from_user.id != bot_id:
             user = message.from_user
-            if await is_admin(client, message, user.id) or await is_approved(message.chat.id, user.id):
+            user_admin = await is_admin(client, message, user.id)
+            user_approved = await is_approved(message.chat.id, user.id)
+            logger.warning(
+                f"[AUTODELETE] {message.chat.id=} msg={message.id} admin={user_admin} approved={user_approved}"
+            )
+            if user_admin or user_approved:
                 return
             await schedule_auto_delete(message.chat.id, message.id)
 
@@ -194,7 +217,12 @@ def register(app: Client) -> None:
         bot_id = (await client.get_me()).id
         if message.from_user.id != bot_id:
             user = message.from_user
-            if await is_admin(client, message, user.id) or await is_approved(message.chat.id, user.id):
+            user_admin = await is_admin(client, message, user.id)
+            user_approved = await is_approved(message.chat.id, user.id)
+            logger.warning(
+                f"[EDITMODE] {message.chat.id=} msg={message.id} admin={user_admin} approved={user_approved}"
+            )
+            if user_admin or user_approved:
                 return
             if await get_setting(message.chat.id, "editmode", "0") != "1":
                 return
@@ -209,12 +237,14 @@ def register(app: Client) -> None:
     async def check_new_member_bio(client: Client, message: Message):
         chat_id = message.chat.id
         bio_filter_enabled = await get_bio_filter(chat_id)
-        logger.debug("bio_filter[%s] -> %s", chat_id, bio_filter_enabled)
+        logger.warning(f"[BIOFILTER] join {chat_id=} enabled={bio_filter_enabled}")
         if not bio_filter_enabled:
             return
 
         for user in message.new_chat_members:
-            if user.is_bot or await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
+            user_admin = await is_admin(client, message, user.id)
+            user_approved = await is_approved(chat_id, user.id)
+            if user.is_bot or user_admin or user_approved:
                 continue
             try:
                 user_info = await client.get_chat(user.id)
@@ -222,8 +252,11 @@ def register(app: Client) -> None:
             except Exception as exc:
                 logger.debug("Failed to fetch bio for %s on join: %s", user.id, exc)
                 continue
-            if not bio or (len(bio) <= MAX_BIO_LENGTH and not contains_link(bio)):
+            has_link = contains_link(bio)
+            if not bio or (len(bio) <= MAX_BIO_LENGTH and not has_link):
                 continue
+
+            logger.warning(f"[BIOFILTER] Bio of {user.id}: {bio}")
 
             logger.debug("Bio link detected on join for %s in %s", user.id, chat_id)
             await suppress_delete(message)
