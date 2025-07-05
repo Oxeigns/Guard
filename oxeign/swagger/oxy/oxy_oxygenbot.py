@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from pyrogram import Client, idle
+from pyrogram import Client, filters, idle
 from pyrogram.enums import ParseMode
 from config import API_ID, API_HASH, BOT_TOKEN, MONGO_URI, MONGO_DB, LOG_LEVEL
 from handlers import register_all
