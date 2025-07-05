@@ -37,12 +37,12 @@ It offers a compact set of tools to keep groups clean while remaining easy to co
    - `SUPPORT_CHAT_URL`, `DEVELOPER_URL`, `PANEL_IMAGE_URL`
 3. Run the bot locally for testing
    ```bash
-   python3 main.py
+   python3 oxygenbot.py
    ```
    Keep it running using `screen`, `tmux` or a `systemd` service.
 
 4. To deploy on a server provide the same environment variables and execute
-   `sh start.sh`. The script simply runs `python main.py` with logging enabled.
+   `sh start.sh`. The script runs `python oxygenbot.py` with logging enabled.
 
 ## Render Deployment
 Create a new **Background Worker** on [Render](https://render.com) and use `render.yaml` for automatic configuration.
@@ -52,6 +52,21 @@ Optionally deploy `web.py` as a small web service for health checks.
 When running on your own VPS simply execute `sh start.sh` in a screen or
 systemd service. On Render the worker type automatically keeps the bot
 running in the background.
+
+### VPS Deployment
+1. Make sure you have Python 3.10+ and Git installed on the server.
+2. Clone the repository and install dependencies as in the setup section.
+3. Copy `.env.example` to `.env` and fill out **all** required variables:
+   - `API_ID` and `API_HASH` from [my.telegram.org](https://my.telegram.org)
+   - `BOT_TOKEN` from BotFather and ensure `/setprivacy` is **disabled**
+   - `MONGO_URI` and `MONGO_DB` for your MongoDB instance
+   - Optionally `OWNER_ID`, `LOG_GROUP_ID`, `SUPPORT_CHAT_URL`, etc.
+4. Start the bot inside a persistent shell so it keeps running:
+   ```bash
+   screen -S oxygen
+   python3 oxygenbot.py
+   ```
+   Detach with `Ctrl+A` then `D`. Reattach with `screen -r oxygen`.
 
 ## Manual Broadcast
 Only the owner can use `/broadcast <text>` (or reply to a message) to send an announcement to every group the bot is in.
