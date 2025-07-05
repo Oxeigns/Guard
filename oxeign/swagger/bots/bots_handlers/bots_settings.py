@@ -1,7 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message, ChatMemberUpdated
-from .bots_settings import send_start, send_control_panel
+from .panels import send_start, send_control_panel  # ✅ Fixed import
 
 
 def register(app: Client):
