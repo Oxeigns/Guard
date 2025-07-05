@@ -11,6 +11,8 @@ from utils.db import (
     reset_warning,
     set_setting,
     set_bio_filter,
+    toggle_approval_mode,
+    set_approval_mode,
 )
 
 logger = logging.getLogger(__name__)
@@ -134,15 +136,24 @@ def register(app: Client) -> None:
         state = message.command[1].lower() in {"on", "enable", "1", "true"}
         await _toggle_setting(message, "linkfilter", "1" if state else "0", "🔗 Link filter")
 
-    @app.on_message(filters.command("editfilter") & filters.group)
+    @app.on_message(filters.command(["editfilter", "editdelete"]) & filters.group)
     @catch_errors
     async def editfilter_cmd(_, message: Message):
-        logger.debug("[ADMIN] editfilter command by %s in %s", message.from_user.id, message.chat.id)
+        logger.debug(
+            "[ADMIN] editfilter command by %s in %s",
+            message.from_user.id,
+            message.chat.id,
+        )
         if len(message.command) < 2:
             await message.reply_text("Usage: /editfilter on|off")
             return
         state = message.command[1].lower() in {"on", "enable", "1", "true"}
-        await _toggle_setting(message, "editmode", "1" if state else "0", "✏️ Edit filter")
+        await _toggle_setting(
+            message,
+            "editmode",
+            "1" if state else "0",
+            "✏️ Edit filter",
+        )
 
     @app.on_message(filters.command("setautodelete") & filters.group)
     @catch_errors
@@ -203,3 +214,27 @@ def register(app: Client) -> None:
         else:
             text = "<b>Approved Users:</b>\n" + "\n".join(f"- <code>{uid}</code>" for uid in users)
             await message.reply_text(text, parse_mode=ParseMode.HTML)
+
+    @app.on_message(filters.command("approval") & filters.group)
+    @catch_errors
+    async def approval_mode_cmd(_, message: Message):
+        logger.debug("[ADMIN] approval command by %s in %s", message.from_user.id, message.chat.id)
+        if not await _require_admin_group(app, message):
+            return
+
+        if len(message.command) == 1:
+            enabled = await toggle_approval_mode(message.chat.id)
+        else:
+            arg = message.command[1].lower()
+            if arg in {"on", "enable", "true"}:
+                await set_approval_mode(message.chat.id, True)
+                enabled = True
+            elif arg in {"off", "disable", "false"}:
+                await set_approval_mode(message.chat.id, False)
+                enabled = False
+            else:
+                await message.reply_text("Usage: /approval [on|off]")
+                return
+
+        state = "ENABLED ✅" if enabled else "DISABLED ❌"
+        await message.reply_text(f"Approval mode is now {state}")
