@@ -60,7 +60,8 @@ running in the background.
    - `API_ID` and `API_HASH` from [my.telegram.org](https://my.telegram.org)
    - `BOT_TOKEN` from BotFather and ensure `/setprivacy` is **disabled**
    - `MONGO_URI` and `MONGO_DB` for your MongoDB instance
-   - Optionally `OWNER_ID`, `LOG_GROUP_ID`, `SUPPORT_CHAT_URL`, etc.
+   - `OWNER_ID` – your Telegram user ID so `/broadcast` works
+   - Optionally `LOG_GROUP_ID`, `SUPPORT_CHAT_URL`, etc.
 4. Start the bot inside a persistent shell so it keeps running:
    ```bash
    screen -S oxygen

@@ -5,7 +5,6 @@ logger = logging.getLogger(__name__)
 from . import (
     admin,
     filters,
-    callbacks,
     logging_handler,  # ✅ renamed from logging.py to avoid conflict
     broadcast,
     general,
@@ -15,7 +14,6 @@ from . import (
 MODULES = [
     admin,
     filters,
-    callbacks,
     logging_handler,  # ⚠️ Must match filename exactly
     broadcast,
     general,
