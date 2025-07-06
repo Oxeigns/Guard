@@ -9,9 +9,12 @@ from pyrogram.types import Message, ChatPermissions
 
 from utils.errors import catch_errors
 from utils.db import (
-    get_setting, get_bio_filter,
-    increment_warning, reset_warning,
-    is_approved, get_approval_mode,
+    get_setting,
+    get_bio_filter,
+    increment_warning,
+    reset_warning,
+    is_approved,
+    get_approval_mode,
 )
 from utils.perms import is_admin
 
@@ -42,6 +45,27 @@ async def get_user_bio(client: Client, user) -> str:
         except Exception:
             bio = ""
     return bio
+
+
+async def bio_link_violation(
+    client: Client, message: Message, user, chat_id: int
+) -> bool:
+    """Check user's bio for links and handle violations."""
+    if not await get_bio_filter(chat_id):
+        return False
+
+    bio = await get_user_bio(client, user)
+    if bio and contains_link(bio):
+        logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
+        await handle_violation(
+            client,
+            message,
+            user,
+            chat_id,
+            "Your bio contains a link, which is not allowed.",
+        )
+        return True
+    return False
 
 
 def build_warning(count: int, user, reason: str, is_final: bool = False):
@@ -94,34 +118,35 @@ def register(app: Client) -> None:
         is_approved_user = await is_approved(chat_id, user.id)
         needs_filtering = not is_admin_user and not is_approved_user
 
-        if needs_filtering:
-            await schedule_auto_delete(chat_id, message.id)
-
         # Approval block
         if needs_filtering and await get_approval_mode(chat_id):
             await suppress_delete(message)
             await message.reply_text("❌ You are not approved to speak here.", quote=True)
             return
 
-        if needs_filtering and await get_bio_filter(chat_id):
-            bio = await get_user_bio(client, user)
-            if bio and contains_link(bio):
-                logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
-                await handle_violation(
-                    client,
-                    message,
-                    user,
-                    chat_id,
-                    "Your bio contains a link, which is not allowed.",
-                )
-                return
+        if needs_filtering and await bio_link_violation(client, message, user, chat_id):
+            return
 
         # Content filters
         content = message.text or message.caption or ""
-        if content and needs_filtering and str(await get_setting(chat_id, "linkfilter", "0")) == "1" and contains_link(content):
+        if (
+            content
+            and needs_filtering
+            and str(await get_setting(chat_id, "linkfilter", "0")) == "1"
+            and contains_link(content)
+        ):
             logger.debug("[FILTER] Link removed in %s from %s", chat_id, user.id)
-            await handle_violation(client, message, user, chat_id, "You are not allowed to share links in this group.")
+            await handle_violation(
+                client,
+                message,
+                user,
+                chat_id,
+                "You are not allowed to share links in this group.",
+            )
             return
+
+        if needs_filtering:
+            await schedule_auto_delete(chat_id, message.id)
 
     async def handle_violation(client: Client, message: Message, user, chat_id: int, reason: str):
         logger.debug("[FILTER] Violation by %s in %s: %s", user.id, chat_id, reason)
@@ -171,12 +196,5 @@ def register(app: Client) -> None:
             if not bio:
                 continue
 
-            if bio and contains_link(bio):
-                logger.debug("[FILTER] New member bio violation %s in %s", user.id, chat_id)
-                await suppress_delete(message)
-                count = await increment_warning(chat_id, user.id)
-                if count >= 3:
-                    await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
-                    await reset_warning(chat_id, user.id)
-                msg, _ = build_warning(count, user, "Your bio contains a link, which is not allowed.", is_final=(count >= 3))
-                await message.reply_text(msg, parse_mode=ParseMode.HTML, quote=True)
+            if await bio_link_violation(client, message, user, chat_id):
+                continue
