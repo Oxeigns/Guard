@@ -115,13 +115,14 @@ def register(app: Client) -> None:
         is_approved_user = await is_approved(chat_id, user.id)
         needs_filtering = not is_admin_user and not is_approved_user
 
+        # Bio link check runs first so violations are always caught
+        if needs_filtering and await bio_link_violation(client, message, user, chat_id):
+            return
+
         # Approval block
         if needs_filtering and await get_approval_mode(chat_id):
             await suppress_delete(message)
             await message.reply_text("❌ You are not approved to speak here.", quote=True)
-            return
-
-        if needs_filtering and await bio_link_violation(client, message, user, chat_id):
             return
 
         # Content filters
