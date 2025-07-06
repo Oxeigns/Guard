@@ -67,6 +67,7 @@ def register(app: Client) -> None:
         if delay > 0:
             asyncio.create_task(delete_later(chat_id, msg_id, delay))
 
+    # Main message moderation
     @app.on_message(filters.group & ~filters.service)
     @catch_errors
     async def moderate_message(client: Client, message: Message) -> None:
@@ -85,11 +86,13 @@ def register(app: Client) -> None:
         if needs_filtering:
             await schedule_auto_delete(chat_id, message.id)
 
+        # Approval block
         if needs_filtering and await get_approval_mode(chat_id):
             await suppress_delete(message)
             await message.reply_text("❌ You are not approved to speak here.", quote=True)
             return
 
+        # Content filters
         content = message.text or message.caption or ""
         if content:
             if needs_filtering and str(await get_setting(chat_id, "linkfilter", "0")) == "1" and contains_link(content):
@@ -116,6 +119,7 @@ def register(app: Client) -> None:
         msg, _ = build_warning(count, user, reason, is_final=(count >= 3))
         await message.reply_text(msg, parse_mode=ParseMode.HTML, quote=True)
 
+    # Edited message check
     @app.on_edited_message(filters.group & ~filters.service)
     @catch_errors
     async def on_edit(client: Client, message: Message):
@@ -135,6 +139,7 @@ def register(app: Client) -> None:
             edited_messages.add(key)
             await schedule_auto_delete(chat_id, message.id, fallback=0)
 
+    # New user bio check
     @app.on_message(filters.new_chat_members)
     @catch_errors
     async def check_new_member_bio(client: Client, message: Message):
