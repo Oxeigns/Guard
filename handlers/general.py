@@ -60,7 +60,8 @@ def register(app: Client) -> None:
     @catch_errors
     async def dm_fallback(client: Client, message: Message) -> None:
         logger.info("[DM FALLBACK] %s: %s", message.from_user.id, message.text)
-        await message.reply_text("🤖 I received your message, but didn’t understand it.")
+        # Do not reply to unknown private messages to avoid spamming users
+        return
 
     # ✅ Group fallback (non-command, non-service)
     @app.on_message(filters.group & ~filters.command(["start", "help", "menu", "panel", "id", "ping"]) & ~filters.service)

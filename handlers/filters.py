@@ -32,6 +32,18 @@ async def suppress_delete(message: Message):
         await message.delete()
 
 
+async def get_user_bio(client: Client, user) -> str:
+    """Return the user's bio, fetching it if necessary."""
+    bio = getattr(user, "bio", "")
+    if not bio:
+        try:
+            user_info = await client.get_chat(user.id)
+            bio = getattr(user_info, "bio", "")
+        except Exception:
+            bio = ""
+    return bio
+
+
 def build_warning(count: int, user, reason: str, is_final: bool = False):
     name = f"@{user.username}" if user.username else f"{user.first_name} ({user.id})"
     msg = (
@@ -92,14 +104,7 @@ def register(app: Client) -> None:
             return
 
         if needs_filtering and await get_bio_filter(chat_id):
-            bio = getattr(user, "bio", "")
-            if not bio:
-                try:
-                    user_info = await client.get_chat(user.id)
-                    bio = getattr(user_info, "bio", "")
-                except Exception:
-                    bio = ""
-
+            bio = await get_user_bio(client, user)
             if bio and contains_link(bio):
                 logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
                 await handle_violation(
@@ -162,13 +167,9 @@ def register(app: Client) -> None:
             if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
                 continue
 
-            bio = getattr(user, "bio", "")
+            bio = await get_user_bio(client, user)
             if not bio:
-                try:
-                    user_info = await client.get_chat(user.id)
-                    bio = getattr(user_info, "bio", "")
-                except Exception:
-                    continue
+                continue
 
             if bio and contains_link(bio):
                 logger.debug("[FILTER] New member bio violation %s in %s", user.id, chat_id)
