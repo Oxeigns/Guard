@@ -44,7 +44,7 @@ def build_warning(count: int, user, reason: str, is_final: bool = False):
 
 
 def register(app: Client) -> None:
-    print("✅ Registered: filters.py")
+    logger.info("✅ Registered: filters.py")
 
     edited_messages: set[tuple[int, int]] = set()
 
@@ -96,6 +96,7 @@ def register(app: Client) -> None:
         content = message.text or message.caption or ""
         if content:
             if needs_filtering and str(await get_setting(chat_id, "linkfilter", "0")) == "1" and contains_link(content):
+                logger.debug("[FILTER] Link removed in %s from %s", chat_id, user.id)
                 await handle_violation(client, message, user, chat_id, "You are not allowed to share links in this group.")
                 return
 
@@ -107,10 +108,12 @@ def register(app: Client) -> None:
                     bio = ""
 
                 if bio and (len(bio) > MAX_BIO_LENGTH or contains_link(bio)):
+                    logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
                     await handle_violation(client, message, user, chat_id, "Your bio contains a link or is too long, which is not allowed.")
                     return
 
     async def handle_violation(client: Client, message: Message, user, chat_id: int, reason: str):
+        logger.debug("[FILTER] Violation by %s in %s: %s", user.id, chat_id, reason)
         await suppress_delete(message)
         count = await increment_warning(chat_id, user.id)
         if count >= 3:
@@ -160,6 +163,7 @@ def register(app: Client) -> None:
                 continue
 
             if bio and (len(bio) > MAX_BIO_LENGTH or contains_link(bio)):
+                logger.debug("[FILTER] New member bio violation %s in %s", user.id, chat_id)
                 await suppress_delete(message)
                 count = await increment_warning(chat_id, user.id)
                 if count >= 3:

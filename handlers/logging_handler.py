@@ -51,7 +51,7 @@ HELP_SECTIONS = {
 
 
 def register(app: Client) -> None:
-    logger.info("✅ Registered: callbacks.py")
+    logger.info("✅ Registered: logging_handler.py")
 
     @app.on_callback_query()
     @catch_errors

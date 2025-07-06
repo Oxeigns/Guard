@@ -50,7 +50,7 @@ help_sections = {
 
 
 def register(app: Client) -> None:
-    print("✅ Registered: callbacks.py")
+    logger.info("✅ Registered: callbacks.py")
 
     @app.on_callback_query()
     @catch_errors
@@ -67,6 +67,7 @@ def register(app: Client) -> None:
 
         elif data == "open_settings":
             await query.answer()
+            logger.debug("[CALLBACK] Open settings in chat %s", chat_id)
             await _render_settings_panel(query, chat_id)
 
         elif data.startswith("toggle_"):
@@ -124,6 +125,7 @@ def register(app: Client) -> None:
 # 🔁 Refresh settings panel UI
 async def _render_settings_panel(query: CallbackQuery, chat_id: int):
     markup = await build_settings_panel(chat_id)
+    logger.debug("[CALLBACK] Rendering settings for %s", chat_id)
     await safe_edit_message(
         query.message,
         caption="⚙️ <b>Group Settings</b>",
@@ -134,6 +136,7 @@ async def _render_settings_panel(query: CallbackQuery, chat_id: int):
 
 # ⚙️ Toggle features
 async def _handle_toggle(data: str, chat_id: int):
+    logger.debug("[CALLBACK] Toggle %s for chat %s", data, chat_id)
     if data == "toggle_biolink":
         current = await get_bio_filter(chat_id)
         await set_bio_filter(chat_id, not current)
