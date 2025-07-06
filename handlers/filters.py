@@ -26,23 +26,48 @@ LINK_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Cache user bios to avoid excessive get_chat calls which may trigger FloodWaits
+# Cache user bios to avoid excessive get_chat calls
 _user_bio_cache: dict[int, tuple[str, float]] = {}
-BIO_CACHE_TTL = 15 * 60  # seconds
+BIO_CACHE_TTL = 15 * 60  # 15 minutes
 
-# Cache recent violations to avoid spam
 _bio_violation_cache: dict[tuple[int, int], float] = {}
-BIO_VIOLATION_TTL = 60  # seconds
-
+BIO_VIOLATION_TTL = 20  # seconds - set low for easier debug
 
 def contains_link(text: str) -> bool:
     return bool(LINK_RE.search(text or ""))
-
 
 async def suppress_delete(message: Message):
     with suppress(Exception):
         await message.delete()
 
+def build_warning(count: int, user, reason: str, is_final: bool = False):
+    name = f"@{user.username}" if user.username else f"{user.first_name} ({user.id})"
+    msg = (
+        f"🔇 <b>Final Warning for {name}</b>\n\n{reason}\nYou have been <b>muted</b>."
+        if is_final
+        else f"⚠️ <b>Warning {count}/3 for {name}</b>\n\n{reason}\nFix this before you're muted."
+    )
+    return msg, None
+
+async def handle_violation(client: Client, message: Message, user, chat_id: int, reason: str) -> None:
+    logger.debug("[FILTER] Violation by %s in %s: %s", user.id, chat_id, reason)
+    await suppress_delete(message)
+    count = await increment_warning(chat_id, user.id)
+    if count >= 3:
+        try:
+            await client.restrict_chat_member(
+                chat_id,
+                user.id,
+                ChatPermissions(can_send_messages=False)
+            )
+        except Exception as e:
+            logger.warning("Mute failed: %s", e)
+        await reset_warning(chat_id, user.id)
+    msg, _ = build_warning(count, user, reason, is_final=(count >= 3))
+    try:
+        await message.reply_text(msg, parse_mode=ParseMode.HTML, quote=True)
+    except Exception as e:
+        logger.warning("Failed to send violation reply: %s", e)
 
 async def get_user_bio(client: Client, user) -> str:
     now = time.monotonic()
@@ -59,28 +84,25 @@ async def get_user_bio(client: Client, user) -> str:
         logger.warning("Failed to fetch bio for %s: %s", user.id, e)
         return cached[0] if cached else ""
 
-
 async def bio_link_violation(client: Client, message: Message, user, chat_id: int) -> bool:
-    """Check user's bio for links and handle violations."""
     if not await get_bio_filter(chat_id):
-        logger.debug("Bio link filter disabled for chat %s", chat_id)
+        logger.debug("Bio link filter OFF for chat %s", chat_id)
         return False
 
     now = time.monotonic()
     last = _bio_violation_cache.get((chat_id, user.id), 0)
-
     if now - last < BIO_VIOLATION_TTL:
-        logger.debug("Bio check skipped (cached) for user %s in chat %s", user.id, chat_id)
+        logger.debug("Bio violation check throttled for %s/%s", chat_id, user.id)
         return False
 
     bio = await get_user_bio(client, user)
     if not bio:
-        logger.debug("Empty bio for user %s in chat %s", user.id, chat_id)
+        logger.debug("No bio for user %s in chat %s", user.id, chat_id)
         return False
-    logger.debug("Bio text for %s in %s: %r", user.id, chat_id, bio)
+    logger.debug("User %s bio in %s: %r", user.id, chat_id, bio)
 
     if contains_link(bio):
-        logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
+        logger.info("[FILTER] Bio link detected for %s in %s", user.id, chat_id)
         await handle_violation(
             client,
             message,
@@ -91,31 +113,8 @@ async def bio_link_violation(client: Client, message: Message, user, chat_id: in
         _bio_violation_cache[(chat_id, user.id)] = now
         return True
     else:
-        logger.debug("Bio clean for %s in chat %s", user.id, chat_id)
+        logger.debug("User %s bio clean in %s", user.id, chat_id)
         return False
-
-
-async def handle_violation(client: Client, message: Message, user, chat_id: int, reason: str) -> None:
-    """Warn or mute a user for violating chat rules."""
-    logger.debug("[FILTER] Violation by %s in %s: %s", user.id, chat_id, reason)
-    await suppress_delete(message)
-    count = await increment_warning(chat_id, user.id)
-    if count >= 3:
-        await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
-        await reset_warning(chat_id, user.id)
-    msg, _ = build_warning(count, user, reason, is_final=(count >= 3))
-    await message.reply_text(msg, parse_mode=ParseMode.HTML, quote=True)
-
-
-def build_warning(count: int, user, reason: str, is_final: bool = False):
-    name = f"@{user.username}" if user.username else f"{user.first_name} ({user.id})"
-    msg = (
-        f"🔇 <b>Final Warning for {name}</b>\n\n{reason}\nYou have been <b>muted</b>."
-        if is_final
-        else f"⚠️ <b>Warning {count}/3 for {name}</b>\n\n{reason}\nFix this before you're muted."
-    )
-    return msg, None
-
 
 def register(app: Client) -> None:
     logger.info("✅ Registered: filters.py")
@@ -141,7 +140,6 @@ def register(app: Client) -> None:
         if delay > 0:
             asyncio.create_task(delete_later(chat_id, msg_id, delay))
 
-    # Main message moderation
     @app.on_message(filters.group & ~filters.service, group=1)
     @catch_errors
     async def moderate_message(client: Client, message: Message) -> None:
@@ -185,7 +183,6 @@ def register(app: Client) -> None:
         if needs_filtering:
             await schedule_auto_delete(chat_id, message.id)
 
-    # Edited message check
     @app.on_edited_message(filters.group & ~filters.service, group=1)
     @catch_errors
     async def on_edit(client: Client, message: Message):
@@ -205,7 +202,6 @@ def register(app: Client) -> None:
             edited_messages.add(key)
             await schedule_auto_delete(chat_id, message.id, fallback=0)
 
-    # New user join bio check
     @app.on_message(filters.new_chat_members & filters.group, group=1)
     @catch_errors
     async def check_new_member_bio(client: Client, message: Message):
