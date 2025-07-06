@@ -58,7 +58,7 @@ HELP_SECTIONS = {
 def register(app: Client) -> None:
     logger.info("✅ Registered: logging_handler.py")
 
-    @app.on_callback_query()
+    @app.on_callback_query(group=1)
     @catch_errors
     async def handle_callback(client: Client, query: CallbackQuery):
         data = query.data
@@ -75,6 +75,10 @@ def register(app: Client) -> None:
                 include_back=(data == "cb_back_panel"),
                 log_panel=False,
             )
+
+        elif data == "open_settings":
+            await query.answer()
+            await render_settings_panel(client, query.message)
 
         elif data.startswith("toggle_"):
             await query.answer("Toggled ✅")
