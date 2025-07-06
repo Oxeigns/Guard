@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+import time
 from contextlib import suppress
 
 from pyrogram import Client, filters
@@ -25,6 +26,10 @@ LINK_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Cache user bios to avoid excessive get_chat calls which may trigger FloodWaits
+_user_bio_cache: dict[int, tuple[str, float]] = {}
+BIO_CACHE_TTL = 15 * 60  # seconds
+
 
 def contains_link(text: str) -> bool:
     return bool(LINK_RE.search(text or ""))
@@ -36,12 +41,20 @@ async def suppress_delete(message: Message):
 
 
 async def get_user_bio(client: Client, user) -> str:
-    """Return the user's bio, always fetching the latest from Telegram."""
+    """Return the user's bio with a small cache for reliability."""
+    now = time.monotonic()
+    cached = _user_bio_cache.get(user.id)
+    if cached and now - cached[1] < BIO_CACHE_TTL:
+        return cached[0]
+
     try:
         user_info = await client.get_chat(user.id)
-        return getattr(user_info, "bio", "") or ""
+        bio = getattr(user_info, "bio", "") or ""
+        _user_bio_cache[user.id] = (bio, now)
+        return bio
     except Exception:
-        return ""
+        # On failure, fall back to any cached bio if available
+        return cached[0] if cached else ""
 
 
 async def bio_link_violation(
