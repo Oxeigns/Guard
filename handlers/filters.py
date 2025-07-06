@@ -5,16 +5,13 @@ from contextlib import suppress
 
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
-from pyrogram.types import Message, ChatPermissions, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import Message, ChatPermissions
 
 from utils.errors import catch_errors
 from utils.db import (
-    get_setting,
-    get_bio_filter,
-    increment_warning,
-    reset_warning,
-    is_approved,
-    get_approval_mode,
+    get_setting, get_bio_filter,
+    increment_warning, reset_warning,
+    is_approved, get_approval_mode,
 )
 from utils.perms import is_admin
 
@@ -38,13 +35,12 @@ async def suppress_delete(message: Message):
 
 def build_warning(count: int, user, reason: str, is_final: bool = False):
     name = f"@{user.username}" if user.username else f"{user.first_name} ({user.id})"
-    btn = InlineKeyboardButton("📨 Support", url="https://t.me/botsyard")
     msg = (
         f"🔇 <b>Final Warning for {name}</b>\n\n{reason}\nYou have been <b>muted</b>."
         if is_final
         else f"⚠️ <b>Warning {count}/3 for {name}</b>\n\n{reason}\nFix this before you're muted."
     )
-    return msg, InlineKeyboardMarkup([[btn]])
+    return msg, None
 
 
 def register(app: Client) -> None:
@@ -89,13 +85,11 @@ def register(app: Client) -> None:
         if needs_filtering:
             await schedule_auto_delete(chat_id, message.id)
 
-        # Approval mode block
         if needs_filtering and await get_approval_mode(chat_id):
             await suppress_delete(message)
             await message.reply_text("❌ You are not approved to speak here.", quote=True)
             return
 
-        # Content analysis
         content = message.text or message.caption or ""
         if content:
             if needs_filtering and str(await get_setting(chat_id, "linkfilter", "0")) == "1" and contains_link(content):
@@ -119,8 +113,8 @@ def register(app: Client) -> None:
         if count >= 3:
             await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
             await reset_warning(chat_id, user.id)
-        msg, kb = build_warning(count, user, reason, is_final=(count >= 3))
-        await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
+        msg, _ = build_warning(count, user, reason, is_final=(count >= 3))
+        await message.reply_text(msg, parse_mode=ParseMode.HTML, quote=True)
 
     @app.on_edited_message(filters.group & ~filters.service)
     @catch_errors
@@ -166,5 +160,5 @@ def register(app: Client) -> None:
                 if count >= 3:
                     await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
                     await reset_warning(chat_id, user.id)
-                msg, kb = build_warning(count, user, "Your bio contains a link or is too long, which is not allowed.", is_final=(count >= 3))
-                await message.reply_text(msg, reply_markup=kb, parse_mode=ParseMode.HTML, quote=True)
+                msg, _ = build_warning(count, user, "Your bio contains a link or is too long, which is not allowed.", is_final=(count >= 3))
+                await message.reply_text(msg, parse_mode=ParseMode.HTML, quote=True)
