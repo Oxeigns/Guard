@@ -1,98 +1,149 @@
 import logging
-from pyrogram import Client, filters
-from pyrogram.types import Message, ChatMemberUpdated
-from config import LOG_GROUP_ID
-from handlers.panels import send_control_panel
+from pyrogram import Client
+from pyrogram.enums import ParseMode
+from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+
+from config import SUPPORT_CHAT_URL, DEVELOPER_URL
+from utils.errors import catch_errors
 from utils.db import (
-    add_user, add_group, remove_group,
-    add_broadcast_user, add_broadcast_group,
-    remove_broadcast_group,
+    set_bio_filter, get_bio_filter,
+    get_setting, set_setting
 )
+from utils.messages import safe_edit_message
+from handlers.panels import send_start, get_help_keyboard, build_settings_panel
 
 logger = logging.getLogger(__name__)
 
+# Help section content for buttons
+HELP_SECTIONS = {
+    "help_biomode": (
+        "🛡️ <b>BioMode</b>\n"
+        "Scans bios of new users for suspicious content like links.\n"
+        "Use <code>/biolink on|off</code> to toggle."
+    ),
+    "help_autodelete": (
+        "🧹 <b>AutoDelete</b>\n"
+        "Deletes non-admin messages after a set delay.\n"
+        "Set delay using <code>/setautodelete &lt;seconds&gt;</code>."
+    ),
+    "help_linkfilter": (
+        "🔗 <b>LinkFilter</b>\n"
+        "Deletes URLs from non-admin messages.\n"
+        "Toggle using <code>/linkfilter on|off</code>."
+    ),
+    "help_editmode": (
+        "✏️ <b>EditMode</b>\n"
+        "Deletes edited messages by normal users.\n"
+        "Use <code>/editfilter on|off</code>."
+    ),
+    "help_broadcast": (
+        "📢 <b>Broadcast</b>\n"
+        "Owner-only broadcast to groups via <code>/broadcast</code>."
+    ),
+}
+
 
 def register(app: Client) -> None:
-    print("✅ Registered: logging.py")
+    logger.info("✅ Registered: callbacks.py")
 
-    # Log private /start usage
-    @app.on_message(filters.command("start") & filters.private, group=-2)
-    async def log_start(client: Client, message: Message):
-        user = message.from_user
-        if not user:
-            return
+    @app.on_callback_query()
+    @catch_errors
+    async def handle_callback(client: Client, query: CallbackQuery):
+        data = query.data
+        user_id = query.from_user.id
+        chat_id = query.message.chat.id if query.message else "N/A"
 
-        try:
-            await add_user(user.id)
-            await add_broadcast_user(user.id)
-        except Exception as exc:
-            logger.warning("Failed to store user: %s", exc)
+        logger.debug(f"[CALLBACK] From user {user_id} in chat {chat_id} → data: {data}")
 
-        log_text = (
-            f"🔹 Bot started by: {user.first_name or 'Unknown'} "
-            f"(@{user.username or 'None'}) | ID: <code>{user.id}</code>"
-        )
-        try:
-            await client.send_message(LOG_GROUP_ID, log_text)
-        except Exception as exc:
-            logger.warning("Failed to log /start: %s", exc)
+        if data in {"cb_start", "cb_back_panel"}:
+            await query.answer()
+            await send_start(client, query.message, include_back=(data == "cb_back_panel"))
 
-    # Log when bot is added or removed from a group
-    @app.on_chat_member_updated(group=-2)
-    async def log_updates(client: Client, update: ChatMemberUpdated):
-        chat = update.chat
-        is_self = update.new_chat_member.user.is_self
+        elif data == "open_settings":
+            await query.answer()
+            await _render_settings_panel(query)
 
-        if is_self and update.old_chat_member.status in {"kicked", "left"}:
-            # Bot added to a group
-            try:
-                await add_group(chat.id)
-                await add_broadcast_group(chat.id)
-            except Exception as exc:
-                logger.warning("Failed to store group: %s", exc)
+        elif data.startswith("toggle_"):
+            await query.answer("Toggled ✅")
+            await _handle_toggle(data, query.message.chat.id)
+            await _render_settings_panel(query)
 
-            inviter = update.from_user
-            try:
-                member_count = await client.get_chat_members_count(chat.id)
-            except Exception:
-                member_count = "unknown"
-
-            name = inviter.first_name if inviter else "Unknown"
-            username = f"@{inviter.username}" if inviter and inviter.username else "None"
-
-            text = (
-                f"🆕 <b>Added to group:</b> <b>{chat.title}</b>\n"
-                f"<b>ID:</b> <code>{chat.id}</code>\n"
-                f"<b>Members:</b> {member_count}\n"
-                f"<b>By:</b> {name} ({username})"
+        elif data in {"cb_help_start", "cb_help_panel"}:
+            await query.answer()
+            await safe_edit_message(
+                query.message,
+                caption="📘 <b>Command Help</b>\n\nUse the buttons below to learn more.",
+                reply_markup=get_help_keyboard("cb_start"),
+                parse_mode=ParseMode.HTML,
             )
 
-            try:
-                await client.send_message(LOG_GROUP_ID, text)
-            except Exception as exc:
-                logger.warning("Failed to log group join: %s", exc)
-
-            # Attempt to show the control panel
-            try:
-                from types import SimpleNamespace
-                dummy_msg = SimpleNamespace(chat=chat, from_user=inviter)
-                await send_control_panel(client, dummy_msg)
-            except Exception as exc:
-                logger.warning("Failed to send control panel: %s", exc)
-
-        elif update.old_chat_member.user.is_self and update.new_chat_member.status in {"kicked", "left"}:
-            # Bot removed from group
-            try:
-                await remove_group(chat.id)
-                await remove_broadcast_group(chat.id)
-            except Exception as exc:
-                logger.warning("Failed to remove group: %s", exc)
-
-            text = (
-                f"❌ <b>Removed from group:</b> <b>{chat.title}</b>\n"
-                f"<b>ID:</b> <code>{chat.id}</code>"
+        elif data in HELP_SECTIONS:
+            await query.answer()
+            await safe_edit_message(
+                query.message,
+                caption=HELP_SECTIONS[data],
+                reply_markup=get_help_keyboard("cb_help_start"),
+                parse_mode=ParseMode.HTML,
             )
-            try:
-                await client.send_message(LOG_GROUP_ID, text)
-            except Exception as exc:
-                logger.warning("Failed to log group removal: %s", exc)
+
+        elif data == "help_support":
+            await query.answer()
+            await safe_edit_message(
+                query.message,
+                caption="🆘 <b>Need help?</b>",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔗 Join Support", url=SUPPORT_CHAT_URL)],
+                    [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                ]),
+                parse_mode=ParseMode.HTML,
+            )
+
+        elif data == "help_developer":
+            await query.answer()
+            await safe_edit_message(
+                query.message,
+                caption="👨‍💻 <b>Developer Info</b>",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("✉️ Message Developer", url=DEVELOPER_URL)],
+                    [InlineKeyboardButton("🔙 Back", callback_data="cb_help_start")]
+                ]),
+                parse_mode=ParseMode.HTML,
+            )
+
+        else:
+            logger.warning(f"⚠️ Unknown callback data received: {data}")
+            await query.answer("⚠️ Unknown action", show_alert=True)
+
+
+# 🔁 Update the group settings panel
+async def _render_settings_panel(query: CallbackQuery):
+    chat_id = query.message.chat.id
+    markup = await build_settings_panel(chat_id)
+    await safe_edit_message(
+        query.message,
+        caption="⚙️ <b>Group Settings</b>",
+        reply_markup=markup,
+        parse_mode=ParseMode.HTML,
+    )
+
+
+# ⚙️ Toggle settings and update DB
+async def _handle_toggle(data: str, chat_id: int):
+    if data == "toggle_biolink":
+        current = await get_bio_filter(chat_id)
+        await set_bio_filter(chat_id, not current)
+
+    elif data == "toggle_linkfilter":
+        current = str(await get_setting(chat_id, "linkfilter", "0")) == "1"
+        await set_setting(chat_id, "linkfilter", "0" if current else "1")
+
+    elif data == "toggle_editfilter":
+        current = str(await get_setting(chat_id, "editmode", "0")) == "1"
+        await set_setting(chat_id, "editmode", "0" if current else "1")
+
+    elif data == "toggle_autodelete":
+        delay = int(await get_setting(chat_id, "autodelete_interval", "0") or 0)
+        await set_setting(chat_id, "autodelete_interval", "0" if delay else "30")
+
+    else:
+        logger.warning(f"🛑 Unrecognized toggle key: {data}")
