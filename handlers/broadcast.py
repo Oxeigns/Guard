@@ -22,17 +22,18 @@ def register(app: Client) -> None:
     @catch_errors
     async def broadcast_cmd(client: Client, message: Message) -> None:
         """Broadcast a message to all stored groups from the DB."""
-        logger.info("[BROADCAST] Triggered by user %s", message.from_user.id)
+        logger.info("[BROADCAST] Triggered by %s", message.from_user.id)
 
         text = None
         payload_msg = None
 
+        # Support `/broadcast text` or reply-to-message
         if message.reply_to_message:
             payload_msg = message.reply_to_message
         elif len(message.command) >= 2:
             text = message.text.split(None, 1)[1]
         else:
-            await message.reply_text("❗ Usage:\nReply to a message or use `/broadcast your text`")
+            await message.reply_text("❗ Usage:\nReply to a message or use `/broadcast <text>`")
             return
 
         group_ids = await get_broadcast_groups()
@@ -45,8 +46,9 @@ def register(app: Client) -> None:
                 else:
                     await client.send_message(chat_id, text, parse_mode=ParseMode.HTML)
                 sent += 1
+
             except FloodWait as e:
-                logger.warning("⏳ FloodWait for %s: sleeping %s sec", chat_id, e.value)
+                logger.warning("⏳ FloodWait for %s: %s sec", chat_id, e.value)
                 await asyncio.sleep(e.value)
                 try:
                     if payload_msg:
@@ -57,13 +59,20 @@ def register(app: Client) -> None:
                 except Exception as e2:
                     logger.error("❌ Retry failed for %s: %s", chat_id, str(e2))
                     failed += 1
+
             except (ChatWriteForbidden, UserKicked, PeerIdInvalid, UserIsBlocked) as e:
                 logger.warning("⛔ Cannot send to %s: %s", chat_id, type(e).__name__)
                 failed += 1
+
             except Exception as e:
                 logger.error("❌ Unexpected error with %s: %s", chat_id, str(e))
                 failed += 1
 
             await asyncio.sleep(0.1)
 
-        await message.reply_text(f"✅ Broadcast complete.\nSent: <b>{sent}</b>\nFailed: <b>{failed}</b>", parse_mode=ParseMode.HTML)
+        # Report summary
+        await message.reply_text(
+            f"✅ <b>Broadcast complete</b>\n"
+            f"Sent: <b>{sent}</b>\nFailed: <b>{failed}</b>",
+            parse_mode=ParseMode.HTML
+        )
