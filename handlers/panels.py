@@ -1,7 +1,7 @@
 import os
 from html import escape
 from pyrogram import Client, filters
-from pyrogram.enums import ParseMode
+from pyrogram.enums import ParseMode, ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
 from utils.perms import is_admin
@@ -15,6 +15,7 @@ def mention_html(user_id: int, name: str) -> str:
     return f'<a href="tg://user?id={user_id}">{escape(name)}</a>'
 
 
+# 🔘 Start Panel (DM)
 async def build_start_panel(is_admin: bool = False, *, is_owner: bool = False, include_back: bool = False) -> InlineKeyboardMarkup:
     buttons = [[InlineKeyboardButton("📘 Commands", callback_data="cb_help_start")]]
     if is_admin:
@@ -26,6 +27,7 @@ async def build_start_panel(is_admin: bool = False, *, is_owner: bool = False, i
     return InlineKeyboardMarkup(buttons)
 
 
+# ⚙️ Settings Panel (Group)
 async def build_settings_panel(chat_id: int) -> InlineKeyboardMarkup:
     bio = await get_bio_filter(chat_id)
     link = str(await get_setting(chat_id, "linkfilter", "0")) == "1"
@@ -45,13 +47,14 @@ async def build_settings_panel(chat_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(buttons)
 
 
+# 📩 Welcome / Panel Sender
 async def send_start(client: Client, message: Message, *, include_back: bool = False) -> None:
     bot_user = await client.get_me()
     user = message.from_user
     chat = message.chat
     is_owner = user.id == OWNER_ID
 
-    if chat.type in {"group", "supergroup"}:
+    if chat.type in {ChatType.GROUP, ChatType.SUPERGROUP}:
         if not await is_admin(client, message):
             await message.reply_text("🔒 Only admins can view the control panel.")
             return
@@ -79,10 +82,12 @@ async def send_start(client: Client, message: Message, *, include_back: bool = F
     )
 
 
+# 🔁 Shortcut for /menu
 async def send_control_panel(client: Client, message: Message) -> None:
     await send_start(client, message)
 
 
+# ❓ Help Menu Keyboard
 def get_help_keyboard(back_cb: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🛡️ BioMode", callback_data="help_biomode")],
@@ -98,13 +103,16 @@ def get_help_keyboard(back_cb: str) -> InlineKeyboardMarkup:
     ])
 
 
+# 📦 Register handlers
 def register(app: Client) -> None:
     print("✅ Registered: panels.py")
 
+    # /menu shortcut
     @app.on_message(filters.command("menu") & filters.group)
     async def show_menu(client: Client, message: Message):
         await send_control_panel(client, message)
 
+    # ⏪ Back to Main Panel
     @app.on_callback_query(filters.regex("^(cb_start|cb_back_panel)$"))
     async def back_to_main(client: Client, query: CallbackQuery):
         user = query.from_user
@@ -118,6 +126,7 @@ def register(app: Client) -> None:
         )
         await query.answer()
 
+    # 📘 Help Panel
     @app.on_callback_query(filters.regex("^cb_help_start$"))
     async def open_help(client: Client, query: CallbackQuery):
         await query.message.edit_text(
