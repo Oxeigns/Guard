@@ -101,11 +101,13 @@ def register(app: Client) -> None:
                 return
 
             if needs_filtering and await get_bio_filter(chat_id):
-                try:
-                    user_info = await client.get_chat(user.id)
-                    bio = getattr(user_info, "bio", "")
-                except Exception:
-                    bio = ""
+                bio = getattr(user, "bio", "")
+                if not bio:
+                    try:
+                        user_info = await client.get_chat(user.id)
+                        bio = getattr(user_info, "bio", "")
+                    except Exception:
+                        bio = ""
 
                 if bio and (len(bio) > MAX_BIO_LENGTH or contains_link(bio)):
                     logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
@@ -156,11 +158,13 @@ def register(app: Client) -> None:
             if await is_admin(client, message, user.id) or await is_approved(chat_id, user.id):
                 continue
 
-            try:
-                user_info = await client.get_chat(user.id)
-                bio = getattr(user_info, "bio", "")
-            except Exception:
-                continue
+            bio = getattr(user, "bio", "")
+            if not bio:
+                try:
+                    user_info = await client.get_chat(user.id)
+                    bio = getattr(user_info, "bio", "")
+                except Exception:
+                    continue
 
             if bio and (len(bio) > MAX_BIO_LENGTH or contains_link(bio)):
                 logger.debug("[FILTER] New member bio violation %s in %s", user.id, chat_id)

@@ -65,10 +65,14 @@ async def send_start(client: Client, message: Message, *, include_back: bool = F
     is_owner = user.id == OWNER_ID
 
     if chat.type in {ChatType.GROUP, ChatType.SUPERGROUP}:
+        # Always track the group so broadcast works even if a non-admin
+        # triggers the start command.
+        await add_group(chat.id)
+
         if not await is_admin(client, message):
             await message.reply_text("🔒 Only admins can view the control panel.")
             return
-        await add_group(chat.id)
+
         markup = await build_settings_panel(chat.id)
         caption = "⚙️ <b>Group Settings</b>"
     else:
