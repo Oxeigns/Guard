@@ -60,40 +60,18 @@ def register(app: Client) -> None:
 
         elif data == "open_settings":
             await query.answer()
-            markup = await build_settings_panel(chat_id)
-            await safe_edit_message(
-                query.message,
-                caption="⚙️ <b>Group Settings</b>",
-                reply_markup=markup,
-                parse_mode=ParseMode.HTML
-            )
+            await _render_settings_panel(query, chat_id)
 
-        elif data == "toggle_biolink":
-            current = await get_bio_filter(chat_id)
-            await set_bio_filter(chat_id, not current)
-            await _update_settings_panel(query, chat_id)
-
-        elif data == "toggle_linkfilter":
-            current = str(await get_setting(chat_id, "linkfilter", "0")) == "1"
-            await set_setting(chat_id, "linkfilter", "0" if current else "1")
-            await _update_settings_panel(query, chat_id)
-
-        elif data == "toggle_editfilter":
-            current = str(await get_setting(chat_id, "editmode", "0")) == "1"
-            await set_setting(chat_id, "editmode", "0" if current else "1")
-            await _update_settings_panel(query, chat_id)
-
-        elif data == "toggle_autodelete":
-            delay = int(await get_setting(chat_id, "autodelete_interval", "0") or 0)
-            new_delay = "0" if delay else "30"
-            await set_setting(chat_id, "autodelete_interval", new_delay)
-            await _update_settings_panel(query, chat_id)
+        elif data.startswith("toggle_"):
+            await query.answer("Toggled")
+            await _handle_toggle(data, chat_id)
+            await _render_settings_panel(query, chat_id)
 
         elif data in {"cb_help_start", "cb_help_panel"}:
             await query.answer()
             await safe_edit_message(
                 query.message,
-                caption="<b>📚 Commands</b>\n\nUse the buttons for module help.",
+                caption="📘 <b>Command Help</b>\n\nUse the buttons below to learn more.",
                 reply_markup=get_help_keyboard("cb_start"),
                 parse_mode=ParseMode.HTML,
             )
@@ -136,9 +114,8 @@ def register(app: Client) -> None:
             await query.answer("⚠️ Unknown action", show_alert=True)
 
 
-# 🔁 Refresh settings panel after toggle
-async def _update_settings_panel(query: CallbackQuery, chat_id: int):
-    await query.answer("Toggled")
+# 🔁 Refresh settings panel UI
+async def _render_settings_panel(query: CallbackQuery, chat_id: int):
     markup = await build_settings_panel(chat_id)
     await safe_edit_message(
         query.message,
@@ -146,3 +123,22 @@ async def _update_settings_panel(query: CallbackQuery, chat_id: int):
         reply_markup=markup,
         parse_mode=ParseMode.HTML,
     )
+
+
+# ⚙️ Toggle features
+async def _handle_toggle(data: str, chat_id: int):
+    if data == "toggle_biolink":
+        current = await get_bio_filter(chat_id)
+        await set_bio_filter(chat_id, not current)
+
+    elif data == "toggle_linkfilter":
+        current = str(await get_setting(chat_id, "linkfilter", "0")) == "1"
+        await set_setting(chat_id, "linkfilter", "0" if current else "1")
+
+    elif data == "toggle_editfilter":
+        current = str(await get_setting(chat_id, "editmode", "0")) == "1"
+        await set_setting(chat_id, "editmode", "0" if current else "1")
+
+    elif data == "toggle_autodelete":
+        current = int(await get_setting(chat_id, "autodelete_interval", "0") or 0)
+        await set_setting(chat_id, "autodelete_interval", "0" if current else "30")
