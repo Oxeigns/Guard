@@ -118,9 +118,6 @@ def register(app: Client) -> None:
         is_approved_user = await is_approved(chat_id, user.id)
         needs_filtering = not is_admin_user and not is_approved_user
 
-        if needs_filtering:
-            await schedule_auto_delete(chat_id, message.id)
-
         # Approval block
         if needs_filtering and await get_approval_mode(chat_id):
             await suppress_delete(message)
@@ -132,10 +129,24 @@ def register(app: Client) -> None:
 
         # Content filters
         content = message.text or message.caption or ""
-        if content and needs_filtering and str(await get_setting(chat_id, "linkfilter", "0")) == "1" and contains_link(content):
+        if (
+            content
+            and needs_filtering
+            and str(await get_setting(chat_id, "linkfilter", "0")) == "1"
+            and contains_link(content)
+        ):
             logger.debug("[FILTER] Link removed in %s from %s", chat_id, user.id)
-            await handle_violation(client, message, user, chat_id, "You are not allowed to share links in this group.")
+            await handle_violation(
+                client,
+                message,
+                user,
+                chat_id,
+                "You are not allowed to share links in this group.",
+            )
             return
+
+        if needs_filtering:
+            await schedule_auto_delete(chat_id, message.id)
 
     async def handle_violation(client: Client, message: Message, user, chat_id: int, reason: str):
         logger.debug("[FILTER] Violation by %s in %s: %s", user.id, chat_id, reason)
