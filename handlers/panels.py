@@ -11,6 +11,8 @@ from utils.db import (
     get_bio_filter,
     add_group,
     add_user,
+    add_broadcast_group,
+    add_broadcast_user,
 )
 from utils.errors import catch_errors
 from utils.messages import safe_edit_message
@@ -68,6 +70,7 @@ async def send_start(client: Client, message: Message, *, include_back: bool = F
         # Always track the group so broadcast works even if a non-admin
         # triggers the start command.
         await add_group(chat.id)
+        await add_broadcast_group(chat.id)
 
         if not await is_admin(client, message):
             await message.reply_text("🔒 Only admins can view the control panel.")
@@ -82,6 +85,7 @@ async def send_start(client: Client, message: Message, *, include_back: bool = F
             include_back=include_back,
         )
         await add_user(user.id)
+        await add_broadcast_user(user.id)
         caption = (
             f"🎉 <b>Welcome to {bot_user.first_name}</b>\n\n"
             f"Hello {mention_html(user.id, user.first_name)}!\n\n"

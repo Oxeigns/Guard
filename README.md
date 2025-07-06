@@ -69,7 +69,8 @@ running in the background.
    Detach with `Ctrl+A` then `D`. Reattach with `screen -r oxygen`.
 
 ## Manual Broadcast
-Only the owner can use `/broadcast <text>` (or reply to a message) to send an announcement to every group the bot is in.
+Only the owner can use `/broadcast <text>` (or reply to a message) to send an announcement.
+Messages are delivered to all groups and private users that have interacted with the bot.
 The Broadcast button in the control panel shows this instruction as well.
 
 ### Tips
