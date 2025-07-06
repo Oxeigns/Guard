@@ -2,13 +2,10 @@ import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message, ChatMemberUpdated
 from config import LOG_GROUP_ID
-from .panels import send_control_panel
+from handlers.panels import send_control_panel
 from utils.db import (
-    add_user,
-    add_group,
-    remove_group,
-    add_broadcast_user,
-    add_broadcast_group,
+    add_user, add_group, remove_group,
+    add_broadcast_user, add_broadcast_group,
     remove_broadcast_group,
 )
 
@@ -18,21 +15,19 @@ logger = logging.getLogger(__name__)
 def register(app: Client) -> None:
     print("✅ Registered: logging.py")
 
-    # Log private /start and store user
+    # Log private /start usage
     @app.on_message(filters.command("start") & filters.private, group=-2)
     async def log_start(client: Client, message: Message):
         user = message.from_user
         if not user:
             return
 
-        # Store user in DB
         try:
             await add_user(user.id)
             await add_broadcast_user(user.id)
         except Exception as exc:
             logger.warning("Failed to store user: %s", exc)
 
-        # Log to group
         log_text = (
             f"🔹 Bot started by: {user.first_name or 'Unknown'} "
             f"(@{user.username or 'None'}) | ID: <code>{user.id}</code>"
@@ -40,16 +35,16 @@ def register(app: Client) -> None:
         try:
             await client.send_message(LOG_GROUP_ID, log_text)
         except Exception as exc:
-            logger.warning("Failed to log start message: %s", exc)
+            logger.warning("Failed to log /start: %s", exc)
 
-    # Handle when bot is added or removed from groups
+    # Log when bot is added or removed from a group
     @app.on_chat_member_updated(group=-2)
     async def log_updates(client: Client, update: ChatMemberUpdated):
         chat = update.chat
         is_self = update.new_chat_member.user.is_self
 
-        # Bot added to group
         if is_self and update.old_chat_member.status in {"kicked", "left"}:
+            # Bot added to a group
             try:
                 await add_group(chat.id)
                 await add_broadcast_group(chat.id)
@@ -77,7 +72,7 @@ def register(app: Client) -> None:
             except Exception as exc:
                 logger.warning("Failed to log group join: %s", exc)
 
-            # Show inline control panel
+            # Attempt to show the control panel
             try:
                 from types import SimpleNamespace
                 dummy_msg = SimpleNamespace(chat=chat, from_user=inviter)
@@ -85,8 +80,8 @@ def register(app: Client) -> None:
             except Exception as exc:
                 logger.warning("Failed to send control panel: %s", exc)
 
-        # Bot removed from group
         elif update.old_chat_member.user.is_self and update.new_chat_member.status in {"kicked", "left"}:
+            # Bot removed from group
             try:
                 await remove_group(chat.id)
                 await remove_broadcast_group(chat.id)
