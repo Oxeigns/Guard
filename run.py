@@ -33,10 +33,11 @@ async def main() -> None:
     await delete_webhook(BOT_TOKEN)
     logger.info("🔌 Webhook deleted (if any). Using polling mode.")
 
-    register_all(bot)
-    logger.info("🤖 Bot handlers registered. Ready to serve!")
+    async with bot:
+        register_all(bot)
+        logger.info("🤖 Bot handlers registered. Ready to serve!")
 
-    await idle()
+        await idle()
 
     await close_db()
     logger.info("🛑 Bot shutdown completed. MongoDB closed.")
