@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def register(app: Client) -> None:
-    print("✅ Registered: broadcast.py")
+    logger.info("✅ Registered: broadcast.py")
 
     @app.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
     @catch_errors
@@ -37,6 +37,7 @@ def register(app: Client) -> None:
             return
 
         group_ids = await get_groups()
+        logger.debug("[BROADCAST] Sending to %d groups", len(group_ids))
         sent, failed = 0, 0
 
         for chat_id in group_ids:
@@ -46,6 +47,7 @@ def register(app: Client) -> None:
                 else:
                     await client.send_message(chat_id, text, parse_mode=ParseMode.HTML)
                 sent += 1
+                logger.debug("[BROADCAST] Sent to %s", chat_id)
 
             except FloodWait as e:
                 logger.warning("⏳ FloodWait for %s: %s sec", chat_id, e.value)

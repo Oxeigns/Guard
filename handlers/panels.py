@@ -128,7 +128,7 @@ def get_help_keyboard(back_cb: str) -> InlineKeyboardMarkup:
 
 # 📦 Register handlers
 def register(app: Client) -> None:
-    print("✅ Registered: panels.py")
+    logger.info("✅ Registered: panels.py")
 
     # /menu shortcut
     @app.on_message(filters.command("menu") & filters.group)

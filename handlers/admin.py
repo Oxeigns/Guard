@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def register(app: Client) -> None:
-    print("✅ Registered: admin.py")
+    logger.info("✅ Registered: admin.py")
 
     # Admin-only group check
     async def _require_admin_group(client: Client, message: Message) -> bool:

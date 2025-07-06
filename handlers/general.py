@@ -10,13 +10,17 @@ logger = logging.getLogger(__name__)
 
 
 def register(app: Client) -> None:
-    print("✅ Registered: general.py")
+    logger.info("✅ Registered: general.py")
 
     # ✅ Panel dispatcher (DM + group)
     @app.on_message(filters.command(["start", "help", "menu", "panel"]) & (filters.private | filters.group))
     @catch_errors
     async def send_panel(client: Client, message: Message):
-        logger.info("[GENERAL] /panel-like command in chat %s", message.chat.id)
+        logger.debug(
+            "[GENERAL] panel command chat=%s user=%s",
+            message.chat.id,
+            message.from_user.id if message.from_user else "?",
+        )
         await send_start(client, message)
 
     # ✅ ID command
@@ -58,4 +62,28 @@ def register(app: Client) -> None:
     @app.on_message(filters.group & ~filters.command(["start", "help", "menu", "panel", "id", "ping"]) & ~filters.service)
     @catch_errors
     async def group_fallback(client: Client, message: Message) -> None:
-        logger.info("[GROUP FALLBACK] %s/%s: %s", message.chat.id, message.from_user.id, message.text)
+        logger.debug(
+            "[GROUP FALLBACK] chat=%s user=%s text=%s",
+            message.chat.id,
+            message.from_user.id if message.from_user else "?",
+            message.text,
+        )
+
+    # 📌 Track when the bot is added to a group so broadcast works reliably
+    @app.on_message(filters.new_chat_members & filters.group)
+    @catch_errors
+    async def track_bot_added(client: Client, message: Message):
+        me = await client.get_me()
+        if any(m.id == me.id for m in message.new_chat_members):
+            from utils.db import add_group
+            await add_group(message.chat.id)
+            logger.info("[GENERAL] Bot added to group %s", message.chat.id)
+
+    @app.on_message(filters.left_chat_member & filters.group)
+    @catch_errors
+    async def track_bot_left(client: Client, message: Message):
+        me = await client.get_me()
+        if message.left_chat_member and message.left_chat_member.id == me.id:
+            from utils.db import remove_group
+            await remove_group(message.chat.id)
+            logger.info("[GENERAL] Bot removed from group %s", message.chat.id)
