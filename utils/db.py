@@ -31,8 +31,11 @@ async def set_setting(chat_id: int, key: str, value: str) -> None:
 
 # ------------------ BIO FILTER ------------------ #
 async def get_bio_filter(chat_id: int) -> bool:
+    """Return True if the bio link filter is enabled for the chat."""
     value = await get_setting(chat_id, "biofilter", "0")
-    return value == "1"
+    if isinstance(value, bool):
+        return value
+    return str(value).lower() in {"1", "true", "on", "yes"}
 
 
 async def set_bio_filter(chat_id: int, enabled: bool) -> None:
