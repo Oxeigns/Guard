@@ -134,6 +134,18 @@ def get_help_keyboard(back_cb: str) -> InlineKeyboardMarkup:
     ])
 
 
+# 🔁 Render group settings panel for a message or callback
+async def render_settings_panel(client: Client, message: Message) -> None:
+    chat_id = message.chat.id
+    markup = await build_settings_panel(chat_id)
+    await safe_edit_message(
+        message,
+        caption="⚙️ <b>Group Settings</b>",
+        reply_markup=markup,
+        parse_mode=ParseMode.HTML,
+    )
+
+
 # 📦 Register handlers
 def register(app: Client) -> None:
     logger.info("✅ Registered: panels.py")
@@ -142,6 +154,12 @@ def register(app: Client) -> None:
     @app.on_message(filters.command("menu") & filters.group)
     async def show_menu(client: Client, message: Message):
         await send_control_panel(client, message)
+
+    # ⚙️ Open settings via inline button
+    @app.on_callback_query(filters.regex("^open_settings$"))
+    async def open_settings_cb(client: Client, query: CallbackQuery):
+        await render_settings_panel(client, query.message)
+        await query.answer()
 
     # ⏪ Back to Main Panel
     @app.on_callback_query(filters.regex("^(cb_start|cb_back_panel)$"))

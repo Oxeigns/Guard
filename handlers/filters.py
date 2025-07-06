@@ -18,7 +18,7 @@ from utils.perms import is_admin
 logger = logging.getLogger(__name__)
 
 LINK_RE = re.compile(
-    r"(?:https?://\S+|tg://\S+|t\.me/\S+|telegram\.me/\S+|(?:\w+\.)+\w{2,})",
+    r"(?:https?://\S+|tg://\S+|t\.me/\S+|telegram\.me/\S+|(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,})",
     re.IGNORECASE,
 )
 MAX_BIO_LENGTH = 800
@@ -68,7 +68,7 @@ def register(app: Client) -> None:
             asyncio.create_task(delete_later(chat_id, msg_id, delay))
 
     # Main message moderation
-    @app.on_message(filters.group & ~filters.service)
+    @app.on_message(filters.group & ~filters.service, group=1)
     @catch_errors
     async def moderate_message(client: Client, message: Message) -> None:
         if not message.from_user or message.from_user.is_bot:
@@ -125,7 +125,7 @@ def register(app: Client) -> None:
         await message.reply_text(msg, parse_mode=ParseMode.HTML, quote=True)
 
     # Edited message check
-    @app.on_edited_message(filters.group & ~filters.service)
+    @app.on_edited_message(filters.group & ~filters.service, group=1)
     @catch_errors
     async def on_edit(client: Client, message: Message):
         if not message.from_user or message.from_user.is_bot:
@@ -145,7 +145,7 @@ def register(app: Client) -> None:
             await schedule_auto_delete(chat_id, message.id, fallback=0)
 
     # New user bio check
-    @app.on_message(filters.new_chat_members)
+    @app.on_message(filters.new_chat_members & filters.group, group=1)
     @catch_errors
     async def check_new_member_bio(client: Client, message: Message):
         chat_id = message.chat.id

@@ -10,7 +10,12 @@ from utils.db import (
     get_setting, set_setting
 )
 from utils.messages import safe_edit_message
-from handlers.panels import send_start, get_help_keyboard, build_settings_panel
+from handlers.panels import (
+    send_start,
+    get_help_keyboard,
+    build_settings_panel,
+    render_settings_panel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -66,14 +71,10 @@ def register(app: Client) -> None:
             await query.answer()
             await send_start(client, query.message, include_back=(data == "cb_back_panel"))
 
-        elif data == "open_settings":
-            await query.answer()
-            await _render_settings_panel(query)
-
         elif data.startswith("toggle_"):
             await query.answer("Toggled ✅")
             await _handle_toggle(data, query.message.chat.id)
-            await _render_settings_panel(query)
+            await render_settings_panel(client, query.message)
 
         elif data in {"cb_help_start", "cb_help_panel"}:
             await query.answer()
@@ -122,16 +123,6 @@ def register(app: Client) -> None:
             await query.answer("⚠️ Unknown action", show_alert=True)
 
 
-# 🔁 Update the group settings panel
-async def _render_settings_panel(query: CallbackQuery):
-    chat_id = query.message.chat.id
-    markup = await build_settings_panel(chat_id)
-    await safe_edit_message(
-        query.message,
-        caption="⚙️ <b>Group Settings</b>",
-        reply_markup=markup,
-        parse_mode=ParseMode.HTML,
-    )
 
 
 # ⚙️ Toggle settings and update DB
