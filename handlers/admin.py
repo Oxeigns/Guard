@@ -51,6 +51,21 @@ def register(app: Client) -> None:
                 await app.unban_chat_member(message.chat.id, user.id)
             elif action == "mute":
                 await app.restrict_chat_member(message.chat.id, user.id, ChatPermissions())
+            elif action == "unban":
+                await app.unban_chat_member(message.chat.id, user.id)
+            elif action == "unmute":
+                await app.restrict_chat_member(
+                    message.chat.id,
+                    user.id,
+                    ChatPermissions(
+                        can_send_messages=True,
+                        can_send_media_messages=True,
+                        can_send_polls=True,
+                        can_send_other_messages=True,
+                        can_add_web_page_previews=True,
+                        can_invite_users=True,
+                    ),
+                )
             await message.reply_text(f"{action.title()} successful ✅")
         except Exception as exc:
             logger.error("%s failed: %s", action, exc)
@@ -72,6 +87,16 @@ def register(app: Client) -> None:
     async def mute_cmd(_, message: Message):
         await _admin_action(message, "mute")
 
+    @app.on_message(filters.command("unban") & filters.group)
+    @catch_errors
+    async def unban_cmd(_, message: Message):
+        await _admin_action(message, "unban")
+
+    @app.on_message(filters.command("unmute") & filters.group)
+    @catch_errors
+    async def unmute_cmd(_, message: Message):
+        await _admin_action(message, "unmute")
+
     @app.on_message(filters.command("warn") & filters.group)
     @catch_errors
     async def warn_cmd(_, message: Message):
@@ -90,7 +115,7 @@ def register(app: Client) -> None:
         else:
             await message.reply_text(f"⚠ Warned {user.mention} ({count}/3)")
 
-    @app.on_message(filters.command("resetwarn") & filters.group)
+    @app.on_message(filters.command(["resetwarn", "rmwarn"]) & filters.group)
     @catch_errors
     async def resetwarn_cmd(_, message: Message):
         if not await _require_admin_group(app, message):

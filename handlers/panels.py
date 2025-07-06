@@ -1,12 +1,20 @@
 import os
+import logging
 from html import escape
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode, ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
 from utils.perms import is_admin
-from utils.db import get_setting, get_bio_filter
-from config import OWNER_ID
+from utils.db import (
+    get_setting,
+    get_bio_filter,
+    add_group,
+    add_user,
+)
+from config import OWNER_ID, LOG_GROUP_ID
+
+logger = logging.getLogger(__name__)
 
 PANEL_IMAGE_URL = os.getenv("PANEL_IMAGE_URL", "https://files.catbox.moe/uvqeln.jpg")
 
@@ -58,6 +66,7 @@ async def send_start(client: Client, message: Message, *, include_back: bool = F
         if not await is_admin(client, message):
             await message.reply_text("🔒 Only admins can view the control panel.")
             return
+        await add_group(chat.id)
         markup = await build_settings_panel(chat.id)
         caption = "⚙️ <b>Group Settings</b>"
     else:
@@ -66,6 +75,7 @@ async def send_start(client: Client, message: Message, *, include_back: bool = F
             is_owner=is_owner,
             include_back=include_back,
         )
+        await add_user(user.id)
         caption = (
             f"🎉 <b>Welcome to {bot_user.first_name}</b>\n\n"
             f"Hello {mention_html(user.id, user.first_name)}!\n\n"
@@ -81,6 +91,16 @@ async def send_start(client: Client, message: Message, *, include_back: bool = F
         parse_mode=ParseMode.HTML,
     )
 
+    if LOG_GROUP_ID:
+        try:
+            loc = "DM" if chat.type == ChatType.PRIVATE else f"group {chat.id}"
+            text = (
+                f"📥 Panel opened in {loc} by {mention_html(user.id, user.first_name)}"
+            )
+            await client.send_message(LOG_GROUP_ID, text, parse_mode=ParseMode.HTML)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to send log: %s", exc)
+
 
 # 🔁 Shortcut for /menu
 async def send_control_panel(client: Client, message: Message) -> None:
@@ -94,6 +114,7 @@ def get_help_keyboard(back_cb: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton("🧹 AutoDelete", callback_data="help_autodelete")],
         [InlineKeyboardButton("🔗 LinkFilter", callback_data="help_linkfilter")],
         [InlineKeyboardButton("✏️ EditMode", callback_data="help_editmode")],
+        [InlineKeyboardButton("👮 Admin", callback_data="help_admin")],
         [InlineKeyboardButton("📢 Broadcast", callback_data="help_broadcast")],
         [
             InlineKeyboardButton("👨‍💻 Developer", callback_data="help_developer"),

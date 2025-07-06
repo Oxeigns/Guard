@@ -35,6 +35,13 @@ help_sections = {
         "Deletes edited messages by normal users.\n"
         "Use <code>/editfilter on|off</code>."
     ),
+    "help_admin": (
+        "👮 <b>Admin Commands</b>\n"
+        "/ban, /unban - Ban or unban users\n"
+        "/kick - Kick users\n"
+        "/mute, /unmute - Restrict or allow talking\n"
+        "/warn - issue warning, /rmwarn - clear warnings",
+    ),
     "help_broadcast": (
         "📢 <b>Broadcast</b>\n"
         "Owner-only broadcast to groups via <code>/broadcast</code>."
