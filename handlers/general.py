@@ -5,6 +5,7 @@ from pyrogram.enums import ParseMode, ChatType
 
 from utils.errors import catch_errors
 from handlers.panels import send_start  # ✅ Panel entry
+from config import LOG_GROUP_ID
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,10 @@ def register(app: Client) -> None:
             message.chat.id,
             message.from_user.id if message.from_user else "?",
         )
-        await send_start(client, message)
+        log_panel = (
+            message.chat.type == ChatType.PRIVATE and message.command and message.command[0].lower() == "start"
+        )
+        await send_start(client, message, log_panel=log_panel)
 
     # ✅ ID command
     @app.on_message(filters.command("id") & (filters.private | filters.group))
@@ -79,6 +83,12 @@ def register(app: Client) -> None:
             await add_group(message.chat.id)
             await add_broadcast_group(message.chat.id)
             logger.info("[GENERAL] Bot added to group %s", message.chat.id)
+            if LOG_GROUP_ID:
+                try:
+                    text = f"➕ Bot added to group {message.chat.id}"
+                    await client.send_message(LOG_GROUP_ID, text)
+                except Exception as exc:
+                    logger.warning("Failed to send log: %s", exc)
 
     @app.on_message(filters.left_chat_member & filters.group)
     @catch_errors
@@ -89,3 +99,9 @@ def register(app: Client) -> None:
             await remove_group(message.chat.id)
             await remove_broadcast_group(message.chat.id)
             logger.info("[GENERAL] Bot removed from group %s", message.chat.id)
+            if LOG_GROUP_ID:
+                try:
+                    text = f"➖ Bot removed from group {message.chat.id}"
+                    await client.send_message(LOG_GROUP_ID, text)
+                except Exception as exc:
+                    logger.warning("Failed to send log: %s", exc)

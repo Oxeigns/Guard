@@ -92,27 +92,32 @@ def register(app: Client) -> None:
             await message.reply_text("❌ You are not approved to speak here.", quote=True)
             return
 
-        # Content filters
-        content = message.text or message.caption or ""
-        if content:
-            if needs_filtering and str(await get_setting(chat_id, "linkfilter", "0")) == "1" and contains_link(content):
-                logger.debug("[FILTER] Link removed in %s from %s", chat_id, user.id)
-                await handle_violation(client, message, user, chat_id, "You are not allowed to share links in this group.")
+        if needs_filtering and await get_bio_filter(chat_id):
+            bio = getattr(user, "bio", "")
+            if not bio:
+                try:
+                    user_info = await client.get_chat(user.id)
+                    bio = getattr(user_info, "bio", "")
+                except Exception:
+                    bio = ""
+
+            if bio and (len(bio) > MAX_BIO_LENGTH or contains_link(bio)):
+                logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
+                await handle_violation(
+                    client,
+                    message,
+                    user,
+                    chat_id,
+                    "Your bio contains a link or is too long, which is not allowed.",
+                )
                 return
 
-            if needs_filtering and await get_bio_filter(chat_id):
-                bio = getattr(user, "bio", "")
-                if not bio:
-                    try:
-                        user_info = await client.get_chat(user.id)
-                        bio = getattr(user_info, "bio", "")
-                    except Exception:
-                        bio = ""
-
-                if bio and (len(bio) > MAX_BIO_LENGTH or contains_link(bio)):
-                    logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
-                    await handle_violation(client, message, user, chat_id, "Your bio contains a link or is too long, which is not allowed.")
-                    return
+        # Content filters
+        content = message.text or message.caption or ""
+        if content and needs_filtering and str(await get_setting(chat_id, "linkfilter", "0")) == "1" and contains_link(content):
+            logger.debug("[FILTER] Link removed in %s from %s", chat_id, user.id)
+            await handle_violation(client, message, user, chat_id, "You are not allowed to share links in this group.")
+            return
 
     async def handle_violation(client: Client, message: Message, user, chat_id: int, reason: str):
         logger.debug("[FILTER] Violation by %s in %s: %s", user.id, chat_id, reason)
