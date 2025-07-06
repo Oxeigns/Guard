@@ -76,8 +76,8 @@ async def get_user_bio(client: Client, user) -> str:
         return cached[0]
 
     try:
-        user_info = await client.get_users(user.id)
-        bio = getattr(user_info, "bio", "") or ""
+        chat = await client.get_chat(user.id)
+        bio = getattr(chat, "bio", "") or ""
         _user_bio_cache[user.id] = (bio, now)
         return bio
     except Exception as e:
