@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from pyrogram import Client, idle
 from pyrogram.enums import ParseMode
 
@@ -34,9 +35,10 @@ async def main() -> None:
     logger.info("🔌 Webhook deleted (if any). Using polling mode.")
 
     register_all(bot)
-    logger.info("🤖 Bot is live and listening...")
 
-    await idle()
+    async with bot:
+        logger.info("🤖 Bot is live and listening...")
+        await idle()
 
     await close_db()
     logger.info("🔚 Bot stopped cleanly.")
@@ -44,4 +46,4 @@ async def main() -> None:
 
 # Run the bot
 if __name__ == "__main__":
-    bot.run(main())
+    asyncio.run(main())
