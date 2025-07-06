@@ -16,19 +16,24 @@ logger = logging.getLogger(__name__)
 def register(app: Client) -> None:
     print("✅ Registered: admin.py")
 
-    # Helper: Require group admin
+    # Admin-only group check
     async def _require_admin_group(client: Client, message: Message) -> bool:
         if message.chat.type not in {ChatType.GROUP, ChatType.SUPERGROUP}:
             await message.reply_text("❗ This command only works in groups.")
             return False
 
-        member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        try:
+            member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        except Exception as e:
+            logger.warning("Failed to fetch member: %s", e)
+            return False
+
         if member.status not in {ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER}:
             await message.reply_text("🔒 You must be an admin to use this.")
             return False
         return True
 
-    # Admin Actions: ban, kick, mute
+    # Central admin action executor
     async def _admin_action(message: Message, action: str) -> None:
         if not await _require_admin_group(app, message):
             return
@@ -49,8 +54,9 @@ def register(app: Client) -> None:
             await message.reply_text(f"{action.title()} successful ✅")
         except Exception as exc:
             logger.error("%s failed: %s", action, exc)
-            await message.reply_text(f"❌ Failed: {exc}")
+            await message.reply_text(f"❌ Failed to {action}: {exc}")
 
+    # Basic moderation commands
     @app.on_message(filters.command("ban") & filters.group)
     @catch_errors
     async def ban_cmd(_, message: Message):
@@ -71,7 +77,6 @@ def register(app: Client) -> None:
     async def warn_cmd(_, message: Message):
         if not await _require_admin_group(app, message):
             return
-
         user = message.reply_to_message.from_user if message.reply_to_message else None
         if not user:
             await message.reply_text("📌 Reply to a user's message.")
@@ -90,16 +95,23 @@ def register(app: Client) -> None:
     async def resetwarn_cmd(_, message: Message):
         if not await _require_admin_group(app, message):
             return
-
         user = message.reply_to_message.from_user if message.reply_to_message else None
         if not user:
             await message.reply_text("📌 Reply to a user's message.")
             return
-
         await reset_warning(message.chat.id, user.id)
         await message.reply_text(f"🧹 Warnings reset for {user.mention}")
 
-    # Bio Filter Toggle
+    # Filter toggles
+    async def _toggle_setting_cmd(message: Message, key: str, label: str):
+        if len(message.command) < 2:
+            await message.reply_text(f"Usage: /{key} on|off")
+            return
+        state = message.command[1].lower() in {"on", "enable", "1", "true"}
+        await set_setting(message.chat.id, key, "1" if state else "0")
+        status = "ENABLED ✅" if state else "DISABLED ❌"
+        await message.reply_text(f"{label} {status}")
+
     @app.on_message(filters.command("biolink") & filters.group)
     @catch_errors
     async def biolink_cmd(_, message: Message):
@@ -110,27 +122,15 @@ def register(app: Client) -> None:
         await set_bio_filter(message.chat.id, state)
         await message.reply_text(f"🌐 Bio link filter {'ENABLED ✅' if state else 'DISABLED ❌'}")
 
-    # LinkFilter Toggle
     @app.on_message(filters.command("linkfilter") & filters.group)
     @catch_errors
     async def linkfilter_cmd(_, message: Message):
-        if len(message.command) < 2:
-            await message.reply_text("Usage: /linkfilter on|off")
-            return
-        state = message.command[1].lower() in {"on", "enable", "1", "true"}
-        await set_setting(message.chat.id, "linkfilter", "1" if state else "0")
-        await message.reply_text(f"🔗 Link filter {'ENABLED ✅' if state else 'DISABLED ❌'}")
+        await _toggle_setting_cmd(message, "linkfilter", "🔗 Link filter")
 
-    # EditFilter Toggle
     @app.on_message(filters.command(["editfilter", "editdelete"]) & filters.group)
     @catch_errors
     async def editfilter_cmd(_, message: Message):
-        if len(message.command) < 2:
-            await message.reply_text("Usage: /editfilter on|off")
-            return
-        state = message.command[1].lower() in {"on", "enable", "1", "true"}
-        await set_setting(message.chat.id, "editmode", "1" if state else "0")
-        await message.reply_text(f"✏️ Edit filter {'ENABLED ✅' if state else 'DISABLED ❌'}")
+        await _toggle_setting_cmd(message, "editmode", "✏️ Edit filter")
 
     @app.on_message(filters.command("setautodelete") & filters.group)
     @catch_errors
@@ -145,7 +145,7 @@ def register(app: Client) -> None:
         except ValueError:
             await message.reply_text("❗ Provide a valid number of seconds.")
 
-    # Approval Mode Commands
+    # Approval system
     @app.on_message(filters.command("approve") & filters.group)
     @catch_errors
     async def approve_cmd(_, message: Message):
@@ -200,5 +200,4 @@ def register(app: Client) -> None:
             else:
                 await message.reply_text("Usage: /approval [on|off]")
                 return
-        state = "ENABLED ✅" if enabled else "DISABLED ❌"
-        await message.reply_text(f"Approval mode is now {state}")
+        await message.reply_text(f"👥 Approval mode is now {'ENABLED ✅' if enabled else 'DISABLED ❌'}")
