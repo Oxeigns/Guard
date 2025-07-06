@@ -36,15 +36,12 @@ async def suppress_delete(message: Message):
 
 
 async def get_user_bio(client: Client, user) -> str:
-    """Return the user's bio, fetching it if necessary."""
-    bio = getattr(user, "bio", "")
-    if not bio:
-        try:
-            user_info = await client.get_chat(user.id)
-            bio = getattr(user_info, "bio", "")
-        except Exception:
-            bio = ""
-    return bio
+    """Return the user's bio, always fetching the latest from Telegram."""
+    try:
+        user_info = await client.get_chat(user.id)
+        return getattr(user_info, "bio", "") or ""
+    except Exception:
+        return ""
 
 
 async def bio_link_violation(

@@ -47,7 +47,7 @@ HELP_SECTIONS = {
         "/ban, /unban - Ban or unban users\n"
         "/kick - Kick users\n"
         "/mute, /unmute - Restrict or allow talking\n"
-        "/warn - issue warning, /rmwarn - clear warnings",
+        "/warn - issue warning, /rmwarn - clear warnings"
     ),
     "help_broadcast": (
         "📢 <b>Broadcast</b>\n"
