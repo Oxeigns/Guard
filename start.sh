@@ -1,3 +1,3 @@
 #!/bin/sh
 set -e
-exec python -u oxygenbot.py
+exec python -u run.py
