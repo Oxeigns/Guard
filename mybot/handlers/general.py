@@ -41,3 +41,20 @@ def register(app: Client) -> None:
     async def ping_cmd(client: Client, message: Message) -> None:
         logger.info("[GENERAL] ping command in chat %s", message.chat.id)
         await message.reply_text("🏓 Pong!")
+
+    @app.on_message(filters.private & ~filters.command(""))
+    @catch_errors
+    async def dm_fallback(client: Client, message: Message) -> None:
+        """Fallback for private chats when no command matched."""
+        print(f"[DM FALLBACK] {message.from_user.id}: {message.text}")
+        await message.reply_text(
+            "🤖 I received your message, but didn’t understand it."
+        )
+
+    @app.on_message(filters.group & ~filters.command("") & ~filters.service)
+    @catch_errors
+    async def group_fallback(client: Client, message: Message) -> None:
+        """Fallback for group chats when no command matched."""
+        print(
+            f"[GROUP FALLBACK] {message.chat.id}/{message.from_user.id}: {message.text}"
+        )
