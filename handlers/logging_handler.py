@@ -100,6 +100,15 @@ def register(app: Client) -> None:
                 parse_mode=ParseMode.HTML,
             )
 
+        elif data == "help_admin":
+            await query.answer()
+            await safe_edit_message(
+                query.message,
+                caption=HELP_SECTIONS.get("help_admin", ""),
+                reply_markup=get_help_keyboard("cb_help_start"),
+                parse_mode=ParseMode.HTML,
+            )
+
         elif data in HELP_SECTIONS:
             await query.answer()
             await safe_edit_message(
