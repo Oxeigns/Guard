@@ -2,6 +2,7 @@ import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message, ChatPermissions
 from pyrogram.enums import ParseMode, ChatType, ChatMemberStatus
+
 from utils.errors import catch_errors
 from utils.db import (
     approve_user, unapprove_user, get_approved,
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 def register(app: Client) -> None:
     print("✅ Registered: admin.py")
 
-    # Admin check
+    # Helper: Require group admin
     async def _require_admin_group(client: Client, message: Message) -> bool:
         if message.chat.type not in {ChatType.GROUP, ChatType.SUPERGROUP}:
             await message.reply_text("❗ This command only works in groups.")
@@ -27,7 +28,7 @@ def register(app: Client) -> None:
             return False
         return True
 
-    # Admin actions: ban/kick/mute
+    # Admin Actions: ban, kick, mute
     async def _admin_action(message: Message, action: str) -> None:
         if not await _require_admin_group(app, message):
             return
@@ -50,7 +51,6 @@ def register(app: Client) -> None:
             logger.error("%s failed: %s", action, exc)
             await message.reply_text(f"❌ Failed: {exc}")
 
-    # Admin Commands
     @app.on_message(filters.command("ban") & filters.group)
     @catch_errors
     async def ban_cmd(_, message: Message):
@@ -71,6 +71,7 @@ def register(app: Client) -> None:
     async def warn_cmd(_, message: Message):
         if not await _require_admin_group(app, message):
             return
+
         user = message.reply_to_message.from_user if message.reply_to_message else None
         if not user:
             await message.reply_text("📌 Reply to a user's message.")
@@ -89,21 +90,16 @@ def register(app: Client) -> None:
     async def resetwarn_cmd(_, message: Message):
         if not await _require_admin_group(app, message):
             return
+
         user = message.reply_to_message.from_user if message.reply_to_message else None
         if not user:
             await message.reply_text("📌 Reply to a user's message.")
             return
+
         await reset_warning(message.chat.id, user.id)
         await message.reply_text(f"🧹 Warnings reset for {user.mention}")
 
-    # Setting toggles
-    async def _toggle_setting(message: Message, key: str, value: str, label: str):
-        if not await _require_admin_group(app, message):
-            return
-        await set_setting(message.chat.id, key, value)
-        status = "ENABLED ✅" if value == "1" else "DISABLED ❌"
-        await message.reply_text(f"{label} {status}")
-
+    # Bio Filter Toggle
     @app.on_message(filters.command("biolink") & filters.group)
     @catch_errors
     async def biolink_cmd(_, message: Message):
@@ -112,10 +108,9 @@ def register(app: Client) -> None:
             return
         state = message.command[1].lower() in {"on", "enable", "1", "true"}
         await set_bio_filter(message.chat.id, state)
-        await message.reply_text(
-            f"🌐 Bio link filter {'ENABLED ✅' if state else 'DISABLED ❌'}"
-        )
+        await message.reply_text(f"🌐 Bio link filter {'ENABLED ✅' if state else 'DISABLED ❌'}")
 
+    # LinkFilter Toggle
     @app.on_message(filters.command("linkfilter") & filters.group)
     @catch_errors
     async def linkfilter_cmd(_, message: Message):
@@ -123,8 +118,10 @@ def register(app: Client) -> None:
             await message.reply_text("Usage: /linkfilter on|off")
             return
         state = message.command[1].lower() in {"on", "enable", "1", "true"}
-        await _toggle_setting(message, "linkfilter", "1" if state else "0", "🔗 Link filter")
+        await set_setting(message.chat.id, "linkfilter", "1" if state else "0")
+        await message.reply_text(f"🔗 Link filter {'ENABLED ✅' if state else 'DISABLED ❌'}")
 
+    # EditFilter Toggle
     @app.on_message(filters.command(["editfilter", "editdelete"]) & filters.group)
     @catch_errors
     async def editfilter_cmd(_, message: Message):
@@ -132,7 +129,8 @@ def register(app: Client) -> None:
             await message.reply_text("Usage: /editfilter on|off")
             return
         state = message.command[1].lower() in {"on", "enable", "1", "true"}
-        await _toggle_setting(message, "editmode", "1" if state else "0", "✏️ Edit filter")
+        await set_setting(message.chat.id, "editmode", "1" if state else "0")
+        await message.reply_text(f"✏️ Edit filter {'ENABLED ✅' if state else 'DISABLED ❌'}")
 
     @app.on_message(filters.command("setautodelete") & filters.group)
     @catch_errors
@@ -147,7 +145,7 @@ def register(app: Client) -> None:
         except ValueError:
             await message.reply_text("❗ Provide a valid number of seconds.")
 
-    # Approval commands
+    # Approval Mode Commands
     @app.on_message(filters.command("approve") & filters.group)
     @catch_errors
     async def approve_cmd(_, message: Message):
