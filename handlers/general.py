@@ -75,8 +75,9 @@ def register(app: Client) -> None:
     async def track_bot_added(client: Client, message: Message):
         me = await client.get_me()
         if any(m.id == me.id for m in message.new_chat_members):
-            from utils.db import add_group
+            from utils.db import add_group, add_broadcast_group
             await add_group(message.chat.id)
+            await add_broadcast_group(message.chat.id)
             logger.info("[GENERAL] Bot added to group %s", message.chat.id)
 
     @app.on_message(filters.left_chat_member & filters.group)
@@ -84,6 +85,7 @@ def register(app: Client) -> None:
     async def track_bot_left(client: Client, message: Message):
         me = await client.get_me()
         if message.left_chat_member and message.left_chat_member.id == me.id:
-            from utils.db import remove_group
+            from utils.db import remove_group, remove_broadcast_group
             await remove_group(message.chat.id)
+            await remove_broadcast_group(message.chat.id)
             logger.info("[GENERAL] Bot removed from group %s", message.chat.id)
