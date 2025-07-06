@@ -30,8 +30,8 @@ def mention_html(user_id: int, name: str) -> str:
 # 🔘 Start Panel (DM)
 async def build_start_panel(is_admin: bool = False, *, is_owner: bool = False, include_back: bool = False) -> InlineKeyboardMarkup:
     buttons = [[InlineKeyboardButton("📘 Commands", callback_data="cb_help_start")]]
-    if is_admin:
-        buttons.insert(0, [InlineKeyboardButton("⚙️ Settings", callback_data="open_settings")])
+    # Show settings button to everyone so non-admins can view the panel too
+    buttons.insert(0, [InlineKeyboardButton("⚙️ Settings", callback_data="open_settings")])
     if is_owner:
         buttons.append([InlineKeyboardButton("📢 Broadcast", callback_data="help_broadcast")])
     if include_back:
@@ -78,10 +78,6 @@ async def send_start(
         # Always track the group so broadcast works even if a non-admin
         await add_group(chat.id)
         await add_broadcast_group(chat.id)
-
-        if not is_admin_user:
-            await message.reply_text("🔒 Only admins can view the control panel.")
-            return
     else:
         await add_user(user.id)
         await add_broadcast_user(user.id)
@@ -98,6 +94,9 @@ async def send_start(
         "Use the buttons below to access features and controls.\n\n"
         "✅ Group-ready\n🛠 Admin settings\n🧠 Smart moderation tools"
     )
+
+    if chat.type in {ChatType.GROUP, ChatType.SUPERGROUP} and not is_admin_user:
+        caption += "\n\n<em>Settings are read-only for non-admins.</em>"
 
     await message.reply_photo(
         photo=PANEL_IMAGE_URL,

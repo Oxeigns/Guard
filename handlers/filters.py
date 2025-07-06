@@ -21,8 +21,6 @@ LINK_RE = re.compile(
     r"(?:https?://\S+|tg://\S+|t\.me/\S+|telegram\.me/\S+|(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,})",
     re.IGNORECASE,
 )
-# Bios longer than Telegram's official 70 character limit are considered spammy
-MAX_BIO_LENGTH = 4
 
 
 def contains_link(text: str) -> bool:
@@ -102,14 +100,14 @@ def register(app: Client) -> None:
                 except Exception:
                     bio = ""
 
-            if bio and (len(bio) > MAX_BIO_LENGTH or contains_link(bio)):
+            if bio and contains_link(bio):
                 logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
                 await handle_violation(
                     client,
                     message,
                     user,
                     chat_id,
-                    "Your bio contains a link or is too long, which is not allowed.",
+                    "Your bio contains a link, which is not allowed.",
                 )
                 return
 
@@ -172,12 +170,12 @@ def register(app: Client) -> None:
                 except Exception:
                     continue
 
-            if bio and (len(bio) > MAX_BIO_LENGTH or contains_link(bio)):
+            if bio and contains_link(bio):
                 logger.debug("[FILTER] New member bio violation %s in %s", user.id, chat_id)
                 await suppress_delete(message)
                 count = await increment_warning(chat_id, user.id)
                 if count >= 3:
                     await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
                     await reset_warning(chat_id, user.id)
-                msg, _ = build_warning(count, user, "Your bio contains a link or is too long, which is not allowed.", is_final=(count >= 3))
+                msg, _ = build_warning(count, user, "Your bio contains a link, which is not allowed.", is_final=(count >= 3))
                 await message.reply_text(msg, parse_mode=ParseMode.HTML, quote=True)
