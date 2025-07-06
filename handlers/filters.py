@@ -63,6 +63,7 @@ async def get_user_bio(client: Client, user) -> str:
 async def bio_link_violation(client: Client, message: Message, user, chat_id: int) -> bool:
     """Check user's bio for links and handle violations."""
     if not await get_bio_filter(chat_id):
+        logger.debug("Bio link filter disabled for chat %s", chat_id)
         return False
 
     now = time.monotonic()
@@ -76,6 +77,7 @@ async def bio_link_violation(client: Client, message: Message, user, chat_id: in
     if not bio:
         logger.debug("Empty bio for user %s in chat %s", user.id, chat_id)
         return False
+    logger.debug("Bio text for %s in %s: %r", user.id, chat_id, bio)
 
     if contains_link(bio):
         logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
@@ -91,6 +93,18 @@ async def bio_link_violation(client: Client, message: Message, user, chat_id: in
     else:
         logger.debug("Bio clean for %s in chat %s", user.id, chat_id)
         return False
+
+
+async def handle_violation(client: Client, message: Message, user, chat_id: int, reason: str) -> None:
+    """Warn or mute a user for violating chat rules."""
+    logger.debug("[FILTER] Violation by %s in %s: %s", user.id, chat_id, reason)
+    await suppress_delete(message)
+    count = await increment_warning(chat_id, user.id)
+    if count >= 3:
+        await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
+        await reset_warning(chat_id, user.id)
+    msg, _ = build_warning(count, user, reason, is_final=(count >= 3))
+    await message.reply_text(msg, parse_mode=ParseMode.HTML, quote=True)
 
 
 def build_warning(count: int, user, reason: str, is_final: bool = False):
@@ -170,16 +184,6 @@ def register(app: Client) -> None:
 
         if needs_filtering:
             await schedule_auto_delete(chat_id, message.id)
-
-    async def handle_violation(client: Client, message: Message, user, chat_id: int, reason: str):
-        logger.debug("[FILTER] Violation by %s in %s: %s", user.id, chat_id, reason)
-        await suppress_delete(message)
-        count = await increment_warning(chat_id, user.id)
-        if count >= 3:
-            await client.restrict_chat_member(chat_id, user.id, ChatPermissions())
-            await reset_warning(chat_id, user.id)
-        msg, _ = build_warning(count, user, reason, is_final=(count >= 3))
-        await message.reply_text(msg, parse_mode=ParseMode.HTML, quote=True)
 
     # Edited message check
     @app.on_edited_message(filters.group & ~filters.service, group=1)
