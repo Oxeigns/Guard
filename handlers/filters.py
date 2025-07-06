@@ -29,6 +29,9 @@ LINK_RE = re.compile(
 # Cache user bios to avoid excessive get_chat calls which may trigger FloodWaits
 _user_bio_cache: dict[int, tuple[str, float]] = {}
 BIO_CACHE_TTL = 15 * 60  # seconds
+# store last violation timestamp to avoid duplicate warnings/spam
+_bio_violation_cache: dict[tuple[int, int], float] = {}
+BIO_VIOLATION_TTL = 60  # seconds
 
 
 def contains_link(text: str) -> bool:
@@ -48,7 +51,8 @@ async def get_user_bio(client: Client, user) -> str:
         return cached[0]
 
     try:
-        user_info = await client.get_chat(user.id)
+        # get_users is more reliable for fetching old users' bios
+        user_info = (await client.get_users(user.id))
         bio = getattr(user_info, "bio", "") or ""
         _user_bio_cache[user.id] = (bio, now)
         return bio
@@ -64,6 +68,11 @@ async def bio_link_violation(
     if not await get_bio_filter(chat_id):
         return False
 
+    now = time.monotonic()
+    last = _bio_violation_cache.get((chat_id, user.id))
+    if last and now - last < BIO_VIOLATION_TTL:
+        return False
+
     bio = await get_user_bio(client, user)
     if bio and contains_link(bio):
         logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
@@ -74,6 +83,7 @@ async def bio_link_violation(
             chat_id,
             "Your bio contains a link, which is not allowed.",
         )
+        _bio_violation_cache[(chat_id, user.id)] = now
         return True
     return False
 
