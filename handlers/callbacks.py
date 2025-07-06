@@ -10,7 +10,7 @@ from utils.db import (
     get_setting, set_setting
 )
 from utils.messages import safe_edit_message
-from .panels import send_start, get_help_keyboard, build_settings_panel
+from handlers.panels import send_start, get_help_keyboard, build_settings_panel
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +50,13 @@ def register(app: Client) -> None:
     async def callbacks(client: Client, query: CallbackQuery):
         data = query.data
         chat_id = query.message.chat.id
+        user_id = query.from_user.id
 
-        logger.debug("[CALLBACK] %s from %s in chat %s", data, query.from_user.id, chat_id)
+        logger.debug("[CALLBACK] Data: %s | From: %s | Chat: %s", data, user_id, chat_id)
 
         if data in {"cb_start", "cb_back_panel"}:
             await query.answer()
-            await send_start(client, query.message, include_back=data == "cb_back_panel")
+            await send_start(client, query.message, include_back=(data == "cb_back_panel"))
 
         elif data == "open_settings":
             await query.answer()
@@ -135,7 +136,7 @@ def register(app: Client) -> None:
             await query.answer("⚠️ Unknown action", show_alert=True)
 
 
-# Helper to refresh the settings panel
+# 🔁 Refresh settings panel after toggle
 async def _update_settings_panel(query: CallbackQuery, chat_id: int):
     await query.answer("Toggled")
     markup = await build_settings_panel(chat_id)
