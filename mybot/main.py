@@ -7,6 +7,7 @@ from .config import API_ID, API_HASH, BOT_TOKEN, MONGO_URI, MONGO_DB, LOG_LEVEL
 from .handlers import register_all
 from .utils.db import init_db, close_db
 from .utils.errors import catch_errors
+from .utils.webhook import delete_webhook
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -31,11 +32,7 @@ async def _ping(_, message):
 async def main() -> None:
     logger.info("🚀 Starting bot")
     await init_db(MONGO_URI, MONGO_DB)
-    try:
-        await bot.delete_webhook(drop_pending_updates=True)
-        logger.info("✅ Cleared any existing webhook")
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Failed to delete webhook: %s", exc)
+    await delete_webhook(BOT_TOKEN)
     register_all(bot)
     async with bot:
         logger.info("🤖 Bot started and listening...")
