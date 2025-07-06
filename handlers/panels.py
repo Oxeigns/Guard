@@ -12,6 +12,8 @@ from utils.db import (
     add_group,
     add_user,
 )
+from utils.errors import catch_errors
+from utils.messages import safe_edit_message
 from config import OWNER_ID, LOG_GROUP_ID
 
 logger = logging.getLogger(__name__)
@@ -149,10 +151,12 @@ def register(app: Client) -> None:
 
     # 📘 Help Panel
     @app.on_callback_query(filters.regex("^cb_help_start$"))
+    @catch_errors
     async def open_help(client: Client, query: CallbackQuery):
-        await query.message.edit_text(
-            "📘 <b>Command Help</b>\n\nUse the buttons below to learn more.",
+        await safe_edit_message(
+            query.message,
+            caption="📘 <b>Command Help</b>\n\nUse the buttons below to learn more.",
             reply_markup=get_help_keyboard("cb_start"),
-            parse_mode=ParseMode.HTML
+            parse_mode=ParseMode.HTML,
         )
         await query.answer()
