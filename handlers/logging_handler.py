@@ -69,7 +69,12 @@ def register(app: Client) -> None:
 
         if data in {"cb_start", "cb_back_panel"}:
             await query.answer()
-            await send_start(client, query.message, include_back=(data == "cb_back_panel"))
+            await send_start(
+                client,
+                query.message,
+                include_back=(data == "cb_back_panel"),
+                log_panel=False,
+            )
 
         elif data.startswith("toggle_"):
             await query.answer("Toggled ✅")

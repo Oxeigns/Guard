@@ -60,39 +60,44 @@ async def build_settings_panel(chat_id: int) -> InlineKeyboardMarkup:
 
 
 # 📩 Welcome / Panel Sender
-async def send_start(client: Client, message: Message, *, include_back: bool = False) -> None:
+async def send_start(
+    client: Client,
+    message: Message,
+    *,
+    include_back: bool = False,
+    log_panel: bool = True,
+) -> None:
     bot_user = await client.get_me()
     user = message.from_user
     chat = message.chat
     is_owner = user.id == OWNER_ID
 
+    is_admin_user = await is_admin(client, message)
+
     if chat.type in {ChatType.GROUP, ChatType.SUPERGROUP}:
         # Always track the group so broadcast works even if a non-admin
-        # triggers the start command.
         await add_group(chat.id)
         await add_broadcast_group(chat.id)
 
-        if not await is_admin(client, message):
+        if not is_admin_user:
             await message.reply_text("🔒 Only admins can view the control panel.")
             return
-
-        markup = await build_settings_panel(chat.id)
-        caption = "⚙️ <b>Group Settings</b>"
     else:
-        markup = await build_start_panel(
-            is_admin=bool(await is_admin(client, message)),
-            is_owner=is_owner,
-            include_back=include_back,
-        )
         await add_user(user.id)
         await add_broadcast_user(user.id)
-        caption = (
-            f"🎉 <b>Welcome to {bot_user.first_name}</b>\n\n"
-            f"Hello {mention_html(user.id, user.first_name)}!\n\n"
-            "I'm here to help manage your group efficiently.\n"
-            "Use the buttons below to access features and controls.\n\n"
-            "✅ Group-ready\n🛠 Admin settings\n🧠 Smart moderation tools"
-        )
+
+    markup = await build_start_panel(
+        is_admin=is_admin_user,
+        is_owner=is_owner,
+        include_back=include_back,
+    )
+    caption = (
+        f"🎉 <b>Welcome to {bot_user.first_name}</b>\n\n"
+        f"Hello {mention_html(user.id, user.first_name)}!\n\n"
+        "I'm here to help manage your group efficiently.\n"
+        "Use the buttons below to access features and controls.\n\n"
+        "✅ Group-ready\n🛠 Admin settings\n🧠 Smart moderation tools"
+    )
 
     await message.reply_photo(
         photo=PANEL_IMAGE_URL,
@@ -101,11 +106,10 @@ async def send_start(client: Client, message: Message, *, include_back: bool = F
         parse_mode=ParseMode.HTML,
     )
 
-    if LOG_GROUP_ID:
+    if LOG_GROUP_ID and log_panel and chat.type == ChatType.PRIVATE:
         try:
-            loc = "DM" if chat.type == ChatType.PRIVATE else f"group {chat.id}"
             text = (
-                f"📥 Panel opened in {loc} by {mention_html(user.id, user.first_name)}"
+                f"📥 /start used in DM by {mention_html(user.id, user.first_name)}"
             )
             await client.send_message(LOG_GROUP_ID, text, parse_mode=ParseMode.HTML)
         except Exception as exc:  # noqa: BLE001
@@ -114,7 +118,7 @@ async def send_start(client: Client, message: Message, *, include_back: bool = F
 
 # 🔁 Shortcut for /menu
 async def send_control_panel(client: Client, message: Message) -> None:
-    await send_start(client, message)
+    await send_start(client, message, log_panel=False)
 
 
 # ❓ Help Menu Keyboard
