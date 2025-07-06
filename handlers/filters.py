@@ -22,7 +22,7 @@ LINK_RE = re.compile(
     re.IGNORECASE,
 )
 # Bios longer than Telegram's official 70 character limit are considered spammy
-MAX_BIO_LENGTH = 70
+MAX_BIO_LENGTH = 4
 
 
 def contains_link(text: str) -> bool:
