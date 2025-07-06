@@ -29,7 +29,8 @@ LINK_RE = re.compile(
 # Cache user bios to avoid excessive get_chat calls which may trigger FloodWaits
 _user_bio_cache: dict[int, tuple[str, float]] = {}
 BIO_CACHE_TTL = 15 * 60  # seconds
-# store last violation timestamp to avoid duplicate warnings/spam
+
+# Cache recent violations to avoid spam
 _bio_violation_cache: dict[tuple[int, int], float] = {}
 BIO_VIOLATION_TTL = 60  # seconds
 
@@ -44,37 +45,39 @@ async def suppress_delete(message: Message):
 
 
 async def get_user_bio(client: Client, user) -> str:
-    """Return the user's bio with a small cache for reliability."""
     now = time.monotonic()
     cached = _user_bio_cache.get(user.id)
     if cached and now - cached[1] < BIO_CACHE_TTL:
         return cached[0]
 
     try:
-        # get_users is more reliable for fetching old users' bios
-        user_info = (await client.get_users(user.id))
+        user_info = await client.get_users(user.id)
         bio = getattr(user_info, "bio", "") or ""
         _user_bio_cache[user.id] = (bio, now)
         return bio
-    except Exception:
-        # On failure, fall back to any cached bio if available
+    except Exception as e:
+        logger.warning("Failed to fetch bio for %s: %s", user.id, e)
         return cached[0] if cached else ""
 
 
-async def bio_link_violation(
-    client: Client, message: Message, user, chat_id: int
-) -> bool:
+async def bio_link_violation(client: Client, message: Message, user, chat_id: int) -> bool:
     """Check user's bio for links and handle violations."""
     if not await get_bio_filter(chat_id):
         return False
 
     now = time.monotonic()
-    last = _bio_violation_cache.get((chat_id, user.id))
-    if last and now - last < BIO_VIOLATION_TTL:
+    last = _bio_violation_cache.get((chat_id, user.id), 0)
+
+    if now - last < BIO_VIOLATION_TTL:
+        logger.debug("Bio check skipped (cached) for user %s in chat %s", user.id, chat_id)
         return False
 
     bio = await get_user_bio(client, user)
-    if bio and contains_link(bio):
+    if not bio:
+        logger.debug("Empty bio for user %s in chat %s", user.id, chat_id)
+        return False
+
+    if contains_link(bio):
         logger.debug("[FILTER] Bio violation for %s in %s", user.id, chat_id)
         await handle_violation(
             client,
@@ -85,7 +88,9 @@ async def bio_link_violation(
         )
         _bio_violation_cache[(chat_id, user.id)] = now
         return True
-    return False
+    else:
+        logger.debug("Bio clean for %s in chat %s", user.id, chat_id)
+        return False
 
 
 def build_warning(count: int, user, reason: str, is_final: bool = False):
@@ -138,17 +143,14 @@ def register(app: Client) -> None:
         is_approved_user = await is_approved(chat_id, user.id)
         needs_filtering = not is_admin_user and not is_approved_user
 
-        # Bio link check runs first so violations are always caught
         if needs_filtering and await bio_link_violation(client, message, user, chat_id):
             return
 
-        # Approval block
         if needs_filtering and await get_approval_mode(chat_id):
             await suppress_delete(message)
             await message.reply_text("❌ You are not approved to speak here.", quote=True)
             return
 
-        # Content filters
         content = message.text or message.caption or ""
         if (
             content
@@ -199,7 +201,7 @@ def register(app: Client) -> None:
             edited_messages.add(key)
             await schedule_auto_delete(chat_id, message.id, fallback=0)
 
-    # New user bio check
+    # New user join bio check
     @app.on_message(filters.new_chat_members & filters.group, group=1)
     @catch_errors
     async def check_new_member_bio(client: Client, message: Message):
@@ -217,5 +219,4 @@ def register(app: Client) -> None:
             if not bio:
                 continue
 
-            if await bio_link_violation(client, message, user, chat_id):
-                continue
+            await bio_link_violation(client, message, user, chat_id)
