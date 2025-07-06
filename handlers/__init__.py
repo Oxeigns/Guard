@@ -6,17 +6,26 @@ from . import (
     admin,
     filters,
     callbacks,
-    logger as log_module,  # 🟡 renamed to avoid shadowing
+    logging_handler,  # ✅ renamed from logging.py to avoid conflict
     broadcast,
     general,
     panels,
 )
 
-MODULES = [admin, filters, callbacks, log_module, broadcast, general, panels]
+MODULES = [
+    admin,
+    filters,
+    callbacks,
+    logging_handler,  # ⚠️ Must match filename exactly
+    broadcast,
+    general,
+    panels,
+]
 
 
 def register_all(app):
     logger.info("🔁 Registering all handler modules...")
+
     for module in MODULES:
         if hasattr(module, "register"):
             try:
@@ -26,4 +35,5 @@ def register_all(app):
                 logger.error(f"❌ Failed to register {module.__name__.split('.')[-1]}: {e}")
         else:
             logger.warning(f"⚠️ Skipped: {module.__name__.split('.')[-1]}.py — no register() function")
+
     logger.info("✅ All modules registered.")
