@@ -9,7 +9,7 @@ from pyrogram.errors import (
 )
 
 from config import OWNER_ID
-from utils.db import get_broadcast_groups
+from utils.db import get_groups
 from utils.errors import catch_errors
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ def register(app: Client) -> None:
             await message.reply_text("❗ Usage:\nReply to a message or use `/broadcast <text>`")
             return
 
-        group_ids = await get_broadcast_groups()
+        group_ids = await get_groups()
         sent, failed = 0, 0
 
         for chat_id in group_ids:
