@@ -7,12 +7,14 @@ from handlers import register_all
 from utils.db import init_db, close_db
 from utils.webhook import delete_webhook
 
+# Configure logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=getattr(logging, LOG_LEVEL, logging.INFO),
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("OxygenBot")
 
+# Initialize bot client
 bot = Client(
     "oxygen_bot",
     api_id=API_ID,
@@ -21,19 +23,25 @@ bot = Client(
     parse_mode=ParseMode.HTML,
 )
 
-
+# Lifecycle function for startup/shutdown
 async def main() -> None:
-    logger.info("\uD83D\uDE80 Starting OxygenBot...")
+    logger.info("🚀 Starting OxygenBot...")
+
     await init_db(MONGO_URI, MONGO_DB)
-    logger.info("\u2705 MongoDB connected.")
+    logger.info("✅ MongoDB connected.")
+
     await delete_webhook(BOT_TOKEN)
-    logger.info("\uD83D\uDD0C Webhook deleted (if any). Using polling mode.")
+    logger.info("🔌 Webhook deleted (if any). Using polling mode.")
+
     register_all(bot)
-    logger.info("\uD83E\uDD16 Bot is live and listening...")
+    logger.info("🤖 Bot is live and listening...")
+
     await idle()
+
     await close_db()
-    logger.info("\uD83D\uDD1A Bot stopped cleanly.")
+    logger.info("🔚 Bot stopped cleanly.")
 
 
+# Run the bot
 if __name__ == "__main__":
     bot.run(main())
