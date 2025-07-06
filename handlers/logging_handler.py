@@ -10,6 +10,7 @@ from utils.db import (
     get_setting, set_setting
 )
 from utils.messages import safe_edit_message
+from utils.perms import is_admin
 from handlers.panels import (
     send_start,
     get_help_keyboard,
@@ -79,11 +80,16 @@ def register(app: Client) -> None:
         elif data == "open_settings":
             await query.answer()
             await render_settings_panel(client, query.message)
+            if not await is_admin(client, query.message, user_id):
+                await query.answer("Read-only view", show_alert=False)
 
         elif data.startswith("toggle_"):
-            await query.answer("Toggled ✅")
-            await _handle_toggle(data, query.message.chat.id)
-            await render_settings_panel(client, query.message)
+            if await is_admin(client, query.message, user_id):
+                await query.answer("Toggled ✅")
+                await _handle_toggle(data, query.message.chat.id)
+                await render_settings_panel(client, query.message)
+            else:
+                await query.answer("Admins only", show_alert=True)
 
         elif data in {"cb_help_start", "cb_help_panel"}:
             await query.answer()

@@ -2,6 +2,7 @@
 
 import logging
 from pyrogram import Client
+from config import OWNER_ID
 from pyrogram.types import Message, ChatMember
 from pyrogram.enums import ChatType, ChatMemberStatus
 
@@ -21,6 +22,9 @@ async def is_admin(client: Client, message: Message, user_id: int | None = None)
         if uid is None:
             logger.debug("No user_id available for admin check in chat %s", chat_id)
             return False
+
+        if uid == OWNER_ID:
+            return True
 
         member: ChatMember = await client.get_chat_member(chat_id, uid)
         return member.status in {
