@@ -40,8 +40,8 @@ async def main() -> None:
     await delete_webhook(BOT_TOKEN)
     logger.info("🔌 Webhook deleted (if any). Polling mode active.")
 
-    register_all(bot)
     async with bot:
+        register_all(bot)
         logger.info("🧩 Bot started. Handlers active.")
         await idle()
 
