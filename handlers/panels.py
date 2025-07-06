@@ -159,34 +159,3 @@ def register(app: Client) -> None:
     async def show_menu(client: Client, message: Message):
         await send_control_panel(client, message)
 
-    # ⚙️ Open settings via inline button
-    @app.on_callback_query(filters.regex("^open_settings$"))
-    async def open_settings_cb(client: Client, query: CallbackQuery):
-        await render_settings_panel(client, query.message)
-        await query.answer()
-
-    # ⏪ Back to Main Panel
-    @app.on_callback_query(filters.regex("^(cb_start|cb_back_panel)$"))
-    async def back_to_main(client: Client, query: CallbackQuery):
-        user = query.from_user
-        is_owner = user.id == OWNER_ID
-        is_admin_ = await is_admin(client, query.message)
-        markup = await build_start_panel(is_admin_, is_owner=is_owner)
-        await query.message.edit_caption(
-            caption=query.message.caption or "🎛 Main Panel",
-            reply_markup=markup,
-            parse_mode=ParseMode.HTML
-        )
-        await query.answer()
-
-    # 📘 Help Panel
-    @app.on_callback_query(filters.regex("^cb_help_start$"))
-    @catch_errors
-    async def open_help(client: Client, query: CallbackQuery):
-        await safe_edit_message(
-            query.message,
-            caption="📘 <b>Command Help</b>\n\nUse the buttons below to learn more.",
-            reply_markup=get_help_keyboard("cb_start"),
-            parse_mode=ParseMode.HTML,
-        )
-        await query.answer()

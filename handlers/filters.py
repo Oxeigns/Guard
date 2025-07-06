@@ -21,7 +21,8 @@ LINK_RE = re.compile(
     r"(?:https?://\S+|tg://\S+|t\.me/\S+|telegram\.me/\S+|(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,})",
     re.IGNORECASE,
 )
-MAX_BIO_LENGTH = 800
+# Bios longer than Telegram's official 70 character limit are considered spammy
+MAX_BIO_LENGTH = 70
 
 
 def contains_link(text: str) -> bool:
