@@ -1,1 +1,1 @@
-worker: python3 -m Guard
+worker: python3 main.py
