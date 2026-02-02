@@ -3,7 +3,6 @@
   "description": "Telegram moderation & guard bot",
   "repository": "https://github.com/Oxeigns/Guard",
   "keywords": ["telegram", "bot", "pyrogram", "guard", "moderation"],
-  "stack": "container",
   "env": {
     "BOT_TOKEN": {
       "description": "Telegram Bot Token from @BotFather",
@@ -19,8 +18,7 @@
     },
     "MONGO_URI": {
       "description": "MongoDB connection URI (mongodb:// or mongodb+srv://)",
-      "required": true,
-      "value": "mongodb+srv://username:password@cluster.mongodb.net"
+      "required": true
     },
     "MONGO_DB": {
       "description": "MongoDB database name",
@@ -58,8 +56,7 @@
   },
   "formation": {
     "worker": {
-      "quantity": 1,
-      "size": "eco"
+      "quantity": 1
     }
   }
 }
