@@ -37,19 +37,19 @@ It offers a compact set of tools to keep groups clean while remaining easy to co
    - `SUPPORT_CHAT_URL`, `DEVELOPER_URL`, `PANEL_IMAGE_URL`
 3. Run the bot locally for testing
    ```bash
-   python3 run.py
+   python3 main.py
    ```
    Keep it running using `screen`, `tmux` or a `systemd` service.
 
 4. To deploy on a server provide the same environment variables and execute
-   `sh start.sh`. The script runs `python run.py` with logging enabled.
+   `python main.py`. The script runs `python main.py` with logging enabled.
 
 ## Render Deployment
-Create a new **Background Worker** on [Render](https://render.com) and use `render.yaml` for automatic configuration.
-Set the environment variables from your `.env` file in the Render dashboard. The worker command runs `sh start.sh`.
+Create a new **Background Worker** on [Render](https://render.com) and configure the build command as `pip install -r requirements.txt`.
+Set the environment variables from your `.env` file in the Render dashboard. The worker command runs `python main.py`.
 Optionally deploy `web.py` as a small web service for health checks.
 
-When running on your own VPS simply execute `sh start.sh` in a screen or
+When running on your own VPS simply execute `python main.py` in a screen or
 systemd service. On Render the worker type automatically keeps the bot
 running in the background.
 
@@ -65,7 +65,7 @@ running in the background.
 4. Start the bot inside a persistent shell so it keeps running:
    ```bash
    screen -S oxygen
-   python3 run.py
+   python3 main.py
    ```
    Detach with `Ctrl+A` then `D`. Reattach with `screen -r oxygen`.
 

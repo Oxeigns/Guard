@@ -1,6 +1,4 @@
 import logging
-import signal
-import asyncio
 
 from pyrogram import Client, idle
 from pyrogram.enums import ParseMode
@@ -33,36 +31,20 @@ bot = Client(
     parse_mode=ParseMode.HTML,
 )
 
-# ───────────────── Graceful Shutdown (Heroku safe) ─────────────────
-def _shutdown(*_):
-    logger.warning("⚠️ Shutdown signal received. Stopping bot...")
-    loop = asyncio.get_event_loop()
-    loop.stop()
-
-signal.signal(signal.SIGTERM, _shutdown)
-signal.signal(signal.SIGINT, _shutdown)
-
 # ───────────────── Main Lifecycle ─────────────────
 async def main() -> None:
     logger.info("🚀 Starting OxygenBot...")
 
-    # Database
-    await init_db(MONGO_URI, MONGO_DB)
-    logger.info("✅ MongoDB connected.")
-
-    # Ensure polling mode
-    await delete_webhook(BOT_TOKEN)
-    logger.info("🔌 Webhook deleted. Polling mode active.")
-
-    # Start bot
-    async with bot:
-        register_all(bot)
-        logger.info("🤖 Bot started successfully. Waiting for updates...")
-        await idle()
-
-    # Cleanup
-    await close_db()
-    logger.info("🛑 Bot stopped. MongoDB connection closed.")
+    try:
+        await init_db(MONGO_URI, MONGO_DB)
+        await delete_webhook(BOT_TOKEN)
+        async with bot:
+            register_all(bot)
+            logger.info("Bot started. Waiting for updates...")
+            await idle()
+    finally:
+        await close_db()
+        logger.info("Bot stopped. MongoDB connection closed.")
 
 # ───────────────── Entrypoint ─────────────────
 if __name__ == "__main__":
