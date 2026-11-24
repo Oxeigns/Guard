@@ -1,3 +1,10 @@
 __pycache__/
 *.py[cod]
 *.log
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.session
+*.session-journal
